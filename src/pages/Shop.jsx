@@ -232,6 +232,31 @@ const Shop = () => {
     });
   }, [dbProducts]);
 
+  // Create dynamic categories from counts
+  const dynamicCategories = useMemo(() => {
+    return Object.keys(categoryCounts).map((catName, idx) => {
+      const staticCat = PAPER_CATEGORIES.find(c => c.name.toLowerCase() === catName.toLowerCase());
+      if (staticCat) return { ...staticCat, count: categoryCounts[catName] };
+      
+      const colors = [
+        { color: 'text-blue-600', bg: 'bg-blue-50', hover: 'group-hover:bg-blue-600 group-hover:text-white' },
+        { color: 'text-purple-600', bg: 'bg-purple-50', hover: 'group-hover:bg-purple-600 group-hover:text-white' },
+        { color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'group-hover:bg-emerald-600 group-hover:text-white' },
+        { color: 'text-amber-600', bg: 'bg-amber-50', hover: 'group-hover:bg-amber-600 group-hover:text-white' },
+        { color: 'text-rose-600', bg: 'bg-rose-50', hover: 'group-hover:bg-rose-600 group-hover:text-white' },
+      ];
+      const style = colors[idx % colors.length];
+      
+      return {
+        name: catName,
+        icon: Box,
+        ...style,
+        image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        count: categoryCounts[catName]
+      };
+    }).sort((a, b) => b.count - a.count);
+  }, [categoryCounts]);
+
   if (!selectedMainCategory) {
     return (
       <main className="flex-1 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full flex flex-col pt-16 md:pt-20 pb-stack-lg">
@@ -295,8 +320,8 @@ const Shop = () => {
         </div>
 
         <div ref={categoriesGridRef} className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 lg:gap-5 auto-rows-[100px] sm:auto-rows-[120px] md:auto-rows-[160px] grid-flow-dense">
-          {PAPER_CATEGORIES.map((cat, idx) => {
-            const count = categoryCounts[cat.name] || 0;
+          {dynamicCategories.map((cat, idx) => {
+            const count = cat.count || 0;
             // Feature some cards to create a bento box layout
             const isFeatured = idx === 0 || idx === 5 || idx === 10 || idx === 14;
             
@@ -335,7 +360,7 @@ const Shop = () => {
           <p className="font-body-sm text-gray-500 mt-1">Premium Stock Catalog</p>
         </div>
         <nav className="flex flex-col gap-1.5 flex-1 pr-2">
-          {PAPER_CATEGORIES.map((cat, idx) => {
+          {dynamicCategories.map((cat, idx) => {
             const isSelected = selectedSubCategory === cat.name;
             return (
               <button
@@ -366,7 +391,7 @@ const Shop = () => {
         <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 pb-6">
           <h1 className="font-headline-xl text-[28px] md:text-[36px] font-extrabold text-[#111111] flex items-center gap-3 tracking-tight">
             {(() => {
-              const activeCat = PAPER_CATEGORIES.find(c => c.name === selectedSubCategory);
+              const activeCat = dynamicCategories.find(c => c.name === selectedSubCategory);
               return activeCat ? (
                 <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center ${activeCat.bg} ${activeCat.color} shadow-sm`}>
                   <activeCat.icon size={24} strokeWidth={2.5} className="md:w-8 md:h-8 w-5 h-5" />
