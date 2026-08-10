@@ -21,9 +21,9 @@ export const CartProvider = ({ children }) => {
       // Check if item already exists with exact same bulk/installment status
       const existingItemIndex = prev.findIndex(item => 
         item.id === product.id && 
-        item.isBulk === isBulk && 
-        item.isInstallment === isInstallment && 
-        item.installmentPlan === installmentPlan
+        !!item.isBulk === !!isBulk && 
+        !!item.isInstallment === !!isInstallment && 
+        (item.installmentPlan || null) === (installmentPlan || null)
       );
       
       if (existingItemIndex >= 0) {
@@ -37,13 +37,18 @@ export const CartProvider = ({ children }) => {
   };
 
   const removeFromCart = (productId, isBulk, isInstallment = false, installmentPlan = null) => {
-    setCartItems(prev => prev.filter(item => !(item.id === productId && item.isBulk === isBulk && item.isInstallment === isInstallment && item.installmentPlan === installmentPlan)));
+    setCartItems(prev => prev.filter(item => !(
+      item.id === productId && 
+      !!item.isBulk === !!isBulk && 
+      !!item.isInstallment === !!isInstallment && 
+      (item.installmentPlan || null) === (installmentPlan || null)
+    )));
   };
 
   const updateQuantity = (productId, isBulk, newQuantity, isInstallment = false, installmentPlan = null) => {
     if (newQuantity < 1) return;
     setCartItems(prev => prev.map(item => 
-      (item.id === productId && item.isBulk === isBulk && item.isInstallment === isInstallment && item.installmentPlan === installmentPlan) 
+      (item.id === productId && !!item.isBulk === !!isBulk && !!item.isInstallment === !!isInstallment && (item.installmentPlan || null) === (installmentPlan || null)) 
         ? { ...item, quantity: newQuantity } 
         : item
     ));
