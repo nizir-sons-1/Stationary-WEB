@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ShoppingBag, Plus, Minus, Truck, ShieldCheck, Phone } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useProduct } from '../hooks/useSupabase';
+import TermsModal from '../components/TermsModal';
 
 const ProductDetails = () => {
   const { name } = useParams();
@@ -53,6 +54,9 @@ const ProductDetails = () => {
   const [quantity, setQuantity] = useState(1);
   const [isBulk, setIsBulk] = useState(false);
   const [bulkNote, setBulkNote] = useState('');
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentPlan, setInstallmentPlan] = useState('3 Months');
+  const [showTerms, setShowTerms] = useState(false);
 
   // Handle GSM auto-select when size changes
   React.useEffect(() => {
@@ -90,6 +94,14 @@ const ProductDetails = () => {
   const totalPrice = price * quantity;
 
   const handleAddToCart = () => {
+    if (isInstallment) {
+      setShowTerms(true);
+      return;
+    }
+    executeAddToCart();
+  };
+
+  const executeAddToCart = () => {
     const item = {
       id: currentVariation.ProductID || `${currentVariation.PRODUCT_NAME}-${currentVariation.GSM}-${selectedSize}`,
       name: currentVariation.PRODUCT_NAME,
@@ -100,7 +112,7 @@ const ProductDetails = () => {
       packingType: currentVariation.PACKING_TYPE || 'ream'
     };
     
-    addToCart(item, quantity, isBulk, isBulk ? bulkNote : null);
+    addToCart(item, quantity, isBulk, isBulk ? bulkNote : null, isInstallment, isInstallment ? installmentPlan : null);
     navigate('/cart');
   };
 
@@ -177,7 +189,7 @@ const ProductDetails = () => {
             </div>
 
             {/* Bulk Order Toggle */}
-            <div className="flex items-start gap-3 p-4 bg-orange-50/50 rounded-xl border border-orange-100 mb-6">
+            <div className="flex items-start gap-3 p-4 bg-orange-50/50 rounded-xl border border-orange-100 mb-4">
               <input 
                 type="checkbox" 
                 id="bulk-toggle" 
@@ -198,6 +210,37 @@ const ProductDetails = () => {
                 )}
               </div>
             </div>
+
+            {/* Installment Plan Toggle (Only for Paper & Canvas) */}
+            {['bleach card', 'art card', 'art paper', 'matte paper', 'copy paper', 'offset paper', 'ivory card', 'color card', 'carbonless', 'stickers', 'local paper', 'boxboard', 'news', 'butter paper', 'kraft card', 'book paper'].includes((currentVariation.Category || '').toLowerCase()) && (
+              <div className="flex items-start gap-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 mb-6">
+                <input 
+                  type="checkbox" 
+                  id="installment-toggle" 
+                  checked={isInstallment} 
+                  onChange={(e) => setIsInstallment(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-600 accent-blue-600 cursor-pointer"
+                />
+                <div className="flex flex-col w-full">
+                  <label htmlFor="installment-toggle" className="font-bold text-secondary cursor-pointer">Request Installment Plan</label>
+                  <p className="text-xs text-gray-500 mt-1">T&C apply. Requires physical bank cheques. Approval via WhatsApp.</p>
+                  
+                  {isInstallment && (
+                    <div className="mt-3">
+                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Select Duration</label>
+                      <select 
+                        value={installmentPlan}
+                        onChange={(e) => setInstallmentPlan(e.target.value)}
+                        className="w-full bg-white border border-gray-200 text-secondary text-sm font-bold py-3 px-4 rounded-xl outline-none focus:border-blue-500 shadow-sm appearance-none cursor-pointer hover:border-gray-300 transition-colors"
+                      >
+                        <option value="3 Months">3 Months (0% Markup)</option>
+                        <option value="6 Months">6 Months</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-6">
               <div className="flex flex-col w-full sm:w-auto">
@@ -249,6 +292,15 @@ const ProductDetails = () => {
 
         </div>
       </div>
+
+      <TermsModal 
+        isOpen={showTerms} 
+        onClose={() => setShowTerms(false)} 
+        onAgree={() => {
+          setShowTerms(false);
+          executeAddToCart();
+        }} 
+      />
     </div>
   );
 };

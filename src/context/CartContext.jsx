@@ -16,10 +16,15 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('paperWebCart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product, quantity = 1, isBulk = false, bulkDetails = null) => {
+  const addToCart = (product, quantity = 1, isBulk = false, bulkDetails = null, isInstallment = false, installmentPlan = null) => {
     setCartItems(prev => {
-      // Check if item already exists with exact same bulk status
-      const existingItemIndex = prev.findIndex(item => item.id === product.id && item.isBulk === isBulk);
+      // Check if item already exists with exact same bulk/installment status
+      const existingItemIndex = prev.findIndex(item => 
+        item.id === product.id && 
+        item.isBulk === isBulk && 
+        item.isInstallment === isInstallment && 
+        item.installmentPlan === installmentPlan
+      );
       
       if (existingItemIndex >= 0) {
         const newCart = [...prev];
@@ -27,18 +32,18 @@ export const CartProvider = ({ children }) => {
         return newCart;
       }
       
-      return [...prev, { ...product, quantity, isBulk, bulkDetails }];
+      return [...prev, { ...product, quantity, isBulk, bulkDetails, isInstallment, installmentPlan }];
     });
   };
 
-  const removeFromCart = (productId, isBulk) => {
-    setCartItems(prev => prev.filter(item => !(item.id === productId && item.isBulk === isBulk)));
+  const removeFromCart = (productId, isBulk, isInstallment = false, installmentPlan = null) => {
+    setCartItems(prev => prev.filter(item => !(item.id === productId && item.isBulk === isBulk && item.isInstallment === isInstallment && item.installmentPlan === installmentPlan)));
   };
 
-  const updateQuantity = (productId, isBulk, newQuantity) => {
+  const updateQuantity = (productId, isBulk, newQuantity, isInstallment = false, installmentPlan = null) => {
     if (newQuantity < 1) return;
     setCartItems(prev => prev.map(item => 
-      (item.id === productId && item.isBulk === isBulk) 
+      (item.id === productId && item.isBulk === isBulk && item.isInstallment === isInstallment && item.installmentPlan === installmentPlan) 
         ? { ...item, quantity: newQuantity } 
         : item
     ));

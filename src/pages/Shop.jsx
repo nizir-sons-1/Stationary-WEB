@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Layers, ArrowLeft, FileText, Package, BookOpen, Newspaper, Tag, Box, CreditCard, Sparkles, Feather, Archive, Palette, PenTool, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useProducts, useCategoryCounts } from '../hooks/useSupabase';
+import TermsModal from '../components/TermsModal';
 import gsap from 'gsap';
 
 const MAIN_CATEGORIES = [
@@ -41,6 +42,8 @@ const ProductGroupCard = ({ productName, variations }) => {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedGsm, setSelectedGsm] = useState('');
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   // Extract all unique Sizes for this product group
   const availableSizes = useMemo(() => {
@@ -113,26 +116,26 @@ const ProductGroupCard = ({ productName, variations }) => {
         <p className="text-[9px] md:text-[13px] text-gray-500 mt-0.5 md:mt-1 mb-2 md:mb-4 line-clamp-1">{currentVariation?.Description || 'Premium High Quality Stock'}</p>
 
         {/* Dynamic Selectors */}
-        <div className="flex flex-col gap-1.5 md:gap-2 mb-3 md:mb-4 bg-gray-50/50 p-2 md:p-3 rounded-lg md:rounded-xl border border-gray-100">
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-1 xl:gap-0">
-            <span className="font-label-caps text-[8px] md:text-[10px] text-gray-400 font-bold tracking-widest uppercase">Size</span>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="flex flex-col bg-gray-50/80 rounded-lg p-1.5 border border-gray-100">
+            <span className="text-[8px] md:text-[9px] text-gray-400 font-bold uppercase tracking-widest px-1">Size</span>
             <select
               value={selectedSize}
               onChange={(e) => setSelectedSize(e.target.value)}
-              className="bg-white border border-gray-200 text-[#111111] text-[10px] md:text-[12px] font-bold py-1 pl-2 pr-5 md:py-1.5 md:pl-3 md:pr-7 rounded flex-1 xl:flex-none outline-none focus:border-primary appearance-none cursor-pointer hover:border-gray-300 transition-colors shadow-sm text-left bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_4px_center] md:bg-[position:right_8px_center] bg-[length:12px] md:bg-[length:14px]"
+              className="w-full bg-transparent text-[#111111] text-[10px] md:text-[11px] font-bold px-1 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:12px]"
             >
               {availableSizes.map(size => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
           </div>
-          <div className="h-px w-full bg-gray-100 hidden xl:block"></div>
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-1 xl:gap-0 mt-1 xl:mt-0">
-            <span className="font-label-caps text-[8px] md:text-[10px] text-gray-400 font-bold tracking-widest uppercase">GSM</span>
+          
+          <div className="flex flex-col bg-gray-50/80 rounded-lg p-1.5 border border-gray-100">
+            <span className="text-[8px] md:text-[9px] text-gray-400 font-bold uppercase tracking-widest px-1">GSM</span>
             <select
               value={selectedGsm}
               onChange={(e) => setSelectedGsm(e.target.value)}
-              className="bg-white border border-gray-200 text-[#111111] text-[10px] md:text-[12px] font-bold py-1 pl-2 pr-5 md:py-1.5 md:pl-3 md:pr-7 rounded flex-1 xl:flex-none outline-none focus:border-primary appearance-none cursor-pointer hover:border-gray-300 transition-colors shadow-sm text-left bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_4px_center] md:bg-[position:right_8px_center] bg-[length:12px] md:bg-[length:14px]"
+              className="w-full bg-transparent text-[#111111] text-[10px] md:text-[11px] font-bold px-1 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:12px]"
             >
               {availableGsms.map(gsm => (
                 <option key={gsm} value={gsm}>{gsm}g</option>
@@ -141,34 +144,73 @@ const ProductGroupCard = ({ productName, variations }) => {
           </div>
         </div>
 
+        {/* Installment Toggle */}
+        {PAPER_CATEGORIES.map(c => c.name.toLowerCase()).includes((currentVariation?.Category || '').toLowerCase()) && (
+          <div className="flex items-center gap-1.5 mb-3 -mt-1 bg-indigo-50/50 p-1.5 rounded-lg border border-indigo-100">
+            <input 
+              type="checkbox" 
+              checked={isInstallment}
+              onChange={(e) => setIsInstallment(e.target.checked)}
+              className="w-3 h-3 text-indigo-600 bg-white border-indigo-300 rounded focus:ring-indigo-600 accent-indigo-600 cursor-pointer shadow-sm"
+            />
+            <span 
+              className="text-[8px] md:text-[9px] text-indigo-700 font-bold uppercase tracking-widest cursor-pointer"
+              onClick={() => setIsInstallment(!isInstallment)}
+            >
+              Request Installment (3M)
+            </span>
+          </div>
+        )}
+
         {/* Price & Action */}
-        <div className="mt-auto pt-2 md:pt-3 border-t border-gray-100 flex justify-between items-end gap-1">
+        <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center gap-2">
           <div className="flex flex-col">
-            <span className="text-[7px] md:text-[10px] font-bold tracking-wider text-gray-400 uppercase mb-0.5 line-clamp-1">Price / {currentVariation?.PACKING_TYPE || 'ream'}</span>
-            <span className="font-price-display text-primary font-extrabold text-[14px] sm:text-[16px] md:text-[22px] leading-none whitespace-nowrap">Rs. {formatPrice(currentVariation?.CALCULATED_PRICE_RS || 0)}</span>
+            <span className="text-[8px] md:text-[9px] font-bold tracking-widest text-gray-400 uppercase mb-0.5 line-clamp-1">Rs / {currentVariation?.PACKING_TYPE || 'ream'}</span>
+            <span className="font-price-display text-[#111111] font-black text-[15px] md:text-[18px] leading-none whitespace-nowrap">Rs. {formatPrice(currentVariation?.CALCULATED_PRICE_RS || 0)}</span>
           </div>
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault();
               if (inStock) {
-                addToCart({
-                  id: currentVariation.ProductID || `${currentVariation.PRODUCT_NAME}-${currentVariation.GSM}-${selectedSize}`,
-                  name: currentVariation.PRODUCT_NAME,
-                  gsm: currentVariation.GSM,
-                  size: selectedSize,
-                  price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
-                  image: currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-                  packingType: currentVariation.PACKING_TYPE || 'ream'
-                }, 1, false, null);
+                if (isInstallment) {
+                  setShowTerms(true);
+                } else {
+                  addToCart({
+                    id: currentVariation.ProductID || `${currentVariation.PRODUCT_NAME}-${currentVariation.GSM}-${selectedSize}`,
+                    name: currentVariation.PRODUCT_NAME,
+                    gsm: currentVariation.GSM,
+                    size: selectedSize,
+                    price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
+                    image: currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+                    packingType: currentVariation.PACKING_TYPE || 'ream'
+                  }, 1, false, null, false, null);
+                }
               }
             }}
-            className={`${inStock ? 'bg-[#111111] text-white hover:bg-primary shadow-[0_4px_14px_rgba(17,17,17,0.2)] hover:shadow-[0_4px_14px_rgba(234,88,12,0.3)]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'} font-label-caps text-[8px] md:text-[11px] font-bold uppercase tracking-widest px-2 py-1.5 md:px-4 md:py-2.5 rounded-lg md:rounded-xl transition-all duration-300 shrink-0 hover:-translate-y-0.5`}
+            className={`${inStock ? 'bg-[#111111] text-white hover:bg-primary shadow-[0_4px_14px_rgba(17,17,17,0.2)] hover:shadow-[0_4px_14px_rgba(234,88,12,0.3)]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'} w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 hover:-translate-y-1`}
           >
-            {inStock ? 'Add' : 'Empty'}
+            {inStock ? <ShoppingBag size={16} className="md:w-5 md:h-5 w-4 h-4" /> : <span className="text-[8px] font-bold">OUT</span>}
           </button>
         </div>
       </div>
+
+      <TermsModal 
+        isOpen={showTerms} 
+        onClose={() => setShowTerms(false)} 
+        onAgree={() => {
+          setShowTerms(false);
+          addToCart({
+            id: currentVariation.ProductID || `${currentVariation.PRODUCT_NAME}-${currentVariation.GSM}-${selectedSize}`,
+            name: currentVariation.PRODUCT_NAME,
+            gsm: currentVariation.GSM,
+            size: selectedSize,
+            price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
+            image: currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            packingType: currentVariation.PACKING_TYPE || 'ream'
+          }, 1, false, null, true, '3 Months');
+        }} 
+      />
     </article>
   );
 };
@@ -234,7 +276,19 @@ const Shop = () => {
 
   // Create dynamic categories from counts
   const dynamicCategories = useMemo(() => {
-    return Object.keys(categoryCounts).map((catName, idx) => {
+    const paperCatNames = PAPER_CATEGORIES.map(c => c.name.toLowerCase());
+    
+    let filteredKeys = Object.keys(categoryCounts);
+    
+    if (selectedMainCategory === 'Paper & Canvas') {
+      // Only show paper categories
+      filteredKeys = filteredKeys.filter(catName => paperCatNames.includes(catName.toLowerCase()));
+    } else if (selectedMainCategory) {
+      // For other departments (which are mostly placeholders from scraped data), show non-paper categories
+      filteredKeys = filteredKeys.filter(catName => !paperCatNames.includes(catName.toLowerCase()));
+    }
+
+    return filteredKeys.map((catName, idx) => {
       const staticCat = PAPER_CATEGORIES.find(c => c.name.toLowerCase() === catName.toLowerCase());
       if (staticCat) return { ...staticCat, count: categoryCounts[catName] };
       
@@ -255,7 +309,7 @@ const Shop = () => {
         count: categoryCounts[catName]
       };
     }).sort((a, b) => b.count - a.count);
-  }, [categoryCounts]);
+  }, [categoryCounts, selectedMainCategory]);
 
   if (!selectedMainCategory) {
     return (

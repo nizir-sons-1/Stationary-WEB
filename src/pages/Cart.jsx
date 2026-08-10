@@ -55,6 +55,10 @@ const Cart = () => {
           message += `   [Bulk Request]\n`;
           if (item.bulkDetails) message += `   Note: ${item.bulkDetails}\n`;
         }
+        if (item.isInstallment) {
+          message += `   [Installment Plan: ${item.installmentPlan}]\n`;
+          message += `   *Requires T&C confirmation and physical bank cheque*\n`;
+        }
         message += `   Est. Price: Rs. ${(item.price * item.quantity).toLocaleString()}\n\n`;
       });
       message += `*Estimated Total: Rs. ${cartTotal.toLocaleString()}*\n`;
@@ -116,6 +120,7 @@ const Cart = () => {
                     <span className="bg-orange-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-primary border border-orange-100 rounded-md">{item.gsm}g</span>
                     <span className="bg-gray-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-gray-500 border border-gray-200 rounded-md">{item.size}</span>
                     {item.isBulk && <span className="bg-blue-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-blue-600 border border-blue-100 rounded-md uppercase tracking-widest">Bulk Req</span>}
+                    {item.isInstallment && <span className="bg-indigo-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-indigo-600 border border-indigo-100 rounded-md uppercase tracking-widest">Installment: {item.installmentPlan}</span>}
                   </div>
                   {item.bulkDetails && <p className="text-xs text-gray-400 mt-2 italic line-clamp-1">Note: {item.bulkDetails}</p>}
                 </div>
@@ -123,9 +128,9 @@ const Cart = () => {
               
               <div className="md:col-span-3 flex justify-start md:justify-center items-center">
                 <div className="flex items-center border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
-                  <button onClick={() => updateQuantity(item.id, item.isBulk, item.quantity - 1)} className="px-3 py-2 hover:bg-gray-50 active:bg-gray-100 text-gray-700 transition-colors"><Minus size={14} /></button>
+                  <button onClick={() => updateQuantity(item.id, item.isBulk, item.quantity - 1, item.isInstallment, item.installmentPlan)} className="px-3 py-2 hover:bg-gray-50 active:bg-gray-100 text-gray-700 transition-colors"><Minus size={14} /></button>
                   <span className="w-8 text-center font-bold text-sm text-gray-900">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.id, item.isBulk, item.quantity + 1)} className="px-3 py-2 hover:bg-gray-50 active:bg-gray-100 text-gray-700 transition-colors"><Plus size={14} /></button>
+                  <button onClick={() => updateQuantity(item.id, item.isBulk, item.quantity + 1, item.isInstallment, item.installmentPlan)} className="px-3 py-2 hover:bg-gray-50 active:bg-gray-100 text-gray-700 transition-colors"><Plus size={14} /></button>
                 </div>
               </div>
               
@@ -135,7 +140,7 @@ const Cart = () => {
               </div>
               
               <div className="md:col-span-12 flex justify-end md:-mt-8">
-                <button onClick={() => removeFromCart(item.id, item.isBulk)} className="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors">
+                <button onClick={() => removeFromCart(item.id, item.isBulk, item.isInstallment, item.installmentPlan)} className="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors">
                   <Trash2 size={14} /> Remove
                 </button>
               </div>

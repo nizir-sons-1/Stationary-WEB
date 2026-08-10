@@ -147,12 +147,6 @@ const Hero = () => {
             >
               Shop Now <ArrowRight size={18} />
             </Link>
-            <Link
-              to="/categories"
-              className="text-secondary font-bold text-[15px] hover:text-primary transition-colors underline underline-offset-4"
-            >
-              View All Products
-            </Link>
           </div>
         </div>
 
