@@ -1,15 +1,28 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+// Simple in-memory cache to prevent lag
+let globalProductsCache = {};
+let globalCountsCache = null;
+let isFetchingProducts = {};
+
 export function useProducts(category = null) {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const cacheKey = category || 'all';
+  const [, setTick] = useState(0);
 
   useEffect(() => {
+    // If already cached, don't fetch again
+    if (globalProductsCache[cacheKey]) {
+      return;
+    }
+
+    // Prevent duplicate concurrent requests
+    if (isFetchingProducts[cacheKey]) return;
+    isFetchingProducts[cacheKey] = true;
+
     async function fetchProducts() {
-      setLoading(true);
       try {
+        setTick(t => t + 1); // trigger loading render
         let query = supabase
           .from('products')
           .select(`
@@ -30,26 +43,37 @@ export function useProducts(category = null) {
         const { data, error: err } = await query;
 
         if (err) throw err;
-        setProducts(data || []);
+        
+        globalProductsCache[cacheKey] = data || [];
       } catch (err) {
         console.error('Error fetching products:', err);
-        setError(err.message);
       } finally {
-        setLoading(false);
+        isFetchingProducts[cacheKey] = false;
+        setTick(t => t + 1); // trigger completion render
       }
     }
 
     fetchProducts();
-  }, [category]);
+  }, [category, cacheKey]);
 
-  return { products, loading, error };
+  return { 
+    products: globalProductsCache[cacheKey] || [], 
+    loading: !globalProductsCache[cacheKey], 
+    error: null 
+  };
 }
 
 export function useCategoryCounts() {
-  const [counts, setCounts] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState(globalCountsCache || {});
+  const [loading, setLoading] = useState(!globalCountsCache);
 
   useEffect(() => {
+    if (globalCountsCache) {
+      setCounts(globalCountsCache);
+      setLoading(false);
+      return;
+    }
+
     async function fetchCounts() {
       try {
         const { data, error } = await supabase
@@ -64,6 +88,7 @@ export function useCategoryCounts() {
           countMap[item.category]++;
         });
         
+        globalCountsCache = countMap;
         setCounts(countMap);
       } catch (err) {
         console.error('Error fetching counts:', err);
@@ -85,6 +110,17 @@ export function useProduct(productName) {
   useEffect(() => {
     async function fetchProduct() {
       if (!productName) return;
+
+      // Check cache first
+      if (globalProductsCache['all']) {
+        const cachedProduct = globalProductsCache['all'].find(p => p.product_name === productName);
+        if (cachedProduct) {
+          setProduct(cachedProduct);
+          setLoading(false);
+          return;
+        }
+      }
+
       setLoading(true);
       try {
         const { data, error: err } = await supabase

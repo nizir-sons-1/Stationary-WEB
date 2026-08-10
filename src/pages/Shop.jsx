@@ -110,7 +110,7 @@ const ProductGroupCard = ({ productName, variations }) => {
         <Link to={`/product/${encodeURIComponent(productName)}`} className="hover:text-primary transition-colors">
           <h3 className="text-[13px] sm:text-[15px] md:text-[20px] text-[#111111] font-bold leading-tight line-clamp-1">{productName}</h3>
         </Link>
-        <p className="text-[9px] md:text-[13px] text-gray-500 mt-0.5 md:mt-1 mb-2 md:mb-4 line-clamp-1">{currentVariation.Description || 'Premium High Quality Stock'}</p>
+        <p className="text-[9px] md:text-[13px] text-gray-500 mt-0.5 md:mt-1 mb-2 md:mb-4 line-clamp-1">{currentVariation?.Description || 'Premium High Quality Stock'}</p>
 
         {/* Dynamic Selectors */}
         <div className="flex flex-col gap-1.5 md:gap-2 mb-3 md:mb-4 bg-gray-50/50 p-2 md:p-3 rounded-lg md:rounded-xl border border-gray-100">
@@ -144,8 +144,8 @@ const ProductGroupCard = ({ productName, variations }) => {
         {/* Price & Action */}
         <div className="mt-auto pt-2 md:pt-3 border-t border-gray-100 flex justify-between items-end gap-1">
           <div className="flex flex-col">
-            <span className="text-[7px] md:text-[10px] font-bold tracking-wider text-gray-400 uppercase mb-0.5 line-clamp-1">Price / {currentVariation.PACKING_TYPE || 'ream'}</span>
-            <span className="font-price-display text-primary font-extrabold text-[14px] sm:text-[16px] md:text-[22px] leading-none whitespace-nowrap">Rs. {formatPrice(currentVariation.CALCULATED_PRICE_RS)}</span>
+            <span className="text-[7px] md:text-[10px] font-bold tracking-wider text-gray-400 uppercase mb-0.5 line-clamp-1">Price / {currentVariation?.PACKING_TYPE || 'ream'}</span>
+            <span className="font-price-display text-primary font-extrabold text-[14px] sm:text-[16px] md:text-[22px] leading-none whitespace-nowrap">Rs. {formatPrice(currentVariation?.CALCULATED_PRICE_RS || 0)}</span>
           </div>
           <button
             type="button"
@@ -229,7 +229,7 @@ const Shop = () => {
         IMAGE_URL: v.image_url || p.image_url
       }));
       return { name: p.product_name, variations };
-    });
+    }).filter(group => group.variations.length > 0);
   }, [dbProducts]);
 
   // Create dynamic categories from counts
@@ -292,20 +292,7 @@ const Shop = () => {
   }
 
   if (selectedMainCategory && !selectedSubCategory) {
-    if (selectedMainCategory !== 'Paper & Canvas') {
-      return (
-        <main className="flex-1 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full flex flex-col pt-16 md:pt-20 pb-stack-lg items-center justify-center text-center h-[50vh]">
-            <button onClick={() => setSelectedMainCategory(null)} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase bg-white px-5 py-2.5 rounded-xl border border-gray-200 shadow-sm w-fit text-[11px] transition-colors">
-              <ArrowLeft size={16} /> Back to Departments
-            </button>
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
-               <Package size={32} className="text-gray-400" />
-            </div>
-            <h2 className="text-[28px] md:text-[36px] font-bold text-secondary tracking-tight mb-4">{selectedMainCategory} is coming soon!</h2>
-            <p className="text-gray-500 text-[14px] md:text-[16px] max-w-md mx-auto">We are currently curating the best products for this department. Stay tuned for updates!</p>
-        </main>
-      );
-    }
+
 
     return (
       <main className="flex-1 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full flex flex-col pt-16 md:pt-20 pb-stack-lg">
@@ -314,8 +301,8 @@ const Shop = () => {
             <ArrowLeft size={14} /> Back to Departments
           </button>
           <div>
-            <h1 className="font-headline-xl text-[28px] md:text-headline-xl text-on-surface">Shop by Paper Category</h1>
-            <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">Select a paper type to view available stock and pricing.</p>
+            <h1 className="font-headline-xl text-[28px] md:text-headline-xl text-on-surface">Shop by Category</h1>
+            <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">Select a category to view available stock and pricing.</p>
           </div>
         </div>
 

@@ -2,30 +2,73 @@ import React from 'react';
 import { Minus, Plus, Trash2, ArrowRight, MessageCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 const Cart = () => {
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
 
-  const handleCheckout = () => {
+  const [isCheckingOut, setIsCheckingOut] = React.useState(false);
+
+  const handleCheckout = async () => {
     if (cartItems.length === 0) return;
     
-    let message = `*New Order Request*\n\n`;
-    cartItems.forEach((item, index) => {
-      message += `${index + 1}. *${item.name}*\n`;
-      message += `   Size: ${item.size} | GSM: ${item.gsm}g\n`;
-      message += `   Qty: ${item.quantity} ${item.packingType}\n`;
-      if (item.isBulk) {
-        message += `   [Bulk Request]\n`;
-        if (item.bulkDetails) message += `   Note: ${item.bulkDetails}\n`;
-      }
-      message += `   Est. Price: Rs. ${(item.price * item.quantity).toLocaleString()}\n\n`;
-    });
-    message += `*Estimated Total: Rs. ${cartTotal.toLocaleString()}*\n`;
-    message += `\nPlease confirm availability and final pricing.`;
-    
-    const whatsappUrl = `https://wa.me/923001234567?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-    clearCart();
+    setIsCheckingOut(true);
+    try {
+      // 1. Save Order to Supabase
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          total_amount: cartTotal,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Save Order Items
+      const orderItemsToInsert = cartItems.map(item => ({
+        order_id: orderData.id,
+        product_name: item.name,
+        quantity: item.quantity,
+        price_at_time: item.price,
+        size: item.size,
+        gsm: item.gsm,
+        packing_type: item.packingType,
+        is_bulk: item.isBulk || false,
+        bulk_notes: item.bulkDetails || null
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsToInsert);
+
+      if (itemsError) throw itemsError;
+
+      // 3. WhatsApp Redirect
+      let message = `*New Order Request (ID: ${orderData.id.split('-')[0]})*\n\n`;
+      cartItems.forEach((item, index) => {
+        message += `${index + 1}. *${item.name}*\n`;
+        message += `   Size: ${item.size} | GSM: ${item.gsm}g\n`;
+        message += `   Qty: ${item.quantity} ${item.packingType}\n`;
+        if (item.isBulk) {
+          message += `   [Bulk Request]\n`;
+          if (item.bulkDetails) message += `   Note: ${item.bulkDetails}\n`;
+        }
+        message += `   Est. Price: Rs. ${(item.price * item.quantity).toLocaleString()}\n\n`;
+      });
+      message += `*Estimated Total: Rs. ${cartTotal.toLocaleString()}*\n`;
+      message += `\nPlease confirm availability and final pricing.`;
+      
+      const whatsappUrl = `https://wa.me/923202220001?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      clearCart();
+    } catch (err) {
+      console.error('Checkout failed:', err);
+      alert('Failed to place order. Please try again or contact us directly.');
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   if (cartItems.length === 0) {
@@ -120,8 +163,8 @@ const Cart = () => {
               <span className="text-3xl font-black text-secondary leading-none">Rs. {cartTotal.toLocaleString()}</span>
             </div>
             
-            <button onClick={handleCheckout} className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-5 font-bold text-sm uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-[#25D366]/30 hover:-translate-y-1 flex items-center justify-center gap-2">
-              <MessageCircle size={20} /> Checkout via WhatsApp
+            <button onClick={handleCheckout} disabled={isCheckingOut} className={`w-full text-white py-5 font-bold text-sm uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 ${isCheckingOut ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#25D366] hover:bg-[#128C7E] hover:shadow-xl hover:shadow-[#25D366]/30 hover:-translate-y-1'}`}>
+              <MessageCircle size={20} /> {isCheckingOut ? 'Processing...' : 'Checkout via WhatsApp'}
             </button>
             
             <p className="text-[11px] font-medium text-gray-400 mt-6 text-center px-4 leading-relaxed">

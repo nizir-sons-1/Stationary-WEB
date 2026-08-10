@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ShoppingBag, Plus, Minus, Truck, ShieldCheck, Phone } from 'lucide-react';
-import productsData from '../data/products.json';
 import { useCart } from '../context/CartContext';
+import { useProduct } from '../hooks/useSupabase';
 
 const ProductDetails = () => {
   const { name } = useParams();
@@ -11,16 +11,34 @@ const ProductDetails = () => {
   
   const decodedName = decodeURIComponent(name);
   
-  // Get all variations of this product
-  const productVariations = useMemo(() => {
-    return productsData.filter(p => p.PRODUCT_NAME === decodedName);
-  }, [decodedName]);
+  const { product: currentProduct, loading } = useProduct(decodedName);
 
-  const [selectedSize, setSelectedSize] = useState(() => {
-    if (productVariations.length === 0) return '';
-    const p = productVariations[0];
-    return p.LENGTH_INCH && p.WIDTH_INCH ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}` : (p.Display_Size || 'N/A');
-  });
+  // Map Supabase product_variations to the expected format
+  const productVariations = useMemo(() => {
+    if (!currentProduct || !currentProduct.product_variations) return [];
+    return currentProduct.product_variations.map(v => ({
+      PRODUCT_NAME: currentProduct.product_name,
+      Description: currentProduct.description,
+      Category: currentProduct.category,
+      ProductID: v.id,
+      Display_Size: v.size,
+      GSM: String(v.gsm),
+      CALCULATED_PRICE_RS: v.price,
+      PACKING_TYPE: v.packing_type,
+      Stock: v.stock,
+      IMAGE_URL: v.image_url || currentProduct.image_url
+    }));
+  }, [currentProduct]);
+
+  const [selectedSize, setSelectedSize] = useState('');
+  
+  // Initialize Size when product loads
+  React.useEffect(() => {
+    if (productVariations.length > 0 && !selectedSize) {
+      const p = productVariations[0];
+      setSelectedSize(p.LENGTH_INCH && p.WIDTH_INCH ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}` : (p.Display_Size || 'N/A'));
+    }
+  }, [productVariations, selectedSize]);
 
   const availableGsms = useMemo(() => {
     if (!selectedSize || productVariations.length === 0) return [];
@@ -43,7 +61,17 @@ const ProductDetails = () => {
     }
   }, [availableGsms, selectedGsm]);
 
-  if (productVariations.length === 0) {
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-container-max mx-auto px-margin-mobile md:px-gutter py-8 animate-pulse">
+        <div className="w-full aspect-[4/3] lg:aspect-square bg-gray-200 rounded-[32px] mb-8"></div>
+        <div className="h-10 bg-gray-200 w-3/4 rounded-lg mb-4"></div>
+        <div className="h-6 bg-gray-200 w-1/2 rounded-lg"></div>
+      </div>
+    );
+  }
+
+  if (productVariations.length === 0 || !currentProduct) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <h2 className="text-2xl font-bold text-gray-800">Product not found</h2>
@@ -52,24 +80,24 @@ const ProductDetails = () => {
     );
   }
 
-  const currentProduct = productVariations.find(p => {
+  const currentVariation = productVariations.find(p => {
     const pSize = p.LENGTH_INCH && p.WIDTH_INCH ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}` : (p.Display_Size || 'N/A');
     return p.GSM === selectedGsm && pSize === selectedSize;
   }) || productVariations[0];
 
-  const inStock = Number(currentProduct.Stock) > 0;
-  const price = Number(currentProduct.CALCULATED_PRICE_RS) || 0;
+  const inStock = Number(currentVariation.Stock) > 0;
+  const price = Number(currentVariation.CALCULATED_PRICE_RS) || 0;
   const totalPrice = price * quantity;
 
   const handleAddToCart = () => {
     const item = {
-      id: currentProduct.ProductID || `${currentProduct.PRODUCT_NAME}-${currentProduct.GSM}-${selectedSize}`,
-      name: currentProduct.PRODUCT_NAME,
-      gsm: currentProduct.GSM,
+      id: currentVariation.ProductID || `${currentVariation.PRODUCT_NAME}-${currentVariation.GSM}-${selectedSize}`,
+      name: currentVariation.PRODUCT_NAME,
+      gsm: currentVariation.GSM,
       size: selectedSize,
       price: price,
-      image: currentProduct.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      packingType: currentProduct.PACKING_TYPE || 'ream'
+      image: currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      packingType: currentVariation.PACKING_TYPE || 'ream'
     };
     
     addToCart(item, quantity, isBulk, isBulk ? bulkNote : null);
@@ -91,7 +119,7 @@ const ProductDetails = () => {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-orange-200/50 rounded-full opacity-60 -z-10 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
             
             <img 
-              src={currentProduct.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} 
+              src={currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} 
               alt={decodedName} 
               className="w-full h-full object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-500 preserve-3d mix-blend-multiply"
               style={{ transform: 'translateZ(30px)' }}
@@ -109,13 +137,13 @@ const ProductDetails = () => {
         {/* Right: Product Details & Controls */}
         <div className="flex flex-col pt-4">
           <div className="inline-block px-3 py-1 rounded-full bg-orange-50 border border-orange-100 mb-4 w-fit">
-            <p className="text-primary text-[11px] font-bold uppercase tracking-widest">{currentProduct.Category || 'Premium Paper'}</p>
+            <p className="text-primary text-[11px] font-bold uppercase tracking-widest">{currentVariation.Category || 'Premium Paper'}</p>
           </div>
           
           <h1 className="text-[32px] lg:text-[48px] font-black text-secondary leading-tight mb-2 tracking-tight">
             {decodedName}
           </h1>
-          <p className="text-gray-500 text-lg mb-8">{currentProduct.Description || 'Premium High Quality Stock for professional printing and arts.'}</p>
+          <p className="text-gray-500 text-lg mb-8">{currentVariation.Description || 'Premium High Quality Stock for professional printing and arts.'}</p>
 
           {/* Configuration Box */}
           <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 lg:p-8 mb-8 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
@@ -173,7 +201,7 @@ const ProductDetails = () => {
 
             <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-6">
               <div className="flex flex-col w-full sm:w-auto">
-                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Quantity ({currentProduct.PACKING_TYPE || 'ream'})</span>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Quantity ({currentVariation.PACKING_TYPE || 'ream'})</span>
                 <div className="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm w-fit">
                   <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-3 hover:bg-gray-50 text-secondary transition-colors"><Minus size={16} /></button>
                   <span className="w-12 text-center font-bold text-lg text-secondary">{quantity}</span>
