@@ -3,6 +3,7 @@ import { Search, ShoppingCart, User, Phone, Palette, BookOpen, Layers, PenTool }
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
+import SearchModal from './SearchModal';
 
 const Navbar = () => {
   const location = useLocation();
@@ -10,6 +11,7 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   const [scrolled, setScrolled] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -80,7 +82,7 @@ const Navbar = () => {
 
         {/* Right Icons */}
         <div className="flex items-center gap-4 md:gap-6 flex-1 justify-end text-secondary">
-          <button aria-label="search" className="hover:text-primary transition-colors p-2 hover:bg-orange-50 rounded-full">
+          <button onClick={() => setIsSearchOpen(true)} aria-label="search" className="hover:text-primary transition-colors p-2 hover:bg-orange-50 rounded-full">
             <Search size={22} strokeWidth={2} />
           </button>
           <Link to="/profile" aria-label="user" className="hover:text-primary transition-colors hidden sm:block p-2 hover:bg-orange-50 rounded-full">
@@ -129,6 +131,8 @@ const Navbar = () => {
         )}
       </AnimatePresence>
       </div>
+
+      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </motion.header>
   );
 };
