@@ -82,7 +82,7 @@ const CategoryCards = () => {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "-50px" }}
-        className="flex overflow-x-auto md:flex-wrap justify-start md:justify-center gap-6 md:gap-10 lg:gap-16 px-margin-mobile md:px-0 pb-12 pt-6 hide-scrollbar snap-x snap-mandatory"
+        className="flex overflow-x-auto md:flex-wrap justify-start md:justify-center gap-6 md:gap-10 lg:gap-16 px-margin-mobile md:px-0 pb-12 pt-6 hide-scrollbar scroll-row-x snap-x snap-mandatory"
       >
         {categories.map((cat, index) => {
           // Stagger sizes: Even items are big, Odd items are small and pushed down slightly
@@ -118,7 +118,10 @@ const CategoryCards = () => {
 
                   <div className="preserve-3d text-center" style={{ transform: 'translateZ(30px)' }}>
                     <h3 className={`font-bold text-secondary group-hover:text-primary transition-colors tracking-tight shadow-sm ${isBig ? 'text-[18px] md:text-[20px]' : 'text-[16px] md:text-[18px]'}`}>{cat.name}</h3>
-                    <p className="text-[12px] text-gray-500 font-medium mt-1 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full border border-white/50 shadow-sm group-hover:bg-orange-50 group-hover:text-orange-600 transition-colors inline-block">{cat.count}</p>
+                    {/* No blur: these pills ride on cards that spring on
+                        rotateX/scale as you scroll, so the backdrop was being
+                        re-blurred on every frame of every card's animation. */}
+                    <p className="text-[12px] text-gray-500 font-medium mt-1 bg-white px-3 py-1 rounded-full border border-white/50 shadow-sm group-hover:bg-orange-50 group-hover:text-orange-600 transition-colors inline-block">{cat.count}</p>
                   </div>
                 </Link>
               </motion.div>

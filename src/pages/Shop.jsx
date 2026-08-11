@@ -114,13 +114,13 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
   const inStock = Number(currentVariation.Stock) > 0;
 
   return (
-    <article className="product-card w-full h-full group bg-white border border-white/60 shadow-glass glass-panel flex flex-col rounded-2xl hover:shadow-antigravity hover:-translate-y-2 transition-all duration-500 overflow-hidden">
+    <article className="product-card w-full h-full group bg-white border border-white/60 shadow-glass flex flex-col rounded-2xl hover:shadow-antigravity hover:-translate-y-2 transition-[transform,box-shadow] duration-500 overflow-hidden">
       {/* Product Image Link */}
       <Link to={`/product/${encodeURIComponent(productName)}`} className="aspect-[5/4] bg-surface-variant overflow-hidden relative border-b border-gray-100 p-2 md:p-4 flex items-center justify-center cursor-pointer">
         {inStock ? (
-          <div className="absolute top-2 left-2 bg-white/90 backdrop-blur text-[#111111] text-[7px] md:text-[9px] uppercase font-bold px-1.5 py-0.5 md:px-2 md:py-1 tracking-wider border border-gray-200 rounded-sm md:rounded-md shadow-sm z-10">In Stock</div>
+          <div className="absolute top-2 left-2 bg-white text-[#111111] text-[7px] md:text-[9px] uppercase font-bold px-1.5 py-0.5 md:px-2 md:py-1 tracking-wider border border-gray-200 rounded-sm md:rounded-md shadow-sm z-10">In Stock</div>
         ) : (
-          <div className="absolute top-2 left-2 bg-red-50/90 backdrop-blur text-red-600 text-[7px] md:text-[9px] uppercase font-bold px-1.5 py-0.5 md:px-2 md:py-1 tracking-wider border border-red-100 rounded-sm md:rounded-md shadow-sm z-10">Out of Stock</div>
+          <div className="absolute top-2 left-2 bg-red-50 text-red-600 text-[7px] md:text-[9px] uppercase font-bold px-1.5 py-0.5 md:px-2 md:py-1 tracking-wider border border-red-100 rounded-sm md:rounded-md shadow-sm z-10">Out of Stock</div>
         )}
         <img
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out absolute inset-0 mix-blend-multiply"
@@ -355,13 +355,13 @@ const Shop = () => {
                 key={idx}
                 role="button"
                 onClick={() => setSelectedMainCategory(cat.name)}
-                className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[16px] md:rounded-[24px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-all duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'}`}
+                className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[16px] md:rounded-[24px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-[transform,box-shadow] duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'}`}
               >
                 <CardArt src={cat.image} alt={cat.name} eager={idx < 3} />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/40 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
                 <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-4 md:p-6' : 'p-2 sm:p-3 md:p-5'}`}>
                   <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-xl text-[24px] sm:text-[28px] md:text-[36px]' : 'font-headline-md text-[13px] sm:text-[15px] md:text-[20px]'}`}>{cat.name}</span>
-                  <span className={`text-white/90 mt-1.5 md:mt-2 uppercase tracking-widest font-bold bg-white/20 rounded-full backdrop-blur-sm border border-white/20 ${isFeatured ? 'text-[10px] md:text-[12px] px-3 py-1 md:px-4 md:py-1.5' : 'text-[7px] sm:text-[8px] md:text-[10px] px-2 py-0.5 md:px-3 md:py-1'}`}>{cat.count}</span>
+                  <span className={`text-white/90 mt-1.5 md:mt-2 uppercase tracking-widest font-bold bg-white/25 rounded-full border border-white/20 ${isFeatured ? 'text-[10px] md:text-[12px] px-3 py-1 md:px-4 md:py-1.5' : 'text-[7px] sm:text-[8px] md:text-[10px] px-2 py-0.5 md:px-3 md:py-1'}`}>{cat.count}</span>
                 </div>
               </div>
             );
@@ -403,7 +403,7 @@ const Shop = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/50 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
                 <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-3 md:p-6' : 'p-1.5 md:p-3'}`}>
                   <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-lg text-[18px] sm:text-[22px] md:text-[28px]' : 'font-headline-sm text-[10px] sm:text-[12px] md:text-[15px]'}`}>{cat.name}</span>
-                  <span className={`text-white/90 mt-1 md:mt-1.5 uppercase tracking-widest font-bold bg-white/20 rounded-full backdrop-blur-sm border border-white/20 ${isFeatured ? 'text-[9px] md:text-[11px] px-2 py-0.5 md:px-3 md:py-1' : 'text-[6px] sm:text-[7px] md:text-[9px] px-1.5 py-0.5'}`}>
+                  <span className={`text-white/90 mt-1 md:mt-1.5 uppercase tracking-widest font-bold bg-white/25 rounded-full border border-white/20 ${isFeatured ? 'text-[9px] md:text-[11px] px-2 py-0.5 md:px-3 md:py-1' : 'text-[6px] sm:text-[7px] md:text-[9px] px-1.5 py-0.5'}`}>
                     {countsLoading ? '...' : (count > 0 ? `${count} Items` : 'Soon')}
                   </span>
                 </div>

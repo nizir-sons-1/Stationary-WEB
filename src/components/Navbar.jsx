@@ -35,7 +35,11 @@ const Navbar = () => {
       if (frame) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
-        setScrolled(window.scrollY > 20);
+        // Hysteresis: expand at 20px, collapse back at 8px. With a single
+        // threshold, hovering around y=20 restarted a 700ms width animation on
+        // a fixed element over and over — the jank you felt the instant you
+        // started scrolling.
+        setScrolled((was) => (was ? window.scrollY > 8 : window.scrollY > 20));
       });
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -54,7 +58,11 @@ const Navbar = () => {
     <header
       className={`w-full z-50 fixed top-0 left-0 flex justify-center pointer-events-none font-sans animate-slide-down transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${scrolled ? 'pt-4 px-4 md:pt-6 md:px-6' : 'pt-0 px-0'}`}
     >
-      <div className={`w-full pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col ${scrolled ? 'max-w-6xl rounded-[32px] glass-pill overflow-hidden border border-white/40 shadow-glass' : 'bg-white shadow-sm'}`}>
+      {/* Transitioning *all* properties here also animated the pill's backdrop
+          filter and every colour on the subtree for 700ms after each scroll.
+          Naming the four that actually change keeps the same motion for a
+          fraction of the cost. */}
+      <div className={`w-full pointer-events-auto transition-[max-width,border-radius,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col ${scrolled ? 'max-w-6xl rounded-[32px] glass-pill overflow-hidden border border-white/40 shadow-glass' : 'bg-white shadow-sm'}`}>
       
       {/* Top Banner (Info) */}
       <div className="bg-secondary text-white text-[12px] font-medium py-2 px-margin-mobile md:px-gutter flex justify-between items-center hidden md:flex">

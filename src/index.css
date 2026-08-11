@@ -3,22 +3,89 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    /* Anchor jumps and programmatic scrolls glide. Wheel and touch stay
+       native — nothing is hijacked onto the main thread, which is what makes
+       "smooth scroll" libraries feel heavy on mid-range phones. */
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply antialiased text-gray-900 bg-[#f4f4f5];
+  }
+
+  /* Anyone who asked the OS to calm motion down gets a still page. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer utilities {
+  /*
+   * Deliberately no `backdrop-filter` here. Every panel wearing this class sits
+   * on a flat surface — #fafaf9, white, or a full-bleed image that covers it —
+   * so the blur had nothing visible to sample. The browser did not know that:
+   * it re-sampled and re-blurred the backdrop of every panel on every scroll
+   * frame, and a Shop grid holds dozens of them. A slightly more opaque white
+   * reads identically and composites for free.
+   */
   .glass-panel {
-    @apply bg-white/60 backdrop-blur-xl border border-white/50 shadow-glass;
+    @apply bg-white/70 border border-white/50 shadow-glass;
   }
+
+  /*
+   * The navbar pill is the one surface where the blur genuinely shows, because
+   * page content slides underneath it. Desktop GPUs absorb a single blurred
+   * bar; phones re-blur it every frame of every scroll, so they get an opaque
+   * pill instead.
+   */
   .glass-pill {
-    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-antigravity;
+    @apply bg-white/90 border border-white/40 shadow-antigravity;
   }
+
+  @media (min-width: 768px) {
+    .glass-pill {
+      @apply bg-white/70 backdrop-blur-md;
+    }
+  }
+
   .preserve-3d {
     transform-style: preserve-3d;
   }
+
   .perspective-1000 {
     perspective: 1000px;
+  }
+
+  /* Used by the category row and the Shop sidebar. It was referenced in both
+     places but never defined, so both showed a native scrollbar. */
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Horizontal card rows: stop a fling from chaining into the page (or into
+     the browser's back gesture) once the row hits its end. */
+  .scroll-row-x {
+    overscroll-behavior-x: contain;
+  }
+
+  /* Fixed bottom bar clears the iPhone home indicator. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }

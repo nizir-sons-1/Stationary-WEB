@@ -5,7 +5,11 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // `html { scroll-behavior: smooth }` would otherwise animate this, so every
+    // route change would spend a second gliding to the top of a page you have
+    // already navigated away from. Route jumps should be instant; only anchors
+    // and explicit in-page scrolls get the glide.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [pathname]);
 
   return null;

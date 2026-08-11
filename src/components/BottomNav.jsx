@@ -8,8 +8,14 @@ const BottomNav = () => {
   const { cartCount } = useCart();
   const isActive = (path) => location.pathname === path;
 
+  // The bar used to carry a large backdrop blur — the worst possible place for
+  // one: fixed, full-width, and `md:hidden`, so it only ever rendered on the
+  // phones least able to afford re-blurring a strip of the page every scroll
+  // frame. Opaque white reads the same over this site's light surfaces.
+  // (Class names stay out of these comments on purpose: Tailwind scans this
+  // file as plain text, so naming one here would ship its rule as dead CSS.)
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-lg border-t border-gray-100 z-50 flex justify-around items-center h-16 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all duration-300">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 z-50 flex justify-around items-center h-16 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
       <Link to="/" className={`flex flex-col items-center justify-center w-full h-full gap-1 p-2 min-w-[44px] min-h-[44px] transition-colors ${isActive('/') ? 'text-primary' : 'text-gray-400 hover:text-secondary'}`}>
         <Home size={22} strokeWidth={isActive('/') ? 2.5 : 2} />
         <span className="font-sans text-[10px] tracking-wide font-bold">Home</span>

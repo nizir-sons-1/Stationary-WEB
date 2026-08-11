@@ -28,8 +28,9 @@ const FloatingWhatsApp = () => {
         <div
           className="relative w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] shadow-[0_4px_20px_rgba(37,211,102,0.4)] flex items-center justify-center border-2 border-white/20 overflow-hidden transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-95"
         >
-          {/* Shine effect */}
-          <div className="absolute top-0 left-[-100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] group-hover:left-[200%] transition-all duration-1000 ease-in-out"></div>
+          {/* Shine effect — travels on `transform`, not `left`. Sliding `left`
+              relaid out the button on all 60 frames of the sweep. */}
+          <div className="absolute top-0 left-[-100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] group-hover:translate-x-[600%] transition-transform duration-1000 ease-in-out"></div>
           
           {/* WhatsApp SVG Icon */}
           <svg 
@@ -45,11 +46,13 @@ const FloatingWhatsApp = () => {
       </a>
 
       {/* Tooltip — reveals on hover/focus of the button above via `peer` */}
-      <div className="mb-3 px-4 py-2 bg-white/90 backdrop-blur-md border border-white/40 shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-2xl pointer-events-none relative origin-bottom-right opacity-0 translate-y-2 scale-90 transition-all duration-200 ease-out peer-hover:opacity-100 peer-hover:translate-y-0 peer-hover:scale-100 peer-focus-visible:opacity-100 peer-focus-visible:translate-y-0 peer-focus-visible:scale-100">
+      {/* No backdrop blur here: this is a fixed element, so the filter held a
+          live backdrop layer on every page even at opacity 0. */}
+      <div className="mb-3 px-4 py-2 bg-white border border-white/40 shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-2xl pointer-events-none relative origin-bottom-right opacity-0 translate-y-2 scale-90 transition-all duration-200 ease-out peer-hover:opacity-100 peer-hover:translate-y-0 peer-hover:scale-100 peer-focus-visible:opacity-100 peer-focus-visible:translate-y-0 peer-focus-visible:scale-100">
         <span className="text-[13px] font-bold text-gray-800 tracking-wide whitespace-nowrap">
           Need Help? Chat with us!
         </span>
-        <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white/90 border-b border-r border-white/40 rotate-45"></div>
+        <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-b border-r border-white/40 rotate-45"></div>
       </div>
     </div>
   );

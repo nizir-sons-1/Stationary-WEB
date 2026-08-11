@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { BadgeCheck, Truck, Globe, Zap } from 'lucide-react';
+import { useInView } from '../hooks/useInView';
 
 const TrustStats = () => {
+  const sectionRef = useRef(null);
+  // The marquee is an infinite translate. Off-screen it is invisible work the
+  // compositor still does on every frame of every scroll further down the page.
+  const inView = useInView(sectionRef);
+
   const stats = [
     {
       icon: <BadgeCheck size={28} className="text-primary" />,
@@ -32,16 +38,16 @@ const TrustStats = () => {
   const marqueeStats = [...stats, ...stats, ...stats, ...stats];
 
   return (
-    <section className="relative z-20 max-w-[100vw] overflow-hidden -mt-8 md:-mt-12 mb-12 md:mb-20 py-4">
+    <section ref={sectionRef} className="relative z-20 max-w-[100vw] overflow-hidden -mt-8 md:-mt-12 mb-12 md:mb-20 py-4">
       {/* Edge fade gradients */}
       <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-surface to-transparent z-30 pointer-events-none"></div>
       <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-surface to-transparent z-30 pointer-events-none"></div>
       
-      <div className="flex w-max animate-marquee-fast hover:[animation-play-state:paused]">
+      <div className={`flex w-max animate-marquee-fast will-change-transform hover:[animation-play-state:paused] ${inView ? '' : '[animation-play-state:paused]'}`}>
         {marqueeStats.map((stat, idx) => (
           <div 
             key={idx} 
-            className="group flex flex-row items-center text-left p-3 md:p-5 bg-white/90 backdrop-blur-md rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-gray-100 hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-500 mx-2 md:mx-3 w-[220px] md:w-[280px] shrink-0 cursor-pointer overflow-hidden relative"
+            className="group flex flex-row items-center text-left p-3 md:p-5 bg-white rounded-[16px] shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-gray-100 hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-500 mx-2 md:mx-3 w-[220px] md:w-[280px] shrink-0 cursor-pointer overflow-hidden relative"
           >
             {/* Subtle highlight effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>

@@ -56,7 +56,7 @@ const Footer = () => {
               <input 
                 type="email" 
                 placeholder="Enter your email address" 
-                className="w-full bg-white/5 border border-white/10 rounded-full py-4 pl-6 pr-32 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all duration-300 backdrop-blur-md"
+                className="w-full bg-white/5 border border-white/10 rounded-full py-4 pl-6 pr-32 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-colors duration-300"
               />
               <button className="absolute right-1.5 top-1.5 bottom-1.5 bg-primary hover:bg-orange-500 text-white font-bold text-[13px] px-4 md:px-6 rounded-full flex items-center gap-2 transition-colors duration-300 shadow-[0_4px_14px_rgba(234,88,12,0.3)] hover:shadow-[0_4px_20px_rgba(234,88,12,0.5)]">
                 Subscribe <ArrowRight size={14} className="hidden sm:block" />

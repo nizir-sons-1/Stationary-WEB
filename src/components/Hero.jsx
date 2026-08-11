@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, ArrowRight, Lock, Unlock } from 'lucide-react';
+import { useInView } from '../hooks/useInView';
 
 // How long the intro overlay owns the screen (Preloader DURATION + EXIT).
 const INTRO_MS = 1550;
+
+// Auto-scroll speed in px per *second*, not per frame. The old per-frame step
+// ran at double speed on a 120 Hz phone and half speed on a throttled tab.
+const AUTOSCROLL_PX_PER_SEC = 48;
 
 const CAROUSEL = [
   { src: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80', alt: 'Art Supplies Hub' },
@@ -23,25 +28,49 @@ const Hero = () => {
   const scrollContainerRef = useRef(null);
   const isInteracting = useRef(false);
   const [isLocked, setIsLocked] = useState(true);
+  const inView = useInView(containerRef);
 
   const headlineText = "Your Ultimate Paper & Stationery Hub".split(" ");
 
   useEffect(() => {
-    let animationFrameId;
-    const autoScroll = () => {
-      if (isLocked && !isInteracting.current && scrollContainerRef.current) {
-        const el = scrollContainerRef.current;
-        el.scrollTop += 0.8;
-        // Seamless loop (approximate)
-        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) {
-          el.scrollTop = 0;
+    // Three ways this loop used to waste the page's frame budget, all fixed
+    // here: it re-armed itself forever even when unlocked (a permanent tick
+    // doing nothing), it kept writing scrollTop while the hero was scrolled
+    // far off-screen, and it stepped a fixed number of pixels per frame so the
+    // speed tracked the display's refresh rate.
+    if (!isLocked || !inView) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+    let frame = 0;
+    let previous = 0;
+    // Kept here rather than read back off the element each frame: a sub-pixel
+    // step written to scrollTop can be rounded away on read, and 0.8px would
+    // then round to nothing and stall the carousel outright.
+    let offset = scrollContainerRef.current?.scrollTop ?? 0;
+
+    const step = (now) => {
+      const el = scrollContainerRef.current;
+      // A hidden tab freezes rAF; the clamp stops the first frame back from
+      // applying the whole elapsed gap as one jump.
+      const elapsed = previous ? Math.min(now - previous, 100) : 0;
+      previous = now;
+
+      if (el) {
+        if (isInteracting.current) {
+          // The user is dragging — pick up from wherever they leave it.
+          offset = el.scrollTop;
+        } else {
+          offset += (AUTOSCROLL_PX_PER_SEC * elapsed) / 1000;
+          if (offset + el.clientHeight >= el.scrollHeight - 5) offset = 0;
+          el.scrollTop = offset;
         }
       }
-      animationFrameId = requestAnimationFrame(autoScroll);
+      frame = requestAnimationFrame(step);
     };
-    animationFrameId = requestAnimationFrame(autoScroll);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [isLocked]);
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [isLocked, inView]);
 
   useEffect(() => {
     // Wait for the intro only while the intro is actually on screen. This reads
@@ -147,7 +176,10 @@ const Hero = () => {
             {headlineText.map((word, i) => (
               <React.Fragment key={i}>
                 <span className="inline-block overflow-hidden align-top pb-[0.35em] -mb-[0.35em] px-[0.05em]">
-                  <span className={`split-word inline-block will-change-transform ${word === 'Paper' ? 'text-primary relative' : ''}`}>
+                  {/* No permanent `will-change`: the headline is 6 words, each
+                      would hold its own compositor layer for the life of the
+                      page for one 0.8s tween. gsap adds it while it tweens. */}
+                  <span className={`split-word inline-block ${word === 'Paper' ? 'text-primary relative' : ''}`}>
                     {word}
                     {word === 'Paper' && (
                       <svg className="absolute -bottom-2 md:-bottom-4 left-0 w-full h-auto text-orange-200 -z-10" viewBox="0 0 100 20" preserveAspectRatio="none">
@@ -179,8 +211,11 @@ const Hero = () => {
         <div className="relative flex justify-center items-center h-[400px] md:h-[550px] perspective-1000 preserve-3d w-full">
 
           {/* Circular organic background shapes with parallax (optimized) */}
-          <div className="parallax-bg absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] md:w-[600px] md:h-[600px] rounded-full opacity-60 -z-10" style={{ background: 'radial-gradient(circle, rgba(254,215,170,0.6) 0%, transparent 60%)' }}></div>
-          <div className="parallax-bg absolute top-1/2 left-1/2 -translate-x-1/4 -translate-y-3/4 w-[350px] h-[350px] md:w-[450px] md:h-[450px] rounded-full opacity-60 -z-10" data-speed="0.8" style={{ background: 'radial-gradient(circle, rgba(191,219,254,0.6) 0%, transparent 60%)' }}></div>
+          {/* These two do move on every scroll frame, so the layer promotion
+              `will-change` buys is worth its cost here — it keeps the large
+              radial gradients off the repaint path. */}
+          <div className="parallax-bg absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] md:w-[600px] md:h-[600px] rounded-full opacity-60 -z-10 will-change-transform" style={{ background: 'radial-gradient(circle, rgba(254,215,170,0.6) 0%, transparent 60%)' }}></div>
+          <div className="parallax-bg absolute top-1/2 left-1/2 -translate-x-1/4 -translate-y-3/4 w-[350px] h-[350px] md:w-[450px] md:h-[450px] rounded-full opacity-60 -z-10 will-change-transform" data-speed="0.8" style={{ background: 'radial-gradient(circle, rgba(191,219,254,0.6) 0%, transparent 60%)' }}></div>
 
           {/* 3D Tilted Scrollable Carousel */}
           <div ref={imageRef} className="relative z-10 w-full h-[500px] md:h-[700px] preserve-3d flex justify-center items-center overflow-hidden" style={{ WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)' }}>
@@ -188,7 +223,7 @@ const Hero = () => {
             {/* Scroll Lock Toggle */}
             <button 
               onClick={() => setIsLocked(!isLocked)}
-              className="absolute top-6 right-6 md:top-10 md:right-10 z-50 bg-white/80 backdrop-blur-md border border-white/50 p-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.1)] text-secondary hover:bg-white hover:scale-110 transition-all duration-300 pointer-events-auto flex items-center justify-center"
+              className="absolute top-6 right-6 md:top-10 md:right-10 z-50 bg-white/90 border border-white/50 p-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.1)] text-secondary hover:bg-white hover:scale-110 transition-all duration-300 pointer-events-auto flex items-center justify-center"
               title={isLocked ? "Unlock to scroll manually" : "Lock to auto-scroll"}
             >
               {isLocked ? <Lock size={20} className="text-gray-500" /> : <Unlock size={20} className="text-primary" />}
@@ -196,22 +231,30 @@ const Hero = () => {
 
             <div className={`w-full h-full flex justify-center preserve-3d transition-all duration-500 ${isLocked ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ transform: 'rotateX(15deg) rotateY(-20deg) rotateZ(5deg)' }}>
               
-              <div 
+              {/*
+                `scrollBehavior: auto` matters: the property inherits from
+                <html>, which is now `smooth`, and this element's scrollTop is
+                written every frame — under `smooth` each write would start its
+                own eased scroll and the carousel would fight itself.
+
+                `hide-scrollbar` replaces an inline `div::-webkit-scrollbar`
+                rule that lived here. That selector was not scoped to this
+                component: it stripped the scrollbar off every div on the site,
+                the Shop sidebar included.
+              */}
+              <div
                 ref={scrollContainerRef}
                 onMouseEnter={() => { if(!isLocked) isInteracting.current = true; }}
                 onMouseLeave={() => { if(!isLocked) isInteracting.current = false; }}
                 onTouchStart={() => { if(!isLocked) isInteracting.current = true; }}
                 onTouchEnd={() => { if(!isLocked) isInteracting.current = false; }}
-                className={`flex flex-col items-center gap-6 md:gap-8 preserve-3d py-[20%] overflow-y-auto h-[150%] w-full ${isLocked ? '' : 'cursor-grab active:cursor-grabbing'}`} 
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                className={`flex flex-col items-center gap-6 md:gap-8 preserve-3d py-[20%] overflow-y-auto h-[150%] w-full hide-scrollbar ${isLocked ? '' : 'cursor-grab active:cursor-grabbing'}`}
+                style={{ overscrollBehavior: 'contain', scrollBehavior: 'auto' }}
               >
-                <style>{`
-                  div::-webkit-scrollbar { display: none; }
-                `}</style>
                 {CAROUSEL_LOOP.map((img, i) => (
                   <div
                     key={i}
-                    className="shrink-0 animate-float motion-reduce:animate-none w-[240px] md:w-[320px] rounded-2xl overflow-hidden glass-panel shadow-[0_30px_60px_rgba(0,0,0,0.15)] border-[2px] border-white/80 p-2 md:p-3 bg-white/40 backdrop-blur-xl preserve-3d"
+                    className={`shrink-0 animate-float motion-reduce:animate-none w-[240px] md:w-[320px] rounded-2xl overflow-hidden glass-panel shadow-[0_30px_60px_rgba(0,0,0,0.15)] border-[2px] border-white/80 p-2 md:p-3 preserve-3d ${inView ? '' : '[animation-play-state:paused]'}`}
                     style={{
                       '--float-z': '40px',
                       '--float-tilt': `${(i % 2 === 0 ? 1 : -1) * 1.5}deg`,
@@ -245,7 +288,7 @@ const Hero = () => {
           */}
           <div ref={badgeRef} className="absolute z-40 top-[15%] left-[5%] md:-left-[5%]">
             <div
-              className="animate-float motion-reduce:animate-none glass-panel p-3 md:p-4 rounded-full shadow-[0_15px_35px_rgba(0,0,0,0.1)] flex items-center gap-3 border border-white/70 bg-white/80 backdrop-blur-md"
+              className={`animate-float motion-reduce:animate-none glass-panel p-3 md:p-4 rounded-full shadow-[0_15px_35px_rgba(0,0,0,0.1)] flex items-center gap-3 border border-white/70 bg-white/90 ${inView ? '' : '[animation-play-state:paused]'}`}
               style={{ '--float-z': '160px', '--float-tilt': '-1.5deg' }}
             >
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-400 to-pink-500 flex items-center justify-center text-white shadow-inner">
