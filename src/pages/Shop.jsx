@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Layers, ArrowLeft, FileText, Package, BookOpen, Newspaper, Tag, Box, CreditCard, Sparkles, Feather, Archive, Palette, PenTool, ShoppingBag } from 'lucide-react';
+import { Layers, ArrowLeft, FileText, Package, BookOpen, Newspaper, Tag, Box, CreditCard, Sparkles, Feather, Archive, Palette, PenTool, ShoppingBag, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useProducts, useCategoryCounts } from '../hooks/useSupabase';
 import TermsModal from '../components/TermsModal';
@@ -65,6 +65,38 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
   const [selectedGsm, setSelectedGsm] = useState('');
   const [isInstallment, setIsInstallment] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+  const btnRef = useRef(null);
+
+  const triggerAddAnimation = () => {
+    setIsAdded(true);
+    // Flying dot animation toward the cart tab
+    if (btnRef.current) {
+      const dot = document.createElement('span');
+      const btnRect = btnRef.current.getBoundingClientRect();
+      const cartEl = document.querySelector('[data-cart-tab]');
+      const targetX = cartEl ? cartEl.getBoundingClientRect().left + cartEl.offsetWidth / 2 - btnRect.left - btnRect.width / 2 : 0;
+      const targetY = cartEl ? cartEl.getBoundingClientRect().top - btnRect.top : -80;
+      dot.style.cssText = `
+        position:fixed;
+        left:${btnRect.left + btnRect.width / 2}px;
+        top:${btnRect.top + btnRect.height / 2}px;
+        width:10px;height:10px;
+        border-radius:50%;
+        background:rgb(234 88 12);
+        pointer-events:none;
+        z-index:9999;
+        transform:translate(-50%,-50%);
+      `;
+      document.body.appendChild(dot);
+      dot.animate([
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+        { transform: `translate(calc(-50% + ${targetX}px), calc(-50% + ${targetY}px)) scale(0.3)`, opacity: 0 }
+      ], { duration: 600, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', fill: 'forwards' })
+        .onfinish = () => dot.remove();
+    }
+    setTimeout(() => setIsAdded(false), 1500);
+  };
 
   // Extract all unique Sizes for this product group
   const availableSizes = useMemo(() => {
@@ -211,12 +243,26 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
                     image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
                     packingType: currentVariation.PACKING_TYPE || 'ream'
                   }, 1, false, null, false, null);
+                  triggerAddAnimation();
                 }
               }
             }}
-            className={`${inStock ? 'bg-[#111111] text-white hover:bg-primary shadow-[0_4px_14px_rgba(17,17,17,0.2)] hover:shadow-[0_4px_14px_rgba(234,88,12,0.3)]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'} w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 hover:-translate-y-1`}
+            ref={btnRef}
+            className={`${
+              isAdded
+                ? 'bg-green-500 text-white shadow-[0_4px_14px_rgba(34,197,94,0.4)]'
+                : inStock
+                  ? 'bg-[#111111] text-white hover:bg-primary shadow-[0_4px_14px_rgba(17,17,17,0.2)] hover:shadow-[0_4px_14px_rgba(234,88,12,0.3)]'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            } w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 hover:-translate-y-1`}
           >
-            {inStock ? <ShoppingBag size={16} className="md:w-5 md:h-5 w-4 h-4" /> : <span className="text-[8px] font-bold">OUT</span>}
+            {isAdded ? (
+              <Check size={16} className="md:w-5 md:h-5 w-4 h-4 animate-[scale-in_0.2s_ease-out]" />
+            ) : inStock ? (
+              <ShoppingBag size={16} className="md:w-5 md:h-5 w-4 h-4" />
+            ) : (
+              <span className="text-[8px] font-bold">OUT</span>
+            )}
           </button>
         </div>
       </div>

@@ -94,7 +94,7 @@ export function useProducts(category = null, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     load(cacheKey, async () => {
-      let query = supabase.from('products').select(PRODUCT_FIELDS);
+      let query = supabase.from('products').select(PRODUCT_FIELDS).eq('is_hidden', false);
       if (category) query = query.eq('category', category);
       const { data, error } = await query;
       if (error) throw error;
@@ -126,7 +126,8 @@ export function useProductIndex(enabled = true) {
     load(cacheKey, async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, product_name, category, image_url');
+        .select('id, product_name, category, image_url')
+        .eq('is_hidden', false);
       if (error) throw error;
       return data;
     });
@@ -141,7 +142,7 @@ export function useCategoryCounts() {
   useEffect(() => {
     load(COUNTS_KEY, async () => {
       // Only the category column travels over the wire; the tally is done here.
-      const { data, error } = await supabase.from('products').select('category');
+      const { data, error } = await supabase.from('products').select('category').eq('is_hidden', false);
       if (error) throw error;
 
       const counts = {};
