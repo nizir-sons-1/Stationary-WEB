@@ -6,6 +6,7 @@ import BottomNav from './components/BottomNav';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import Home from './pages/Home';
 import Preloader from './components/Preloader';
+import ScrollToTop from './components/ScrollToTop';
 
 // Home ships in the entry chunk because it is the landing route. Everything
 // else is fetched on demand, and prefetched on hover/idle by the router links.
@@ -25,6 +26,7 @@ const RouteFallback = () => (
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Preloader />
       <div className="flex flex-col min-h-screen bg-background">
         <Navbar />

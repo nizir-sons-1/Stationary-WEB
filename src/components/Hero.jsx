@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight, Lock, Unlock } from 'lucide-react';
 
 // How long the intro overlay owns the screen (Preloader DURATION + EXIT).
 const INTRO_MS = 1550;
@@ -20,8 +20,28 @@ const Hero = () => {
   const imageRef = useRef(null);
   const badgeRef = useRef(null);
   const descRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const isInteracting = useRef(false);
+  const [isLocked, setIsLocked] = useState(true);
 
   const headlineText = "Your Ultimate Creative & Stationery Hub".split(" ");
+
+  useEffect(() => {
+    let animationFrameId;
+    const autoScroll = () => {
+      if (isLocked && !isInteracting.current && scrollContainerRef.current) {
+        const el = scrollContainerRef.current;
+        el.scrollTop += 0.8;
+        // Seamless loop (approximate)
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) {
+          el.scrollTop = 0;
+        }
+      }
+      animationFrameId = requestAnimationFrame(autoScroll);
+    };
+    animationFrameId = requestAnimationFrame(autoScroll);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isLocked]);
 
   useEffect(() => {
     // Wait for the intro only while the intro is actually on screen. This reads
@@ -162,15 +182,36 @@ const Hero = () => {
           <div className="parallax-bg absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] md:w-[600px] md:h-[600px] rounded-full opacity-60 -z-10" style={{ background: 'radial-gradient(circle, rgba(254,215,170,0.6) 0%, transparent 60%)' }}></div>
           <div className="parallax-bg absolute top-1/2 left-1/2 -translate-x-1/4 -translate-y-3/4 w-[350px] h-[350px] md:w-[450px] md:h-[450px] rounded-full opacity-60 -z-10" data-speed="0.8" style={{ background: 'radial-gradient(circle, rgba(191,219,254,0.6) 0%, transparent 60%)' }}></div>
 
-          {/* 3D Tilted Continuous Carousel */}
+          {/* 3D Tilted Scrollable Carousel */}
           <div ref={imageRef} className="relative z-10 w-full h-[500px] md:h-[700px] preserve-3d flex justify-center items-center overflow-hidden" style={{ WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)' }}>
-            <div className="w-full flex justify-center preserve-3d" style={{ transform: 'rotateX(15deg) rotateY(-20deg) rotateZ(5deg)' }}>
+            
+            {/* Scroll Lock Toggle */}
+            <button 
+              onClick={() => setIsLocked(!isLocked)}
+              className="absolute top-6 right-6 md:top-10 md:right-10 z-50 bg-white/80 backdrop-blur-md border border-white/50 p-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.1)] text-secondary hover:bg-white hover:scale-110 transition-all duration-300 pointer-events-auto flex items-center justify-center"
+              title={isLocked ? "Unlock to scroll manually" : "Lock to auto-scroll"}
+            >
+              {isLocked ? <Lock size={20} className="text-gray-500" /> : <Unlock size={20} className="text-primary" />}
+            </button>
+
+            <div className={`w-full h-full flex justify-center preserve-3d transition-all duration-500 ${isLocked ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ transform: 'rotateX(15deg) rotateY(-20deg) rotateZ(5deg)' }}>
               
-              <div className="flex flex-col gap-6 md:gap-8 animate-marquee-vertical hover:[animation-play-state:paused] preserve-3d pt-8">
+              <div 
+                ref={scrollContainerRef}
+                onMouseEnter={() => { if(!isLocked) isInteracting.current = true; }}
+                onMouseLeave={() => { if(!isLocked) isInteracting.current = false; }}
+                onTouchStart={() => { if(!isLocked) isInteracting.current = true; }}
+                onTouchEnd={() => { if(!isLocked) isInteracting.current = false; }}
+                className={`flex flex-col items-center gap-6 md:gap-8 preserve-3d py-[20%] overflow-y-auto h-[150%] w-full ${isLocked ? '' : 'cursor-grab active:cursor-grabbing'}`} 
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                <style>{`
+                  div::-webkit-scrollbar { display: none; }
+                `}</style>
                 {CAROUSEL_LOOP.map((img, i) => (
                   <div
                     key={i}
-                    className="animate-float motion-reduce:animate-none w-[240px] md:w-[320px] rounded-2xl overflow-hidden glass-panel shadow-[0_30px_60px_rgba(0,0,0,0.15)] border-[2px] border-white/80 p-2 md:p-3 bg-white/40 backdrop-blur-xl preserve-3d"
+                    className="shrink-0 animate-float motion-reduce:animate-none w-[240px] md:w-[320px] rounded-2xl overflow-hidden glass-panel shadow-[0_30px_60px_rgba(0,0,0,0.15)] border-[2px] border-white/80 p-2 md:p-3 bg-white/40 backdrop-blur-xl preserve-3d"
                     style={{
                       '--float-z': '40px',
                       '--float-tilt': `${(i % 2 === 0 ? 1 : -1) * 1.5}deg`,
