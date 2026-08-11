@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { Minus, Plus, Trash2, ArrowRight, MessageCircle, ArrowLeft, Truck, PackageCheck, CreditCard, Building2, MapPin } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
-// No supabase import here on purpose: checkout hands off to WhatsApp and never
-// touches the database, so importing the client only forced the ~55 kB supabase
-// chunk to download whenever someone opened their cart.
+import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Cart = () => {
@@ -58,18 +56,6 @@ const Cart = () => {
     
     setIsCheckingOut(true);
     try {
-      // Generate a simple Order ID since we are bypassing DB insertion for now
-      const orderId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
-
-      // 3. WhatsApp Redirect
-      let message = `*New Order Request (ID: ${orderId})*\n\n`;
-      
-      message += `*Customer Details:*\n`;
-      message += `Name: ${fullName}\n`;
-      message += `Phone: ${phone}\n`;
-      if (email) message += `Email: ${email}\n`;
-      if (address) message += `Address: ${address}\n`;
-      
       const shipMap = {
         'self_pickup': 'Self Pickup (FREE)',
         'delivery_open': 'Delivery - Open (Min Rs 350)',
@@ -82,7 +68,57 @@ const Cart = () => {
         'cod': 'Cash on Delivery (COD)',
         'online': 'Online Transfer'
       };
-      
+
+      let finalTotal = cartTotal;
+      if (shippingMethod === 'standard_delivery') finalTotal += 200;
+
+      // 1. Insert order into Supabase so admin panel can see it
+      const orderPayload = {
+        customer_name: fullName,
+        customer_phone: phone,
+        customer_email: email || null,
+        customer_address: address || null,
+        whatsapp_number: phone,
+        shipping_method: shipMap[shippingMethod],
+        payment_method: payMap[paymentMethod],
+        total_amount: finalTotal,
+        total_price: finalTotal,
+        status: 'pending',
+        order_type: isB2B ? 'B2B' : 'B2C',
+        items: cartItems.map(item => ({
+          name: item.name,
+          size: item.size,
+          gsm: item.gsm,
+          quantity: item.quantity,
+          packingType: item.packingType,
+          price: item.price,
+          isBulk: item.isBulk || false,
+          bulkDetails: item.bulkDetails || null,
+          isInstallment: item.isInstallment || false,
+          installmentPlan: item.installmentPlan || null,
+        }))
+      };
+
+      const { data: insertedOrder, error: insertError } = await supabase
+        .from('orders')
+        .insert(orderPayload)
+        .select()
+        .single();
+
+      const orderId = insertedOrder?.id?.slice(0, 8).toUpperCase() || `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
+
+      if (insertError) {
+        // Log but don't block — still send WhatsApp so customer isn't stuck
+        console.error('Supabase order insert error:', insertError);
+      }
+
+      // 2. Build WhatsApp message (always runs regardless of DB result)
+      let message = `*New Order Request (ID: ${orderId})*\n\n`;
+      message += `*Customer Details:*\n`;
+      message += `Name: ${fullName}\n`;
+      message += `Phone: ${phone}\n`;
+      if (email) message += `Email: ${email}\n`;
+      if (address) message += `Address: ${address}\n`;
       message += `Shipping: ${shipMap[shippingMethod]}\n`;
       message += `Payment: ${payMap[paymentMethod]}\n\n`;
 
@@ -101,9 +137,6 @@ const Cart = () => {
         }
         message += `   Price: Rs. ${(item.price * item.quantity).toLocaleString()}\n\n`;
       });
-      
-      let finalTotal = cartTotal;
-      if (shippingMethod === 'standard_delivery') finalTotal += 200;
       
       message += `*Total Order Value: Rs. ${finalTotal.toLocaleString()}*\n`;
       message += `\nPlease confirm my order.`;
