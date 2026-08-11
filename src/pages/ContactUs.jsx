@@ -139,7 +139,7 @@ const ContactUs = () => {
         >
           <div className="rounded-[32px] overflow-hidden shadow-glass border border-white/60 h-[400px] relative">
             <iframe 
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1m3!1d3399.7360565576723!2d74.30825317646549!3d31.558882545239535!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39191b00195674b9%3A0xa86214db65adc697!2sNazir%20and%20Sons%20Paper!5e0!3m2!1sen!2s!4v1708453459141!5m2!1sen!2s" 
+              src="https://maps.google.com/maps?q=Nazir%20and%20Sons%20Paper,%20Lahore&t=&z=15&ie=UTF8&iwloc=&output=embed" 
               width="100%" 
               height="100%" 
               style={{ border: 0 }} 
