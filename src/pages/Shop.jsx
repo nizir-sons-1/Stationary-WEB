@@ -241,7 +241,8 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
                     size: selectedSize,
                     price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
                     image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
-                    packingType: currentVariation.PACKING_TYPE || 'ream'
+                    packingType: currentVariation.PACKING_TYPE || 'ream',
+                    category: currentVariation.Category
                   }, 1, false, null, false, null);
                   triggerAddAnimation();
                 }
@@ -279,7 +280,8 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
             size: selectedSize,
             price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
             image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
-            packingType: currentVariation.PACKING_TYPE || 'ream'
+            packingType: currentVariation.PACKING_TYPE || 'ream',
+            category: currentVariation.Category
           }, 1, false, null, true, '3 Months');
         }} 
       />

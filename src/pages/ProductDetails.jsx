@@ -112,7 +112,8 @@ const ProductDetails = () => {
       size: selectedSize,
       price: price,
       image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
-      packingType: currentVariation.PACKING_TYPE || 'ream'
+      packingType: currentVariation.PACKING_TYPE || 'ream',
+      category: currentVariation.Category
     };
     
     addToCart(item, quantity, isBulk, isBulk ? bulkNote : null, isInstallment, isInstallment ? installmentPlan : null);
