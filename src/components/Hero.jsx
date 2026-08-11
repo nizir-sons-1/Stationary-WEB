@@ -1,14 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, ArrowRight } from 'lucide-react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-gsap.registerPlugin(ScrollTrigger);
+// How long the intro overlay owns the screen (Preloader DURATION + EXIT).
+const INTRO_MS = 1550;
 
-// Utility to split text on whitespace without breaking HTML structures if possible,
-// but since we only need text, we'll iterate over elements marked data-split.
-// Removed unused splitTextToSpans function
+const CAROUSEL = [
+  { src: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80', alt: 'Art Supplies Hub' },
+  { src: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80', alt: 'Premium Notebooks' },
+  { src: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=400&q=80', alt: 'Pens & Brushes' },
+];
+// Duplicated so the vertical marquee loops seamlessly.
+const CAROUSEL_LOOP = [...CAROUSEL, ...CAROUSEL];
 
 const Hero = () => {
   const containerRef = useRef(null);
@@ -21,85 +24,87 @@ const Hero = () => {
   const headlineText = "Your Ultimate Creative & Stationery Hub".split(" ");
 
   useEffect(() => {
-    // Determine if it's the first time loading to sync with Preloader
-    const isFirstLoad = !sessionStorage.getItem('site_loaded');
-    const delayTime = isFirstLoad ? 3.7 : 0.1;
-    sessionStorage.setItem('site_loaded', 'true');
-
-    // Lock scrolling initially if it's the first load, else don't lock
-    if (isFirstLoad) {
-      document.body.style.overflow = 'hidden';
+    // Wait for the intro only while the intro is actually on screen. This reads
+    // the flag the Preloader owns rather than a second "site_loaded" key: with
+    // two independent flags, landing on /shop first and then navigating home
+    // left the hero delayed and the page unscrollable for 1.5s with no overlay
+    // visible to explain it.
+    let introRunning = false;
+    try {
+      introRunning = sessionStorage.getItem('preloader_done') !== 'true';
+    } catch {
+      /* storage unavailable — assume no intro and animate immediately */
     }
 
-    const ctx = gsap.context(() => {
-      const headlineTargets = gsap.utils.toArray('.split-word');
+    // The intro overlay covers the page, so hide the scrollbar while it does.
+    // The release is scheduled unconditionally, never gated on an animation
+    // callback — a gsap failure must not leave the page permanently unscrollable.
+    let releaseScroll;
+    if (introRunning) {
+      document.body.style.overflow = 'hidden';
+      releaseScroll = setTimeout(() => {
+        document.body.style.overflow = '';
+      }, INTRO_MS);
+    }
 
-      // Master Timeline
-      const tl = gsap.timeline({
-        delay: delayTime, 
-        onComplete: () => {
-          document.body.style.overflow = ''; // Release scroll
-        }
-      });
+    // gsap + ScrollTrigger is ~70 kB that the first paint does not need. The
+    // markup is styled to its final state and every tween is a `.from()`, so
+    // loading the library after paint costs nothing visually.
+    let ctx;
+    let cancelled = false;
 
-      // If it's the first load, we add a slight 0.6s stagger offset. 
-      // If not, we start immediately at 0s so there's no delay when returning to home.
-      const startTime = isFirstLoad ? 0.6 : 0;
-      const animSpeed = isFirstLoad ? 1 : 0.6; // slightly faster animation on return
+    Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(
+      ([{ default: gsap }, { ScrollTrigger }]) => {
+        if (cancelled) return;
+        gsap.registerPlugin(ScrollTrigger);
 
-      // Choreography using .from() so default state is always visible if JS fails
-      if (ctaContainerRef.current) {
-        tl.from(ctaContainerRef.current.children, {
-          y: 26, opacity: 0, stagger: 0.05, ease: 'power3.out', duration: 0.6 * animSpeed
-        }, startTime);
+        ctx = gsap.context(() => {
+          const headlineTargets = gsap.utils.toArray('.split-word');
+          const startTime = introRunning ? INTRO_MS / 1000 : 0;
+          const animSpeed = introRunning ? 1 : 0.6;
+
+          const tl = gsap.timeline();
+
+          if (ctaContainerRef.current) {
+            tl.from(ctaContainerRef.current.children, {
+              y: 26, opacity: 0, stagger: 0.05, ease: 'power3.out', duration: 0.6 * animSpeed
+            }, startTime);
+          }
+
+          if (headlineTargets.length) {
+            tl.from(headlineTargets, {
+              yPercent: 110, duration: 0.8 * animSpeed, stagger: 0.04, ease: 'power3.out'
+            }, startTime + 0.05);
+          }
+
+          tl.from([descRef.current, imageRef.current, badgeRef.current], {
+            y: 44, opacity: 0, stagger: 0.08, ease: 'power3.out', duration: 0.7 * animSpeed
+          }, startTime + 0.2);
+
+          if (eyebrowRef.current) {
+            tl.from(eyebrowRef.current, { opacity: 0, duration: 0.6 * animSpeed }, startTime + 0.25);
+          }
+
+          // Parallax only ticks while the user scrolls, unlike the old infinite
+          // float tween — that one is a pure CSS animation now.
+          gsap.to('.parallax-bg', {
+            yPercent: 30,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: containerRef.current,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: true,
+            },
+          });
+        }, containerRef);
       }
-      
-      if (headlineTargets.length) {
-        tl.from(headlineTargets, {
-          yPercent: 110, duration: 0.8 * animSpeed, stagger: 0.04, ease: 'power3.out'
-        }, startTime + 0.05);
-      }
-      
-      tl.from([descRef.current, imageRef.current, badgeRef.current], {
-        y: 44, opacity: 0, stagger: 0.08, ease: 'power3.out', duration: 0.7 * animSpeed
-      }, startTime + 0.2);
-      
-      if (eyebrowRef.current) {
-        tl.from(eyebrowRef.current, {
-          opacity: 0, duration: 0.6 * animSpeed
-        }, startTime + 0.25);
-      }
-
-      // Antigravity Floating animation
-      gsap.to('.float-element', {
-        y: -20,
-        rotationZ: 'random(-2, 2)',
-        duration: 3.5,
-        ease: 'sine.inOut',
-        yoyo: true,
-        repeat: -1,
-        stagger: {
-          each: 0.6,
-          from: 'random'
-        }
-      });
-
-      // Parallax Backgrounds
-      gsap.to('.parallax-bg', {
-        yPercent: 30,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: true
-        }
-      });
-
-    }, containerRef);
+    );
 
     return () => {
-      ctx.revert();
+      cancelled = true;
+      ctx?.revert();
+      clearTimeout(releaseScroll);
       document.body.style.overflow = '';
     };
   }, []);
@@ -162,18 +167,27 @@ const Hero = () => {
             <div className="w-full flex justify-center preserve-3d" style={{ transform: 'rotateX(15deg) rotateY(-20deg) rotateZ(5deg)' }}>
               
               <div className="flex flex-col gap-6 md:gap-8 animate-marquee-vertical hover:[animation-play-state:paused] preserve-3d pt-8">
-                {[
-                  { src: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80", alt: "Art Supplies Hub" },
-                  { src: "https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80", alt: "Premium Notebooks" },
-                  { src: "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=400&q=80", alt: "Pens & Brushes" },
-                  // Duplicated for seamless infinite loop
-                  { src: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80", alt: "Art Supplies Hub" },
-                  { src: "https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80", alt: "Premium Notebooks" },
-                  { src: "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=400&q=80", alt: "Pens & Brushes" }
-                ].map((img, i) => (
-                  <div key={i} className="float-element w-[240px] md:w-[320px] rounded-2xl overflow-hidden glass-panel shadow-[0_30px_60px_rgba(0,0,0,0.15)] border-[2px] border-white/80 p-2 md:p-3 bg-white/40 backdrop-blur-xl preserve-3d" style={{ transform: 'translateZ(40px)' }}>
+                {CAROUSEL_LOOP.map((img, i) => (
+                  <div
+                    key={i}
+                    className="animate-float motion-reduce:animate-none w-[240px] md:w-[320px] rounded-2xl overflow-hidden glass-panel shadow-[0_30px_60px_rgba(0,0,0,0.15)] border-[2px] border-white/80 p-2 md:p-3 bg-white/40 backdrop-blur-xl preserve-3d"
+                    style={{
+                      '--float-z': '40px',
+                      '--float-tilt': `${(i % 2 === 0 ? 1 : -1) * 1.5}deg`,
+                      animationDelay: `${(i % 3) * 0.6}s`,
+                    }}
+                  >
                     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-inner">
-                      <img src={img.src} alt={img.alt} className="w-full h-auto object-cover aspect-[4/5] hover:scale-110 transition-transform duration-700 ease-in-out" />
+                      <img
+                        src={img.src}
+                        alt={img.alt}
+                        width={320}
+                        height={400}
+                        loading={i === 0 ? 'eager' : 'lazy'}
+                        fetchPriority={i === 0 ? 'high' : 'low'}
+                        decoding="async"
+                        className="w-full h-auto object-cover aspect-[4/5] hover:scale-110 transition-transform duration-700 ease-in-out"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
                     </div>
                   </div>
@@ -183,13 +197,22 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* Floating Badge */}
-          <div ref={badgeRef} className="float-element absolute z-40 top-[15%] left-[5%] md:-left-[5%] glass-panel p-3 md:p-4 rounded-full shadow-[0_15px_35px_rgba(0,0,0,0.1)] flex items-center gap-3 border border-white/70 bg-white/80 backdrop-blur-md" style={{ transform: 'translateZ(160px)' }}>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-400 to-pink-500 flex items-center justify-center text-white shadow-inner">
-              <Sparkles size={18} fill="currentColor" />
-            </div>
-            <div className="pr-3">
-              <p className="text-[13px] md:text-[14px] font-black text-secondary uppercase tracking-widest leading-tight">Premium<br />Quality</p>
+          {/*
+            Two layers on purpose: gsap animates the outer element on entrance,
+            the CSS float owns the inner one. Sharing a single element would let
+            the CSS animation clobber gsap's inline transform.
+          */}
+          <div ref={badgeRef} className="absolute z-40 top-[15%] left-[5%] md:-left-[5%]">
+            <div
+              className="animate-float motion-reduce:animate-none glass-panel p-3 md:p-4 rounded-full shadow-[0_15px_35px_rgba(0,0,0,0.1)] flex items-center gap-3 border border-white/70 bg-white/80 backdrop-blur-md"
+              style={{ '--float-z': '160px', '--float-tilt': '-1.5deg' }}
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-400 to-pink-500 flex items-center justify-center text-white shadow-inner">
+                <Sparkles size={18} fill="currentColor" />
+              </div>
+              <div className="pr-3">
+                <p className="text-[13px] md:text-[14px] font-black text-secondary uppercase tracking-widest leading-tight">Premium<br />Quality</p>
+              </div>
             </div>
           </div>
 

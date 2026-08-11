@@ -104,9 +104,13 @@ const CategoryCards = () => {
                   <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full rounded-2xl bg-gradient-to-tr ${cat.color} opacity-0 group-hover:opacity-30 transition-opacity duration-500 ${isBig ? 'h-[140px] md:h-[180px]' : 'h-[110px] md:h-[150px]'}`} style={{ transform: 'translateZ(-50px) scale(1.5)', backgroundImage: `radial-gradient(circle, var(--tw-gradient-from) 0%, transparent 70%)` }}></div>
 
                   <div className={`relative z-10 rounded-2xl overflow-hidden mb-4 border-[2px] border-white/60 shadow-glass glass-panel group-hover:shadow-antigravity transition-all duration-500 ease-out mx-auto ${isBig ? 'w-[140px] h-[140px] md:w-[180px] md:h-[180px]' : 'w-[110px] h-[110px] md:w-[150px] md:h-[150px]'}`}>
-                    <img 
-                      src={cat.img} 
-                      alt={cat.name} 
+                    <img
+                      src={cat.img}
+                      alt={cat.name}
+                      width={180}
+                      height={180}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
                     />
                     <div className="absolute inset-0 bg-secondary/0 group-hover:bg-secondary/10 transition-colors duration-500"></div>

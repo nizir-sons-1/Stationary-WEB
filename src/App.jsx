@@ -1,16 +1,26 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BottomNav from './components/BottomNav';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import Home from './pages/Home';
-import Shop from './pages/Shop';
-import Cart from './pages/Cart';
-import ProductDetails from './pages/ProductDetails';
-import CustomCalculator from './pages/CustomCalculator';
-import Reviews from './pages/Reviews';
 import Preloader from './components/Preloader';
+
+// Home ships in the entry chunk because it is the landing route. Everything
+// else is fetched on demand, and prefetched on hover/idle by the router links.
+const Shop = lazy(() => import('./pages/Shop'));
+const Cart = lazy(() => import('./pages/Cart'));
+const ProductDetails = lazy(() => import('./pages/ProductDetails'));
+const CustomCalculator = lazy(() => import('./pages/CustomCalculator'));
+const Reviews = lazy(() => import('./pages/Reviews'));
+
+// Reserves the viewport while a route chunk downloads so the layout doesn't jump.
+const RouteFallback = () => (
+  <div className="min-h-[60vh] flex items-center justify-center" aria-busy="true">
+    <div className="w-8 h-8 rounded-full border-[3px] border-gray-200 border-t-primary animate-spin" />
+  </div>
+);
 
 function App() {
   return (
@@ -19,14 +29,16 @@ function App() {
       <div className="flex flex-col min-h-screen bg-background">
         <Navbar />
         <main className="flex-grow pt-16">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/product/:name" element={<ProductDetails />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/calculator" element={<CustomCalculator />} />
-            <Route path="/reviews" element={<Reviews />} />
-          </Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/product/:name" element={<ProductDetails />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/calculator" element={<CustomCalculator />} />
+              <Route path="/reviews" element={<Reviews />} />
+            </Routes>
+          </Suspense>
         </main>
         <Footer />
         <FloatingWhatsApp />

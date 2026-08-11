@@ -1,9 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Search, ShoppingCart, User, Phone, Palette, BookOpen, Layers, PenTool } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
-import SearchModal from './SearchModal';
+
+// The search modal pulls in framer-motion and the full product catalog. Neither
+// belongs in the first paint, so the chunk is fetched the moment it's opened.
+const SearchModal = lazy(() => import('./SearchModal'));
+
+const CATEGORY_LINKS = [
+  { label: 'Fine Arts', icon: Palette },
+  { label: 'Stationery', icon: BookOpen },
+  { label: 'Paper & Canvas', icon: Layers },
+  { label: 'Accessories', icon: PenTool },
+];
+
+// The marquee translates by -50%, so the list is rendered twice over to make the
+// wrap seamless; two more passes keep it wide enough for large viewports.
+const MARQUEE_PASSES = [0, 1, 2, 3];
 
 const Navbar = () => {
   const location = useLocation();
@@ -12,19 +25,34 @@ const Navbar = () => {
 
   const [scrolled, setScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  // Stays true after the first open so closing doesn't unmount (and re-fetch) it.
+  const [searchMounted, setSearchMounted] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    let frame = 0;
+    const handleScroll = () => {
+      // Coalesce bursts of scroll events into one state update per frame.
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        setScrolled(window.scrollY > 20);
+      });
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      cancelAnimationFrame(frame);
+    };
   }, []);
 
+  const openSearch = () => {
+    setSearchMounted(true);
+    setIsSearchOpen(true);
+  };
+
   return (
-    <motion.header 
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className={`w-full z-50 fixed top-0 left-0 flex justify-center pointer-events-none font-sans transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${scrolled ? 'pt-4 px-4 md:pt-6 md:px-6' : 'pt-0 px-0'}`}
+    <header
+      className={`w-full z-50 fixed top-0 left-0 flex justify-center pointer-events-none font-sans animate-slide-down transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${scrolled ? 'pt-4 px-4 md:pt-6 md:px-6' : 'pt-0 px-0'}`}
     >
       <div className={`w-full pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col ${scrolled ? 'max-w-6xl rounded-[32px] glass-pill overflow-hidden border border-white/40 shadow-glass' : 'bg-white shadow-sm'}`}>
       
@@ -56,15 +84,15 @@ const Navbar = () => {
         <div className="hidden md:flex gap-8 flex-1">
           <Link to="/" className={`text-[14px] font-bold relative group ${isActive('/') ? 'text-primary' : 'text-gray-600 hover:text-secondary transition-colors'}`}>
             Home
-            {isActive('/') && <motion.div layoutId="nav-pill" className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
+            {isActive('/') && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
           </Link>
           <Link to="/shop" className={`text-[14px] font-bold relative group ${isActive('/shop') ? 'text-primary' : 'text-gray-600 hover:text-secondary transition-colors'}`}>
             Shop with Trust
-            {isActive('/shop') && <motion.div layoutId="nav-pill" className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
+            {isActive('/shop') && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
           </Link>
           <Link to="/calculator" className={`text-[14px] font-bold relative group ${isActive('/calculator') ? 'text-primary' : 'text-gray-600 hover:text-secondary transition-colors'}`}>
             Calculator
-            {isActive('/calculator') && <motion.div layoutId="nav-pill" className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
+            {isActive('/calculator') && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
           </Link>
         </div>
 
@@ -82,7 +110,7 @@ const Navbar = () => {
 
         {/* Right Icons */}
         <div className="flex items-center gap-4 md:gap-6 flex-1 justify-end text-secondary">
-          <button onClick={() => setIsSearchOpen(true)} aria-label="search" className="hover:text-primary transition-colors p-2 hover:bg-orange-50 rounded-full">
+          <button onClick={openSearch} aria-label="search" className="hover:text-primary transition-colors p-2 hover:bg-orange-50 rounded-full">
             <Search size={22} strokeWidth={2} />
           </button>
           <Link to="/profile" aria-label="user" className="hover:text-primary transition-colors hidden sm:block p-2 hover:bg-orange-50 rounded-full">
@@ -95,45 +123,42 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Secondary Categories Bar */}
-      <AnimatePresence>
-        {!scrolled && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-secondary text-white py-3 border-b border-white/10 overflow-hidden w-full flex"
-          >
-            <motion.div 
-              animate={{ x: ["0%", "-50%"] }}
-              transition={{ repeat: Infinity, ease: "linear", duration: 30 }}
-              className="flex items-center gap-10 md:gap-16 w-max px-4"
-            >
-              {[...Array(4)].map((_, idx) => (
-                <React.Fragment key={idx}>
-                  <Link to="/shop" state={{ mainCategory: 'Fine Arts' }} className="flex items-center gap-2 text-[12px] font-bold text-white/80 hover:text-white transition-colors whitespace-nowrap uppercase tracking-[0.1em]">
-                    <Palette size={14} className="text-orange-400" /> Fine Arts
-                  </Link>
-                  <Link to="/shop" state={{ mainCategory: 'Stationery' }} className="flex items-center gap-2 text-[12px] font-bold text-white/80 hover:text-white transition-colors whitespace-nowrap uppercase tracking-[0.1em]">
-                    <BookOpen size={14} className="text-orange-400" /> Stationery
-                  </Link>
-                  <Link to="/shop" state={{ mainCategory: 'Paper & Canvas' }} className="flex items-center gap-2 text-[12px] font-bold text-white/80 hover:text-white transition-colors whitespace-nowrap uppercase tracking-[0.1em]">
-                    <Layers size={14} className="text-orange-400" /> Paper & Canvas
-                  </Link>
-                  <Link to="/shop" state={{ mainCategory: 'Accessories' }} className="flex items-center gap-2 text-[12px] font-bold text-white/80 hover:text-white transition-colors whitespace-nowrap uppercase tracking-[0.1em]">
-                    <PenTool size={14} className="text-orange-400" /> Accessories
-                  </Link>
+      {/*
+        Collapses via a grid-row transition — the browser animates it off the
+        main thread, where the old height:auto tween forced a layout every frame.
+      */}
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${scrolled ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="bg-secondary text-white py-3 border-b border-white/10 overflow-hidden w-full flex">
+            <div className="flex items-center gap-10 md:gap-16 w-max px-4 animate-marquee-slow motion-reduce:animate-none">
+              {MARQUEE_PASSES.map((pass) => (
+                <React.Fragment key={pass}>
+                  {CATEGORY_LINKS.map(({ label, icon: Icon }) => (
+                    <Link
+                      key={`${pass}-${label}`}
+                      to="/shop"
+                      state={{ mainCategory: label }}
+                      className="flex items-center gap-2 text-[12px] font-bold text-white/80 hover:text-white transition-colors whitespace-nowrap uppercase tracking-[0.1em]"
+                    >
+                      <Icon size={14} className="text-orange-400" /> {label}
+                    </Link>
+                  ))}
                 </React.Fragment>
               ))}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
 
-      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-    </motion.header>
+      {searchMounted && (
+        <Suspense fallback={null}>
+          <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+        </Suspense>
+      )}
+    </header>
   );
 };
 

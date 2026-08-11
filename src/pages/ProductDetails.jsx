@@ -5,6 +5,9 @@ import { useCart } from '../context/CartContext';
 import { useProduct } from '../hooks/useSupabase';
 import TermsModal from '../components/TermsModal';
 
+const FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+
 const ProductDetails = () => {
   const { name } = useParams();
   const navigate = useNavigate();
@@ -108,7 +111,7 @@ const ProductDetails = () => {
       gsm: currentVariation.GSM,
       size: selectedSize,
       price: price,
-      image: currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
       packingType: currentVariation.PACKING_TYPE || 'ream'
     };
     
@@ -130,12 +133,17 @@ const ProductDetails = () => {
             {/* Glowing background */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-orange-200/50 rounded-full opacity-60 -z-10 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
             
-            <img 
-              src={currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"} 
-              alt={decodedName} 
+            <img
+              src={currentVariation.IMAGE_URL || FALLBACK_IMAGE}
+              alt={decodedName}
+              // The hero image of this route — worth fetching at high priority.
+              fetchPriority="high"
+              decoding="async"
               className="w-full h-full object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-500 preserve-3d mix-blend-multiply"
               style={{ transform: 'translateZ(30px)' }}
-              onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"; }}
+              onError={(e) => {
+                if (e.currentTarget.src !== FALLBACK_IMAGE) e.currentTarget.src = FALLBACK_IMAGE;
+              }}
             />
             
             {!inStock && (

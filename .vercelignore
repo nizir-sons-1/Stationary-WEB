@@ -1,0 +1,10 @@
+# Nothing listed here is imported by the app, so keeping it out of the upload
+# keeps deploys fast. (Applies to `vercel` CLI deploys; Git-integration deploys
+# clone the repo as-is — see README for untracking the large media files.)
+*.mp4
+*.jpeg
+*.jpg
+migrate.cjs
+scrape_and_push.cjs
+scratch_categories.js
+scratch_categories.cjs

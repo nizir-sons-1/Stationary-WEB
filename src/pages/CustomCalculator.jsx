@@ -1,48 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { Calculator, Maximize, Layers, Copy, HelpCircle } from 'lucide-react';
-import productsData from '../data/products.json';
+// Pre-digested at build time from products.json by scripts/build-calculator-data.cjs.
+// Importing the raw catalogue here put 428 kB of product rows in the bundle.
+import categories from '../data/calculator-rates.json';
+
+const EMPTY_OPTIONS = { gsms: [], lengths: [], widths: [] };
 
 const CustomCalculator = () => {
-  // Extract unique categories and their highest rate from productsData
-  const categories = useMemo(() => {
-    const cats = {};
-    productsData.forEach(p => {
-      if (p.Category && p.RATE_PER_KG && Number(p.RATE_PER_KG) > 0) {
-        if (!cats[p.Category] || cats[p.Category] < Number(p.RATE_PER_KG)) {
-          cats[p.Category] = Number(p.RATE_PER_KG);
-        }
-      }
-    });
-    return Object.keys(cats).map(name => ({ name, rate: cats[name] })).sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
-
   const [category, setCategory] = useState(categories.length > 0 ? categories[0].name : '');
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
   const [gsm, setGsm] = useState('');
   const [sheets, setSheets] = useState('100');
 
-  const selectedRate = useMemo(() => {
-    const cat = categories.find(c => c.name === category);
-    return cat ? cat.rate : 0;
-  }, [category, categories]);
+  const selected = useMemo(
+    () => categories.find((c) => c.name === category),
+    [category]
+  );
 
-  // Extract popular options for the selected category
-  const categoryData = useMemo(() => {
-    const items = productsData.filter(p => p.Category === category);
-    
-    // Extract unique values
-    const getUnique = (key) => [...new Set(items.map(p => p[key]).filter(v => v && v.trim() !== ''))]
-      .map(Number)
-      .sort((a, b) => a - b)
-      .map(String);
-      
-    return {
-      gsms: getUnique('GSM'),
-      lengths: getUnique('LENGTH_INCH'),
-      widths: getUnique('WIDTH_INCH')
-    };
-  }, [category]);
+  const selectedRate = selected ? selected.rate : 0;
+  const categoryData = selected || EMPTY_OPTIONS;
 
   const results = useMemo(() => {
     const l = parseFloat(length) || 0;

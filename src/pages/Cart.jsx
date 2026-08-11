@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Minus, Plus, Trash2, ArrowRight, MessageCircle, ArrowLeft, Truck, PackageCheck, CreditCard, Building2, MapPin } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+// No supabase import here on purpose: checkout hands off to WhatsApp and never
+// touches the database, so importing the client only forced the ~55 kB supabase
+// chunk to download whenever someone opened their cart.
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Cart = () => {

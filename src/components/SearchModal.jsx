@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Package } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useProducts } from '../hooks/useSupabase';
+import { useNavigate } from 'react-router-dom';
+import { useProductIndex } from '../hooks/useSupabase';
 
 const SearchModal = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
@@ -11,7 +11,7 @@ const SearchModal = ({ isOpen, onClose }) => {
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
-  const { products, loading } = useProducts();
+  const { products, loading } = useProductIndex();
 
   useEffect(() => {
     setMounted(true);
@@ -34,14 +34,26 @@ const SearchModal = ({ isOpen, onClose }) => {
     navigate(path);
   };
 
-  if (!mounted || typeof document === 'undefined') return null;
+  // Memoised, and the needle is lower-cased once instead of once per row —
+  // this runs over the whole catalogue on every keystroke.
+  const filteredProducts = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return [];
 
-  const filteredProducts = query.trim() === '' 
-    ? [] 
-    : products.filter(p => 
-        (p.product_name && p.product_name.toLowerCase().includes(query.toLowerCase())) ||
-        (p.category && p.category.toLowerCase().includes(query.toLowerCase()))
-      ).slice(0, 6); // show top 6 results
+    const hits = [];
+    for (const p of products) {
+      if (
+        p.product_name?.toLowerCase().includes(needle) ||
+        p.category?.toLowerCase().includes(needle)
+      ) {
+        hits.push(p);
+        if (hits.length === 6) break; // show top 6 results
+      }
+    }
+    return hits;
+  }, [products, query]);
+
+  if (!mounted || typeof document === 'undefined') return null;
 
   return createPortal(
     <AnimatePresence>

@@ -15,19 +15,19 @@ const MAIN_CATEGORIES = [
 ];
 
 const PAPER_CATEGORIES = [
-  { name: 'Bleach Card', icon: CreditCard, color: 'text-blue-600', bg: 'bg-blue-50', hover: 'group-hover:bg-blue-600 group-hover:text-white', image: '/images/white_paper.png' },
-  { name: 'Art Card', icon: Sparkles, color: 'text-purple-600', bg: 'bg-purple-50', hover: 'group-hover:bg-purple-600 group-hover:text-white', image: '/images/art_card.png' },
-  { name: 'Art Paper', icon: FileText, color: 'text-pink-600', bg: 'bg-pink-50', hover: 'group-hover:bg-pink-600 group-hover:text-white', image: '/images/art_paper.png' },
-  { name: 'Matte Paper', icon: Layers, color: 'text-amber-600', bg: 'bg-amber-50', hover: 'group-hover:bg-amber-600 group-hover:text-white', image: '/images/matte_paper.png' },
-  { name: 'Copy Paper', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'group-hover:bg-emerald-600 group-hover:text-white', image: '/images/copy_paper.png' },
-  { name: 'Offset Paper', icon: Archive, color: 'text-cyan-600', bg: 'bg-cyan-50', hover: 'group-hover:bg-cyan-600 group-hover:text-white', image: '/images/offset_paper.png' },
-  { name: 'Ivory Card', icon: CreditCard, color: 'text-stone-600', bg: 'bg-stone-50', hover: 'group-hover:bg-stone-600 group-hover:text-white', image: '/images/ivory_card.png' },
-  { name: 'Color Card', icon: Layers, color: 'text-rose-600', bg: 'bg-rose-50', hover: 'group-hover:bg-rose-600 group-hover:text-white', image: '/images/color_card.png' },
-  { name: 'Carbonless', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', hover: 'group-hover:bg-indigo-600 group-hover:text-white', image: '/images/carbonless.png' },
-  { name: 'Stickers', icon: Tag, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', hover: 'group-hover:bg-fuchsia-600 group-hover:text-white', image: '/images/stickers.png' },
-  { name: 'Local Paper', icon: FileText, color: 'text-teal-600', bg: 'bg-teal-50', hover: 'group-hover:bg-teal-600 group-hover:text-white', image: '/images/local_paper.png' },
-  { name: 'BoxBoard', icon: Box, color: 'text-orange-600', bg: 'bg-orange-50', hover: 'group-hover:bg-orange-600 group-hover:text-white', image: '/images/kraft.png' },
-  { name: 'News', icon: Newspaper, color: 'text-slate-600', bg: 'bg-slate-50', hover: 'group-hover:bg-slate-600 group-hover:text-white', image: '/images/news_paper.png' },
+  { name: 'Bleach Card', icon: CreditCard, color: 'text-blue-600', bg: 'bg-blue-50', hover: 'group-hover:bg-blue-600 group-hover:text-white', image: '/images/white_paper.webp' },
+  { name: 'Art Card', icon: Sparkles, color: 'text-purple-600', bg: 'bg-purple-50', hover: 'group-hover:bg-purple-600 group-hover:text-white', image: '/images/art_card.webp' },
+  { name: 'Art Paper', icon: FileText, color: 'text-pink-600', bg: 'bg-pink-50', hover: 'group-hover:bg-pink-600 group-hover:text-white', image: '/images/art_paper.webp' },
+  { name: 'Matte Paper', icon: Layers, color: 'text-amber-600', bg: 'bg-amber-50', hover: 'group-hover:bg-amber-600 group-hover:text-white', image: '/images/matte_paper.webp' },
+  { name: 'Copy Paper', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'group-hover:bg-emerald-600 group-hover:text-white', image: '/images/copy_paper.webp' },
+  { name: 'Offset Paper', icon: Archive, color: 'text-cyan-600', bg: 'bg-cyan-50', hover: 'group-hover:bg-cyan-600 group-hover:text-white', image: '/images/offset_paper.webp' },
+  { name: 'Ivory Card', icon: CreditCard, color: 'text-stone-600', bg: 'bg-stone-50', hover: 'group-hover:bg-stone-600 group-hover:text-white', image: '/images/ivory_card.webp' },
+  { name: 'Color Card', icon: Layers, color: 'text-rose-600', bg: 'bg-rose-50', hover: 'group-hover:bg-rose-600 group-hover:text-white', image: '/images/color_card.webp' },
+  { name: 'Carbonless', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', hover: 'group-hover:bg-indigo-600 group-hover:text-white', image: '/images/carbonless.webp' },
+  { name: 'Stickers', icon: Tag, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', hover: 'group-hover:bg-fuchsia-600 group-hover:text-white', image: '/images/stickers.webp' },
+  { name: 'Local Paper', icon: FileText, color: 'text-teal-600', bg: 'bg-teal-50', hover: 'group-hover:bg-teal-600 group-hover:text-white', image: '/images/local_paper.webp' },
+  { name: 'BoxBoard', icon: Box, color: 'text-orange-600', bg: 'bg-orange-50', hover: 'group-hover:bg-orange-600 group-hover:text-white', image: '/images/kraft.webp' },
+  { name: 'News', icon: Newspaper, color: 'text-slate-600', bg: 'bg-slate-50', hover: 'group-hover:bg-slate-600 group-hover:text-white', image: '/images/news_paper.webp' },
   { name: 'Butter Paper', icon: Feather, color: 'text-sky-600', bg: 'bg-sky-50', hover: 'group-hover:bg-sky-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
   { name: 'Kraft Card', icon: Package, color: 'text-yellow-600', bg: 'bg-yellow-50', hover: 'group-hover:bg-yellow-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1518707399587-25e243dbf152?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
   { name: 'Book Paper', icon: BookOpen, color: 'text-lime-600', bg: 'bg-lime-50', hover: 'group-hover:bg-lime-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' }
@@ -38,7 +38,28 @@ const formatPrice = (priceStr) => {
   return isNaN(num) ? priceStr : num.toLocaleString();
 };
 
-const ProductGroupCard = ({ productName, variations }) => {
+const FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+
+/*
+ * Category art used to be a CSS `background-image`, which the browser always
+ * downloads eagerly — 16 categories meant 16 full-size fetches before anything
+ * below the fold was even visible. A real <img> gets native lazy loading.
+ */
+const CardArt = ({ src, alt, eager }) => (
+  <img
+    src={src}
+    alt={alt}
+    loading={eager ? 'eager' : 'lazy'}
+    decoding="async"
+    fetchPriority={eager ? 'high' : 'low'}
+    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+  />
+);
+
+// Memoised: a grid can hold dozens of these, and without it every one of them
+// re-rendered whenever the cart changed.
+const ProductGroupCard = React.memo(function ProductGroupCard({ productName, variations }) {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedGsm, setSelectedGsm] = useState('');
@@ -103,9 +124,14 @@ const ProductGroupCard = ({ productName, variations }) => {
         )}
         <img
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out absolute inset-0 mix-blend-multiply"
-          src={currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"}
+          src={currentVariation.IMAGE_URL || FALLBACK_IMAGE}
           alt={productName}
-          onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"; }}
+          loading="lazy"
+          decoding="async"
+          onError={(e) => {
+            // Guard against an unreachable fallback re-triggering onError forever.
+            if (e.currentTarget.src !== FALLBACK_IMAGE) e.currentTarget.src = FALLBACK_IMAGE;
+          }}
         />
       </Link>
 
@@ -182,7 +208,7 @@ const ProductGroupCard = ({ productName, variations }) => {
                     gsm: currentVariation.GSM,
                     size: selectedSize,
                     price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
-                    image: currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+                    image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
                     packingType: currentVariation.PACKING_TYPE || 'ream'
                   }, 1, false, null, false, null);
                 }
@@ -206,14 +232,14 @@ const ProductGroupCard = ({ productName, variations }) => {
             gsm: currentVariation.GSM,
             size: selectedSize,
             price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
-            image: currentVariation.IMAGE_URL || "https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
             packingType: currentVariation.PACKING_TYPE || 'ream'
           }, 1, false, null, true, '3 Months');
         }} 
       />
     </article>
   );
-};
+});
 
 const Shop = () => {
   const location = useLocation();
@@ -331,7 +357,7 @@ const Shop = () => {
                 onClick={() => setSelectedMainCategory(cat.name)}
                 className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[16px] md:rounded-[24px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-all duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'}`}
               >
-                <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url(${cat.image})` }}></div>
+                <CardArt src={cat.image} alt={cat.name} eager={idx < 3} />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/40 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
                 <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-4 md:p-6' : 'p-2 sm:p-3 md:p-5'}`}>
                   <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-xl text-[24px] sm:text-[28px] md:text-[36px]' : 'font-headline-md text-[13px] sm:text-[15px] md:text-[20px]'}`}>{cat.name}</span>
@@ -373,7 +399,7 @@ const Shop = () => {
                 onClick={() => setSelectedSubCategory(cat.name)}
                 className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[12px] md:rounded-[20px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-all duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'}`}
               >
-                <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url(${cat.image})` }}></div>
+                <CardArt src={cat.image} alt={cat.name} eager={idx < 4} />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/50 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
                 <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-3 md:p-6' : 'p-1.5 md:p-3'}`}>
                   <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-lg text-[18px] sm:text-[22px] md:text-[28px]' : 'font-headline-sm text-[10px] sm:text-[12px] md:text-[15px]'}`}>{cat.name}</span>
