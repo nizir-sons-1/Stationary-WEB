@@ -1,8 +1,5 @@
 /*
- * The calculator only needs a rate per category plus the distinct sizes/GSMs it
- * offers as quick-pick chips — a few kB. Importing the raw 438 kB catalogue for
- * that shipped the entire product list to every visitor.
- *
+ * The calculator needs rates and distinct sizes/GSMs grouped by Category and Brand.
  * Run after changing src/data/products.json:  npm run build:data
  */
 const fs = require('node:fs');
@@ -22,31 +19,57 @@ const uniqueNumbers = (rows, key) =>
     .sort((a, b) => a - b)
     .map(String);
 
+// Group by Category -> Brand (PRODUCT_NAME)
 const byCategory = new Map();
 
 for (const row of products) {
   if (!row.Category) continue;
-  if (!byCategory.has(row.Category)) byCategory.set(row.Category, []);
-  byCategory.get(row.Category).push(row);
+  
+  // Only include items that actually have a RATE_PER_KG
+  const rate = Number(row.RATE_PER_KG);
+  if (!Number.isFinite(rate) || rate <= 0) continue;
+
+  if (!byCategory.has(row.Category)) {
+    byCategory.set(row.Category, new Map());
+  }
+  
+  const brandMap = byCategory.get(row.Category);
+  const brandName = row.PRODUCT_NAME || row.Category; // Fallback to category if no name
+  
+  if (!brandMap.has(brandName)) {
+    brandMap.set(brandName, []);
+  }
+  
+  brandMap.get(brandName).push(row);
 }
 
 const categories = [];
 
-for (const [name, rows] of byCategory) {
-  // The original picked the highest rate seen for the category — keep that.
-  const rate = rows.reduce((max, r) => {
-    const value = Number(r.RATE_PER_KG);
-    return Number.isFinite(value) && value > max ? value : max;
-  }, 0);
-
-  if (rate <= 0) continue; // matches the old `RATE_PER_KG > 0` filter
-
+for (const [categoryName, brandMap] of byCategory) {
+  const brands = [];
+  
+  for (const [brandName, rows] of brandMap) {
+    // Pick highest valid rate for this brand
+    const rate = rows.reduce((max, r) => {
+      const value = Number(r.RATE_PER_KG);
+      return Number.isFinite(value) && value > max ? value : max;
+    }, 0);
+    
+    brands.push({
+      name: brandName,
+      rate,
+      gsms: uniqueNumbers(rows, 'GSM'),
+      lengths: uniqueNumbers(rows, 'LENGTH_INCH'),
+      widths: uniqueNumbers(rows, 'WIDTH_INCH'),
+    });
+  }
+  
+  // Sort brands alphabetically
+  brands.sort((a, b) => a.name.localeCompare(b.name));
+  
   categories.push({
-    name,
-    rate,
-    gsms: uniqueNumbers(rows, 'GSM'),
-    lengths: uniqueNumbers(rows, 'LENGTH_INCH'),
-    widths: uniqueNumbers(rows, 'WIDTH_INCH'),
+    name: categoryName,
+    brands
   });
 }
 

@@ -8,18 +8,32 @@ const EMPTY_OPTIONS = { gsms: [], lengths: [], widths: [] };
 
 const CustomCalculator = () => {
   const [category, setCategory] = useState(categories.length > 0 ? categories[0].name : '');
+  const [brand, setBrand] = useState('');
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
   const [gsm, setGsm] = useState('');
   const [sheets, setSheets] = useState('100');
 
-  const selected = useMemo(
+  const selectedCatObj = useMemo(
     () => categories.find((c) => c.name === category),
     [category]
   );
 
-  const selectedRate = selected ? selected.rate : 0;
-  const categoryData = selected || EMPTY_OPTIONS;
+  React.useEffect(() => {
+    if (selectedCatObj && selectedCatObj.brands && selectedCatObj.brands.length > 0) {
+      setBrand(selectedCatObj.brands[0].name);
+    } else {
+      setBrand('');
+    }
+  }, [category, selectedCatObj]);
+
+  const selectedBrandObj = useMemo(() => {
+    if (!selectedCatObj || !selectedCatObj.brands) return null;
+    return selectedCatObj.brands.find(b => b.name === brand) || selectedCatObj.brands[0];
+  }, [selectedCatObj, brand]);
+
+  const selectedRate = selectedBrandObj ? selectedBrandObj.rate : 0;
+  const categoryData = selectedBrandObj || EMPTY_OPTIONS;
 
   const results = useMemo(() => {
     const l = parseFloat(length) || 0;
@@ -66,7 +80,7 @@ const CustomCalculator = () => {
           <div className="flex flex-col gap-6">
             {/* Category Select */}
             <div className="flex flex-col gap-2">
-              <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase">Paper Category (Determines Rate)</label>
+              <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase">Paper Category</label>
               <div className="relative">
                 <select 
                   value={category}
@@ -77,7 +91,7 @@ const CustomCalculator = () => {
                   className="w-full bg-gray-50 border border-gray-200 text-[#111111] font-bold text-[14px] p-4 rounded-xl outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none transition-all cursor-pointer shadow-sm"
                 >
                   {categories.map((c, idx) => (
-                    <option key={idx} value={c.name}>{c.name} (Rs. {c.rate}/kg)</option>
+                    <option key={idx} value={c.name}>{c.name}</option>
                   ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
@@ -85,6 +99,30 @@ const CustomCalculator = () => {
                 </div>
               </div>
             </div>
+
+            {/* Brand Select */}
+            {selectedCatObj && selectedCatObj.brands && selectedCatObj.brands.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase">Select Brand (Determines Rate)</label>
+                <div className="relative">
+                  <select 
+                    value={brand}
+                    onChange={(e) => {
+                      setBrand(e.target.value);
+                      setLength(''); setWidth(''); setGsm('');
+                    }}
+                    className="w-full bg-gray-50 border border-gray-200 text-[#111111] font-bold text-[14px] p-4 rounded-xl outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none transition-all cursor-pointer shadow-sm"
+                  >
+                    {selectedCatObj.brands.map((b, idx) => (
+                      <option key={idx} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Size Inputs */}
             <div className="grid grid-cols-2 gap-4">

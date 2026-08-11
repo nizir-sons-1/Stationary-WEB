@@ -16,14 +16,43 @@ const Cart = () => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [shippingMethod, setShippingMethod] = useState('self_pickup'); // 'self_pickup' | 'delivery_open' | 'delivery_bundle'
-  const [paymentMethod, setPaymentMethod] = useState('shop'); // 'shop' | 'bank'
+  const [address, setAddress] = useState('');
+  const [shippingMethod, setShippingMethod] = useState('self_pickup'); // 'self_pickup' | 'delivery_open' | 'delivery_bundle' | 'standard_delivery'
+  const [paymentMethod, setPaymentMethod] = useState('shop'); // 'shop' | 'bank' | 'cod' | 'online'
+
+  // Determine if it's a B2B (Paper) or B2C (Stationery/Arts/Misc) checkout
+  // It is ONLY B2B if EVERY item in the cart is explicitly a Paper category.
+  const isB2B = cartItems.every(item => {
+    const cat = (item.category || '').toLowerCase();
+    const dept = (item.department || '').toLowerCase();
+    
+    const isPaperCategory = [
+      'bleach card', 'art card', 'art paper', 'matte paper', 'copy paper', 
+      'offset paper', 'ivory card', 'color card', 'carbonless', 'stickers', 
+      'local paper', 'boxboard', 'news', 'butter paper', 'kraft card', 'book paper'
+    ].some(c => cat.includes(c));
+
+    const isPaperDept = dept === 'paper & canvas' && isPaperCategory; // Strict check
+
+    return isPaperCategory || isPaperDept;
+  });
+
+  // Force default methods if switching types
+  React.useEffect(() => {
+    if (isB2B) {
+      if (shippingMethod === 'standard_delivery') setShippingMethod('self_pickup');
+      if (paymentMethod === 'cod' || paymentMethod === 'online') setPaymentMethod('shop');
+    } else {
+      if (shippingMethod !== 'standard_delivery') setShippingMethod('standard_delivery');
+      if (paymentMethod === 'shop') setPaymentMethod('cod');
+    }
+  }, [isB2B]);
 
   const handleCheckout = async (e) => {
     e?.preventDefault();
     if (cartItems.length === 0) return;
-    if (checkoutPhase === 'checkout' && (!fullName || !phone)) {
-      alert("Please fill in your required details.");
+    if (checkoutPhase === 'checkout' && (!fullName || !phone || (!isB2B && !address))) {
+      alert("Please fill in all required details.");
       return;
     }
     
@@ -39,15 +68,19 @@ const Cart = () => {
       message += `Name: ${fullName}\n`;
       message += `Phone: ${phone}\n`;
       if (email) message += `Email: ${email}\n`;
+      if (address) message += `Address: ${address}\n`;
       
       const shipMap = {
         'self_pickup': 'Self Pickup (FREE)',
         'delivery_open': 'Delivery - Open (Min Rs 350)',
-        'delivery_bundle': 'Delivery - Bundle (Only for Adda)'
+        'delivery_bundle': 'Delivery - Bundle (Only for Adda)',
+        'standard_delivery': 'Standard Delivery (Rs 200)'
       };
       const payMap = {
         'shop': 'Pay at Shop (Pay when collecting)',
-        'bank': 'Bank Transfer (Details via WhatsApp)'
+        'bank': 'Bank Transfer',
+        'cod': 'Cash on Delivery (COD)',
+        'online': 'Online Transfer'
       };
       
       message += `Shipping: ${shipMap[shippingMethod]}\n`;
@@ -66,10 +99,14 @@ const Cart = () => {
           message += `   [Installment Plan: ${item.installmentPlan}]\n`;
           message += `   *Requires T&C confirmation and physical bank cheque*\n`;
         }
-        message += `   Est. Price: Rs. ${(item.price * item.quantity).toLocaleString()}\n\n`;
+        message += `   Price: Rs. ${(item.price * item.quantity).toLocaleString()}\n\n`;
       });
-      message += `*Estimated Total: Rs. ${cartTotal.toLocaleString()}*\n`;
-      message += `\nPlease confirm availability and final pricing.`;
+      
+      let finalTotal = cartTotal;
+      if (shippingMethod === 'standard_delivery') finalTotal += 200;
+      
+      message += `*Total Order Value: Rs. ${finalTotal.toLocaleString()}*\n`;
+      message += `\nPlease confirm my order.`;
       
       const whatsappUrl = `https://wa.me/923202220001?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
@@ -207,6 +244,13 @@ const Cart = () => {
                     <label className="text-sm font-bold text-gray-700">Email Address (Optional)</label>
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
                   </div>
+                  
+                  {!isB2B && (
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-bold text-gray-700">Delivery Address *</label>
+                      <textarea required value={address} onChange={e => setAddress(e.target.value)} placeholder="Enter your full shipping address" rows="3" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white resize-none" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Shipping Method */}
@@ -214,32 +258,45 @@ const Cart = () => {
                   <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Shipping Method</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     
-                    <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'self_pickup' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                      <input type="radio" name="shipping" value="self_pickup" checked={shippingMethod === 'self_pickup'} onChange={() => setShippingMethod('self_pickup')} className="sr-only" />
-                      <Building2 className={shippingMethod === 'self_pickup' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
-                      <div>
-                        <div className={`font-bold text-sm ${shippingMethod === 'self_pickup' ? 'text-[#25D366]' : 'text-gray-700'}`}>Self Pickup</div>
-                        <div className={`text-xs mt-0.5 ${shippingMethod === 'self_pickup' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>FREE</div>
-                      </div>
-                    </label>
+                    {isB2B ? (
+                      <>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'self_pickup' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <input type="radio" name="shipping" value="self_pickup" checked={shippingMethod === 'self_pickup'} onChange={() => setShippingMethod('self_pickup')} className="sr-only" />
+                          <Building2 className={shippingMethod === 'self_pickup' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <div>
+                            <div className={`font-bold text-sm ${shippingMethod === 'self_pickup' ? 'text-[#25D366]' : 'text-gray-700'}`}>Self Pickup</div>
+                            <div className={`text-xs mt-0.5 ${shippingMethod === 'self_pickup' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>FREE</div>
+                          </div>
+                        </label>
 
-                    <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'delivery_open' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                      <input type="radio" name="shipping" value="delivery_open" checked={shippingMethod === 'delivery_open'} onChange={() => setShippingMethod('delivery_open')} className="sr-only" />
-                      <Truck className={shippingMethod === 'delivery_open' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
-                      <div>
-                        <div className={`font-bold text-sm ${shippingMethod === 'delivery_open' ? 'text-[#25D366]' : 'text-gray-700'}`}>Delivery - Open</div>
-                        <div className={`text-xs mt-0.5 ${shippingMethod === 'delivery_open' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Min Rs 350</div>
-                      </div>
-                    </label>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'delivery_open' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <input type="radio" name="shipping" value="delivery_open" checked={shippingMethod === 'delivery_open'} onChange={() => setShippingMethod('delivery_open')} className="sr-only" />
+                          <Truck className={shippingMethod === 'delivery_open' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <div>
+                            <div className={`font-bold text-sm ${shippingMethod === 'delivery_open' ? 'text-[#25D366]' : 'text-gray-700'}`}>Delivery - Open</div>
+                            <div className={`text-xs mt-0.5 ${shippingMethod === 'delivery_open' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Min Rs 350</div>
+                          </div>
+                        </label>
 
-                    <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'delivery_bundle' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                      <input type="radio" name="shipping" value="delivery_bundle" checked={shippingMethod === 'delivery_bundle'} onChange={() => setShippingMethod('delivery_bundle')} className="sr-only" />
-                      <PackageCheck className={shippingMethod === 'delivery_bundle' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
-                      <div>
-                        <div className={`font-bold text-sm ${shippingMethod === 'delivery_bundle' ? 'text-[#25D366]' : 'text-gray-700'}`}>Delivery - Bundle</div>
-                        <div className={`text-xs mt-0.5 ${shippingMethod === 'delivery_bundle' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Only for Adda</div>
-                      </div>
-                    </label>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'delivery_bundle' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <input type="radio" name="shipping" value="delivery_bundle" checked={shippingMethod === 'delivery_bundle'} onChange={() => setShippingMethod('delivery_bundle')} className="sr-only" />
+                          <PackageCheck className={shippingMethod === 'delivery_bundle' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <div>
+                            <div className={`font-bold text-sm ${shippingMethod === 'delivery_bundle' ? 'text-[#25D366]' : 'text-gray-700'}`}>Delivery - Bundle</div>
+                            <div className={`text-xs mt-0.5 ${shippingMethod === 'delivery_bundle' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Only for Adda</div>
+                          </div>
+                        </label>
+                      </>
+                    ) : (
+                      <label className={`md:col-span-3 cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'standard_delivery' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <input type="radio" name="shipping" value="standard_delivery" checked={shippingMethod === 'standard_delivery'} onChange={() => setShippingMethod('standard_delivery')} className="sr-only" />
+                        <Truck className={shippingMethod === 'standard_delivery' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                        <div>
+                          <div className={`font-bold text-sm ${shippingMethod === 'standard_delivery' ? 'text-[#25D366]' : 'text-gray-700'}`}>Standard Delivery</div>
+                          <div className={`text-xs mt-0.5 ${shippingMethod === 'standard_delivery' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Rs 200 Flat Rate</div>
+                        </div>
+                      </label>
+                    )}
 
                   </div>
                 </div>
@@ -249,24 +306,47 @@ const Cart = () => {
                   <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Payment Method</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
-                    <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'shop' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                      <input type="radio" name="payment" value="shop" checked={paymentMethod === 'shop'} onChange={() => setPaymentMethod('shop')} className="sr-only" />
-                      <MapPin className={paymentMethod === 'shop' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
-                      <div>
-                        <div className={`font-bold text-sm ${paymentMethod === 'shop' ? 'text-[#25D366]' : 'text-gray-700'}`}>Pay at Shop</div>
-                        <div className={`text-xs mt-0.5 ${paymentMethod === 'shop' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Pay when collecting</div>
-                      </div>
-                    </label>
+                    {isB2B ? (
+                      <>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'shop' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <input type="radio" name="payment" value="shop" checked={paymentMethod === 'shop'} onChange={() => setPaymentMethod('shop')} className="sr-only" />
+                          <MapPin className={paymentMethod === 'shop' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <div>
+                            <div className={`font-bold text-sm ${paymentMethod === 'shop' ? 'text-[#25D366]' : 'text-gray-700'}`}>Pay at Shop</div>
+                            <div className={`text-xs mt-0.5 ${paymentMethod === 'shop' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Pay when collecting</div>
+                          </div>
+                        </label>
 
-                    <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'bank' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                      <input type="radio" name="payment" value="bank" checked={paymentMethod === 'bank'} onChange={() => setPaymentMethod('bank')} className="sr-only" />
-                      <CreditCard className={paymentMethod === 'bank' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
-                      <div>
-                        <div className={`font-bold text-sm ${paymentMethod === 'bank' ? 'text-[#25D366]' : 'text-gray-700'}`}>Bank Transfer</div>
-                        <div className={`text-xs mt-0.5 ${paymentMethod === 'bank' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Details via WhatsApp</div>
-                      </div>
-                    </label>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'bank' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <input type="radio" name="payment" value="bank" checked={paymentMethod === 'bank'} onChange={() => setPaymentMethod('bank')} className="sr-only" />
+                          <CreditCard className={paymentMethod === 'bank' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <div>
+                            <div className={`font-bold text-sm ${paymentMethod === 'bank' ? 'text-[#25D366]' : 'text-gray-700'}`}>Bank Transfer</div>
+                            <div className={`text-xs mt-0.5 ${paymentMethod === 'bank' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Details via WhatsApp</div>
+                          </div>
+                        </label>
+                      </>
+                    ) : (
+                      <>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'cod' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="sr-only" />
+                          <MapPin className={paymentMethod === 'cod' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <div>
+                            <div className={`font-bold text-sm ${paymentMethod === 'cod' ? 'text-[#25D366]' : 'text-gray-700'}`}>Cash on Delivery (COD)</div>
+                            <div className={`text-xs mt-0.5 ${paymentMethod === 'cod' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Pay at your doorstep</div>
+                          </div>
+                        </label>
 
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'online' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <input type="radio" name="payment" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="sr-only" />
+                          <CreditCard className={paymentMethod === 'online' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <div>
+                            <div className={`font-bold text-sm ${paymentMethod === 'online' ? 'text-[#25D366]' : 'text-gray-700'}`}>Online Payment</div>
+                            <div className={`text-xs mt-0.5 ${paymentMethod === 'online' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Bank / EasyPaisa / JazzCash</div>
+                          </div>
+                        </label>
+                      </>
+                    )}
                   </div>
                 </div>
               </motion.form>
@@ -287,7 +367,9 @@ const Cart = () => {
             
             <div className="flex justify-between items-center py-2">
               <span className="text-sm font-medium text-gray-500">Shipping</span>
-              <span className="text-sm font-bold text-primary">{shippingMethod === 'self_pickup' ? 'FREE' : 'TBD'}</span>
+              <span className="text-sm font-bold text-primary">
+                {shippingMethod === 'self_pickup' ? 'FREE' : shippingMethod === 'standard_delivery' ? 'Rs 200' : 'TBD'}
+              </span>
             </div>
 
             <div className="flex justify-between items-center py-2 border-b border-gray-200 pb-6 mb-6">
@@ -297,7 +379,9 @@ const Cart = () => {
             
             <div className="flex justify-between items-end mb-8">
               <span className="text-xl font-bold text-secondary">Total</span>
-              <span className="text-2xl font-black text-blue-900 leading-none">Rs. {cartTotal.toLocaleString()}</span>
+              <span className="text-2xl font-black text-blue-900 leading-none">
+                Rs. {(cartTotal + (shippingMethod === 'standard_delivery' ? 200 : 0)).toLocaleString()}
+              </span>
             </div>
 
             {/* Mini Cart Items (Only visible in Checkout Phase) */}
