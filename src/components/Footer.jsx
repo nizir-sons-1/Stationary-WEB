@@ -79,18 +79,18 @@ const Footer = () => {
 
           <div className="flex flex-col gap-4">
             <h4 className="text-white font-bold tracking-wider uppercase text-[12px] mb-2 opacity-90">Customer Service</h4>
-            <a href="#" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Contact Us</a>
-            <a href="#" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Track Order</a>
-            <a href="#" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Shipping Policy</a>
-            <a href="#" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Returns & Refunds</a>
+            <Link to="/contact" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Contact Us</Link>
+            <Link to="/track-order" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Track Order</Link>
+            <Link to="/shipping" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Shipping Policy</Link>
+            <Link to="/returns" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Returns & Refunds</Link>
           </div>
 
           <div className="flex flex-col gap-4">
             <h4 className="text-white font-bold tracking-wider uppercase text-[12px] mb-2 opacity-90">About Us</h4>
-            <a href="#" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Our Story</a>
-            <a href="#" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Careers</a>
-            <a href="#" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Privacy Policy</a>
-            <a href="#" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Terms of Service</a>
+            <Link to="/about" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Our Story</Link>
+            <Link to="/careers" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Careers</Link>
+            <Link to="/privacy" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Privacy Policy</Link>
+            <Link to="/terms" className="text-gray-400 hover:text-primary hover:translate-x-1 transition-all duration-300 text-[14px] w-fit">Terms of Service</Link>
           </div>
 
           <div className="flex flex-col gap-4 col-span-2 md:col-span-1">

@@ -16,6 +16,16 @@ const ProductDetails = lazy(() => import('./pages/ProductDetails'));
 const CustomCalculator = lazy(() => import('./pages/CustomCalculator'));
 const Reviews = lazy(() => import('./pages/Reviews'));
 
+// New Footer Pages
+const ContactUs = lazy(() => import('./pages/ContactUs'));
+const TrackOrder = lazy(() => import('./pages/TrackOrder'));
+const ShippingPolicy = lazy(() => import('./pages/ShippingPolicy'));
+const ReturnsRefunds = lazy(() => import('./pages/ReturnsRefunds'));
+const OurStory = lazy(() => import('./pages/OurStory'));
+const Careers = lazy(() => import('./pages/Careers'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+
 // Reserves the viewport while a route chunk downloads so the layout doesn't jump.
 const RouteFallback = () => (
   <div className="min-h-[60vh] flex items-center justify-center" aria-busy="true">
@@ -39,6 +49,16 @@ function App() {
               <Route path="/cart" element={<Cart />} />
               <Route path="/calculator" element={<CustomCalculator />} />
               <Route path="/reviews" element={<Reviews />} />
+              
+              {/* Footer Page Routes */}
+              <Route path="/contact" element={<ContactUs />} />
+              <Route path="/track-order" element={<TrackOrder />} />
+              <Route path="/shipping" element={<ShippingPolicy />} />
+              <Route path="/returns" element={<ReturnsRefunds />} />
+              <Route path="/about" element={<OurStory />} />
+              <Route path="/careers" element={<Careers />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
             </Routes>
           </Suspense>
         </main>

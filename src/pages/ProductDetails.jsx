@@ -13,9 +13,7 @@ const ProductDetails = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   
-  const decodedName = decodeURIComponent(name);
-  
-  const { product: currentProduct, loading } = useProduct(decodedName);
+  const { product: currentProduct, loading } = useProduct(name);
 
   // Map Supabase product_variations to the expected format
   const productVariations = useMemo(() => {
@@ -136,7 +134,7 @@ const ProductDetails = () => {
             
             <img
               src={currentVariation.IMAGE_URL || FALLBACK_IMAGE}
-              alt={decodedName}
+              alt={name}
               // The hero image of this route — worth fetching at high priority.
               fetchPriority="high"
               decoding="async"
