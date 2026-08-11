@@ -24,7 +24,7 @@ const Hero = () => {
   const isInteracting = useRef(false);
   const [isLocked, setIsLocked] = useState(true);
 
-  const headlineText = "Your Ultimate Creative & Stationery Hub".split(" ");
+  const headlineText = "Your Ultimate Paper & Stationery Hub".split(" ");
 
   useEffect(() => {
     let animationFrameId;
@@ -147,9 +147,9 @@ const Hero = () => {
             {headlineText.map((word, i) => (
               <React.Fragment key={i}>
                 <span className="inline-block overflow-hidden align-top pb-[0.35em] -mb-[0.35em] px-[0.05em]">
-                  <span className={`split-word inline-block will-change-transform ${word === 'Creative' ? 'text-primary relative' : ''}`}>
+                  <span className={`split-word inline-block will-change-transform ${word === 'Paper' ? 'text-primary relative' : ''}`}>
                     {word}
-                    {word === 'Creative' && (
+                    {word === 'Paper' && (
                       <svg className="absolute -bottom-2 md:-bottom-4 left-0 w-full h-auto text-orange-200 -z-10" viewBox="0 0 100 20" preserveAspectRatio="none">
                         <path d="M0,15 Q50,0 100,15" fill="none" stroke="currentColor" strokeWidth="4" />
                       </svg>
