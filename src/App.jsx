@@ -7,6 +7,8 @@ import FloatingWhatsApp from './components/FloatingWhatsApp';
 import Home from './pages/Home';
 import Preloader from './components/Preloader';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from './components/ErrorBoundary';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 
 // Home ships in the entry chunk because it is the landing route. Everything
 // else is fetched on demand, and prefetched on hover/idle by the router links.
@@ -35,38 +37,42 @@ const RouteFallback = () => (
 
 function App() {
   return (
-    <Router>
-      <ScrollToTop />
-      <Preloader />
-      <div className="flex flex-col min-h-screen bg-background">
-        <Navbar />
-        <main className="flex-grow pt-16">
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/product/:name" element={<ProductDetails />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/calculator" element={<CustomCalculator />} />
-              <Route path="/reviews" element={<Reviews />} />
-              
-              {/* Footer Page Routes */}
-              <Route path="/contact" element={<ContactUs />} />
-              <Route path="/track-order" element={<TrackOrder />} />
-              <Route path="/shipping" element={<ShippingPolicy />} />
-              <Route path="/returns" element={<ReturnsRefunds />} />
-              <Route path="/about" element={<OurStory />} />
-              <Route path="/careers" element={<Careers />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-            </Routes>
-          </Suspense>
-        </main>
-        <Footer />
-        <FloatingWhatsApp />
-        <BottomNav />
-      </div>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <ScrollToTop />
+        <Preloader />
+        <div className="flex flex-col min-h-screen bg-background">
+          <Navbar />
+          <main className="flex-grow pt-16">
+            <RouteErrorBoundary>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/product/:name" element={<ProductDetails />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/calculator" element={<CustomCalculator />} />
+                  <Route path="/reviews" element={<Reviews />} />
+                  
+                  {/* Footer Page Routes */}
+                  <Route path="/contact" element={<ContactUs />} />
+                  <Route path="/track-order" element={<TrackOrder />} />
+                  <Route path="/shipping" element={<ShippingPolicy />} />
+                  <Route path="/returns" element={<ReturnsRefunds />} />
+                  <Route path="/about" element={<OurStory />} />
+                  <Route path="/careers" element={<Careers />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                </Routes>
+              </Suspense>
+            </RouteErrorBoundary>
+          </main>
+          <Footer />
+          <FloatingWhatsApp />
+          <BottomNav />
+        </div>
+      </Router>
+    </ErrorBoundary>
   );
 }
 
