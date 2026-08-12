@@ -10,10 +10,11 @@ const FALLBACK_IMAGE =
 
 const ProductDetails = () => {
   const { name } = useParams();
+  const decodedName = decodeURIComponent(name);
   const navigate = useNavigate();
   const { addToCart } = useCart();
   
-  const { product: currentProduct, loading } = useProduct(name);
+  const { product: currentProduct, loading } = useProduct(decodedName);
 
   // Map Supabase product_variations to the expected format
   const productVariations = useMemo(() => {
