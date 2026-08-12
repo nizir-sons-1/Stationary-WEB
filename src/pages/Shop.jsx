@@ -26,7 +26,7 @@ const PAPER_CATEGORIES = [
   { name: 'Carbonless', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', hover: 'group-hover:bg-indigo-600 group-hover:text-white', image: '/images/carbonless.webp' },
   { name: 'Stickers', icon: Tag, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', hover: 'group-hover:bg-fuchsia-600 group-hover:text-white', image: '/images/stickers.webp' },
   { name: 'Local Paper', icon: FileText, color: 'text-teal-600', bg: 'bg-teal-50', hover: 'group-hover:bg-teal-600 group-hover:text-white', image: '/images/local_paper.webp' },
-  { name: 'BoxBoard', icon: Box, color: 'text-orange-600', bg: 'bg-orange-50', hover: 'group-hover:bg-orange-600 group-hover:text-white', image: '/images/kraft.webp' },
+  { name: 'BoxBoard', icon: Box, color: 'text-orange-600', bg: 'bg-orange-50', hover: 'group-hover:bg-orange-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?auto=format&fit=crop&w=600&q=80' },
   { name: 'News', icon: Newspaper, color: 'text-slate-600', bg: 'bg-slate-50', hover: 'group-hover:bg-slate-600 group-hover:text-white', image: '/images/news_paper.webp' },
   { name: 'Butter Paper', icon: Feather, color: 'text-sky-600', bg: 'bg-sky-50', hover: 'group-hover:bg-sky-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
   { name: 'Kraft Card', icon: Package, color: 'text-yellow-600', bg: 'bg-yellow-50', hover: 'group-hover:bg-yellow-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1518707399587-25e243dbf152?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
