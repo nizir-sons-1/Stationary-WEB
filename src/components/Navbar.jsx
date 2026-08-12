@@ -76,12 +76,12 @@ const Navbar = () => {
             </a>
           </div>
           <span className="flex items-center gap-2 text-white/90">
-            Signup and get <span className="text-primary font-bold">20% OFF</span> your first order.
+            Free Delivery on Orders Over <span className="text-primary font-bold">Rs 5,000</span>
           </span>
         </div>
         <div className="flex items-center gap-6">
-          <Link to="/about" className="hover:text-primary transition-colors">Help Center</Link>
-          <Link to="/track" className="hover:text-primary transition-colors">Track Order</Link>
+          <Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link>
+          <Link to="/track-order" className="hover:text-primary transition-colors">Track Order</Link>
         </div>
       </div>
 
@@ -121,7 +121,7 @@ const Navbar = () => {
           <button onClick={openSearch} aria-label="search" className="hover:text-primary transition-colors p-2 hover:bg-orange-50 rounded-full">
             <Search size={22} strokeWidth={2} />
           </button>
-          <Link to="/profile" aria-label="user" className="hover:text-primary transition-colors hidden sm:block p-2 hover:bg-orange-50 rounded-full">
+          <Link to="/contact" aria-label="contact" className="hover:text-primary transition-colors hidden sm:block p-2 hover:bg-orange-50 rounded-full">
             <User size={22} strokeWidth={2} />
           </Link>
           <Link to="/cart" aria-label="shopping_cart" className="hover:text-primary transition-colors relative p-2 hover:bg-orange-50 rounded-full hidden sm:block">

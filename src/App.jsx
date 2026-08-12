@@ -27,6 +27,7 @@ const OurStory = lazy(() => import('./pages/OurStory'));
 const Careers = lazy(() => import('./pages/Careers'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Reserves the viewport while a route chunk downloads so the layout doesn't jump.
 const RouteFallback = () => (
@@ -63,6 +64,7 @@ function App() {
                   <Route path="/careers" element={<Careers />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
             </RouteErrorBoundary>

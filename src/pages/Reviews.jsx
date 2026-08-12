@@ -1,65 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { Star, ThumbsUp, ThumbsDown, CheckCircle, X, ChevronDown, MessageSquare, Edit3 } from 'lucide-react';
-
-const DUMMY_REVIEWS = [
-  {
-    id: 1,
-    name: "Ali Raza",
-    rating: 5,
-    date: "2 days ago",
-    text: "Excellent paper quality! The A4 sheets are super smooth and perfect for both laser and inkjet printing. Will definitely order again.",
-    verified: true,
-    helpful: 12,
-  },
-  {
-    id: 2,
-    name: "Sara Khan",
-    rating: 4,
-    date: "1 week ago",
-    text: "Good quality paper, but the delivery took a day longer than expected. Otherwise, completely satisfied with the product.",
-    verified: true,
-    helpful: 5,
-  },
-  {
-    id: 3,
-    name: "Usman Tariq",
-    rating: 5,
-    date: "2 weeks ago",
-    text: "The bundle pricing is very reasonable. I bought 5 reams and the packaging was solid. No damaged corners.",
-    verified: true,
-    helpful: 8,
-  },
-  {
-    id: 4,
-    name: "Ayesha Ahmed",
-    rating: 3,
-    date: "1 month ago",
-    text: "Decent paper for draft printing. A bit too thin for double-sided color printing, but works fine for regular text.",
-    verified: false,
-    helpful: 2,
-  },
-  {
-    id: 5,
-    name: "Zainab Ali",
-    rating: 5,
-    date: "1 month ago",
-    text: "Best customer service and top notch quality. Highly recommended for office use.",
-    verified: true,
-    helpful: 15,
-  }
-];
+import { useReviews, submitReview } from '../hooks/useSupabase';
 
 const Reviews = () => {
-  const [reviews, setReviews] = useState(DUMMY_REVIEWS);
+  const { reviews, loading } = useReviews();
   const [filterStar, setFilterStar] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newReview, setNewReview] = useState({ name: '', text: '', rating: 5 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Calculate stats
   const totalReviews = reviews.length;
-  const averageRating = (reviews.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews).toFixed(1);
+  const averageRating = totalReviews > 0 ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews).toFixed(1) : '0.0';
   const starCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   reviews.forEach(r => { starCounts[r.rating] = (starCounts[r.rating] || 0) + 1 });
 
@@ -75,27 +29,45 @@ const Reviews = () => {
     } else if (sortBy === 'lowest') {
       result.sort((a, b) => a.rating - b.rating);
     }
+    // 'newest' is default from Supabase order
     
     return result;
   }, [reviews, filterStar, sortBy]);
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
-    if (!newReview.name || !newReview.text) return;
+    if (!newReview.name || !newReview.text || isSubmitting) return;
 
-    const reviewToAdd = {
-      id: Date.now(),
-      name: newReview.name,
-      rating: newReview.rating,
-      date: "Just now",
-      text: newReview.text,
-      verified: true,
-      helpful: 0
-    };
-    
-    setReviews([reviewToAdd, ...reviews]);
-    setIsModalOpen(false);
-    setNewReview({ name: '', text: '', rating: 5 });
+    setIsSubmitting(true);
+    try {
+      await submitReview({
+        name: newReview.name,
+        rating: newReview.rating,
+        text: newReview.text,
+      });
+      setIsModalOpen(false);
+      setNewReview({ name: '', text: '', rating: 5 });
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+      alert('Could not submit your review. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
   };
 
   const renderStars = (rating) => {
@@ -124,38 +96,45 @@ const Reviews = () => {
             <h1 className="text-3xl font-display font-bold tracking-tight">Customer Reviews</h1>
           </div>
 
-          <div className="grid md:grid-cols-[1fr_2fr] gap-8 bg-gray-50 p-6 rounded-3xl border border-gray-200">
-            
-            {/* Rating Summary */}
-            <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 pb-6 md:pb-0 md:pr-6">
-              <div className="text-6xl font-bold text-[#111111] mb-2">{averageRating}</div>
-              <div className="flex gap-1 mb-2">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={20} className={i < Math.round(averageRating) ? "fill-primary text-primary" : "text-gray-300"} />
+          {loading ? (
+            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-200 animate-pulse">
+              <div className="h-20 bg-gray-200 rounded-xl mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-[1fr_2fr] gap-8 bg-gray-50 p-6 rounded-3xl border border-gray-200">
+              
+              {/* Rating Summary */}
+              <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 pb-6 md:pb-0 md:pr-6">
+                <div className="text-6xl font-bold text-[#111111] mb-2">{averageRating}</div>
+                <div className="flex gap-1 mb-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={20} className={i < Math.round(averageRating) ? "fill-primary text-primary" : "text-gray-300"} />
+                  ))}
+                </div>
+                <p className="text-gray-500 text-sm font-medium">Based on {totalReviews} reviews</p>
+              </div>
+
+              {/* Rating Bars */}
+              <div className="flex flex-col justify-center gap-2">
+                {[5, 4, 3, 2, 1].map(star => (
+                  <div key={star} className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 w-12">
+                      <span className="text-sm text-gray-700 font-bold">{star}</span>
+                      <Star size={12} className="text-gray-400 fill-gray-400" />
+                    </div>
+                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full transition-all duration-1000"
+                        style={{ width: totalReviews > 0 ? `${(starCounts[star] / totalReviews) * 100}%` : '0%' }}
+                      />
+                    </div>
+                    <div className="w-8 text-right text-xs text-gray-500 font-medium">{starCounts[star]}</div>
+                  </div>
                 ))}
               </div>
-              <p className="text-gray-500 text-sm font-medium">Based on {totalReviews} reviews</p>
             </div>
-
-            {/* Rating Bars */}
-            <div className="flex flex-col justify-center gap-2">
-              {[5, 4, 3, 2, 1].map(star => (
-                <div key={star} className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 w-12">
-                    <span className="text-sm text-gray-700 font-bold">{star}</span>
-                    <Star size={12} className="text-gray-400 fill-gray-400" />
-                  </div>
-                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary rounded-full transition-all duration-1000"
-                      style={{ width: `${(starCounts[star] / totalReviews) * 100}%` }}
-                    />
-                  </div>
-                  <div className="w-8 text-right text-xs text-gray-500 font-medium">{starCounts[star]}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -209,7 +188,22 @@ const Reviews = () => {
 
         {/* Reviews List */}
         <div className="flex flex-col gap-4">
-          {filteredAndSortedReviews.length > 0 ? (
+          {loading ? (
+            // Skeleton
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white border border-gray-100 p-6 rounded-3xl animate-pulse">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-gray-200" />
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-1" />
+                    <div className="h-3 bg-gray-200 rounded w-16" />
+                  </div>
+                </div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-2" />
+                <div className="h-4 bg-gray-200 rounded w-2/3" />
+              </div>
+            ))
+          ) : filteredAndSortedReviews.length > 0 ? (
             filteredAndSortedReviews.map((review) => (
               <div key={review.id} className="bg-white border border-gray-100 p-6 rounded-3xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-shadow">
                 <div className="flex justify-between items-start mb-4">
@@ -219,7 +213,7 @@ const Reviews = () => {
                     </div>
                     <div>
                       <div className="font-bold text-[#111111]">{review.name}</div>
-                      <div className="text-xs text-gray-500 font-medium">{review.date}</div>
+                      <div className="text-xs text-gray-500 font-medium">{formatDate(review.created_at)}</div>
                     </div>
                   </div>
                   <div className="flex gap-1 bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-full">
@@ -242,7 +236,7 @@ const Reviews = () => {
                   <div className="flex items-center gap-4 ml-auto">
                     <span className="text-xs text-gray-400 font-bold">Helpful?</span>
                     <button className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-primary transition-colors">
-                      <ThumbsUp size={14} /> {review.helpful}
+                      <ThumbsUp size={14} /> {review.helpful || 0}
                     </button>
                     <button className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-red-500 transition-colors">
                       <ThumbsDown size={14} />
@@ -305,7 +299,7 @@ const Reviews = () => {
                   required
                   value={newReview.name}
                   onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
-                  placeholder="John Doe"
+                  placeholder="Your name"
                   className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-[#111111] focus:outline-none focus:border-primary transition-colors font-medium shadow-inner"
                 />
               </div>
@@ -324,9 +318,10 @@ const Reviews = () => {
 
               <button 
                 type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-2xl transition-all mt-2 shadow-md hover:shadow-lg"
+                disabled={isSubmitting}
+                className={`w-full text-white font-bold py-3.5 rounded-2xl transition-all mt-2 shadow-md hover:shadow-lg ${isSubmitting ? 'bg-gray-400 cursor-wait' : 'bg-primary hover:bg-primary/90'}`}
               >
-                Submit Review
+                {isSubmitting ? 'Submitting...' : 'Submit Review'}
               </button>
             </form>
           </div>

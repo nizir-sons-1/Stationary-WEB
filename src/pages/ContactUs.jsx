@@ -101,30 +101,39 @@ const ContactUs = () => {
             <h3 className="text-2xl font-bold text-secondary mb-2 font-serif italic">Send us a Message</h3>
             <p className="text-gray-500 text-[14px] mb-8">Fill out the form below and our team will get back to you within 24 hours.</p>
             
-            <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex flex-col gap-6" onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const name = formData.get('name') || '';
+              const email = formData.get('email') || '';
+              const subject = formData.get('subject') || '';
+              const message = formData.get('message') || '';
+              const text = `*New Contact Form Message*\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}`;
+              window.open(`https://wa.me/923202220001?text=${encodeURIComponent(text)}`, '_blank');
+            }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Full Name</label>
-                  <input type="text" placeholder="John Doe" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
+                  <input name="name" type="text" required placeholder="Your name" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Email Address</label>
-                  <input type="email" placeholder="john@example.com" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
+                  <input name="email" type="email" placeholder="john@example.com" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
                 </div>
               </div>
               
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Subject</label>
-                <input type="text" placeholder="How can we help you?" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
+                <input name="subject" type="text" required placeholder="How can we help you?" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
               </div>
 
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Message</label>
-                <textarea rows="5" placeholder="Write your message here..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm resize-none"></textarea>
+                <textarea name="message" rows="5" required placeholder="Write your message here..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm resize-none"></textarea>
               </div>
 
-              <button className="bg-[#111111] text-white px-8 py-4 rounded-xl font-bold text-sm tracking-widest uppercase hover:bg-primary transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 self-start mt-2">
-                Submit Message
+              <button type="submit" className="bg-[#111111] text-white px-8 py-4 rounded-xl font-bold text-sm tracking-widest uppercase hover:bg-primary transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 self-start mt-2 flex items-center gap-2">
+                <MessageCircle size={18} /> Send via WhatsApp
               </button>
             </form>
           </div>

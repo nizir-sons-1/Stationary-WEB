@@ -201,3 +201,56 @@ export function useProduct(productName) {
     error: snapshot.error,
   };
 }
+
+// ── Reviews ──────────────────────────────────────────────────────────
+
+const REVIEWS_KEY = 'reviews:all';
+
+export function useReviews() {
+  const subscribe = useCallback((notify) => subscribeTo(REVIEWS_KEY, notify), []);
+  const getSnapshot = useCallback(() => read(REVIEWS_KEY), []);
+
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  useEffect(() => {
+    load(REVIEWS_KEY, async () => {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    });
+  }, []);
+
+  return {
+    reviews: snapshot.data === EMPTY ? [] : snapshot.data,
+    loading: snapshot.loading,
+    error: snapshot.error,
+  };
+}
+
+/**
+ * Insert a new review and refresh the cache so the UI updates immediately.
+ */
+export async function submitReview({ name, rating, text }) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert({ name, rating, text, verified: false, helpful: 0 })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Prepend the new review to the existing cache so it shows instantly.
+  const current = entries.get(REVIEWS_KEY);
+  if (current && current.data && current.data !== EMPTY) {
+    write(REVIEWS_KEY, { ...current, data: [data, ...current.data] });
+  } else {
+    // Force a full refetch if cache was empty.
+    entries.delete(REVIEWS_KEY);
+    inflight.delete(REVIEWS_KEY);
+  }
+
+  return data;
+}

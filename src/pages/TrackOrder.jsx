@@ -1,28 +1,60 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Package, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Search, Package, ArrowRight, CheckCircle2, MessageCircle, Clock, Truck, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+
+const STATUS_MAP = {
+  pending: { label: 'Order Received', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+  processing: { label: 'Processing', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+  shipped: { label: 'Shipped', icon: Truck, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+  delivered: { label: 'Delivered', icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
+  cancelled: { label: 'Cancelled', icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
+};
 
 const TrackOrder = () => {
   const [trackingId, setTrackingId] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState(null);
+  const [notFound, setNotFound] = useState(false);
 
-  const handleTrack = (e) => {
+  const handleTrack = async (e) => {
     e.preventDefault();
-    if (!trackingId) return;
+    if (!trackingId.trim()) return;
     
     setIsSearching(true);
-    // Simulate network request
-    setTimeout(() => {
+    setResult(null);
+    setNotFound(false);
+
+    try {
+      const needle = trackingId.trim();
+
+      // Try matching by: order ID prefix (first 8 chars uppercase), phone number, or full UUID
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, status, created_at, total_amount, customer_name, items, shipping_method')
+        .or(`customer_phone.ilike.%${needle}%,id.ilike.%${needle}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setResult(data);
+      } else {
+        setNotFound(true);
+      }
+    } catch (err) {
+      console.error('Track order error:', err);
+      setNotFound(true);
+    } finally {
       setIsSearching(false);
-      setResult({
-        status: 'processing',
-        message: 'Your order is currently being processed by our team.',
-        eta: '2-3 Business Days'
-      });
-    }, 1500);
+    }
   };
+
+  const statusInfo = result ? (STATUS_MAP[result.status] || STATUS_MAP.pending) : null;
+  const StatusIcon = statusInfo?.icon || Clock;
 
   return (
     <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto flex flex-col items-center justify-center min-h-[70vh]">
@@ -40,7 +72,7 @@ const TrackOrder = () => {
           Track Your Order
         </h1>
         <p className="font-body-lg text-gray-500">
-          Enter your Order ID or WhatsApp number below to check the real-time status of your premium delivery.
+          Enter your Order ID or phone number below to check the real-time status of your delivery.
         </p>
       </motion.div>
 
@@ -86,14 +118,20 @@ const TrackOrder = () => {
               animate={{ opacity: 1, height: 'auto', marginTop: 32 }}
               className="border-t border-gray-100 pt-8"
             >
-              <div className="flex items-start gap-4 p-5 bg-orange-50/50 border border-orange-100 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-primary shrink-0">
-                  <CheckCircle2 size={20} />
+              <div className={`flex items-start gap-4 p-5 ${statusInfo.bg} ${statusInfo.border} border rounded-2xl`}>
+                <div className={`w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm ${statusInfo.color} shrink-0`}>
+                  <StatusIcon size={20} />
                 </div>
-                <div>
-                  <h4 className="font-bold text-secondary text-lg mb-1">Status: Processing</h4>
-                  <p className="text-gray-600 text-sm mb-2">{result.message}</p>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Estimated Delivery: <span className="text-primary">{result.eta}</span></p>
+                <div className="flex-1">
+                  <h4 className="font-bold text-secondary text-lg mb-1">Status: {statusInfo.label}</h4>
+                  <p className="text-gray-600 text-sm mb-2">
+                    Order for <span className="font-bold">{result.customer_name}</span> — {Array.isArray(result.items) ? result.items.length : 0} item(s)
+                  </p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    <span>ID: <span className="text-secondary">{result.id.slice(0, 8).toUpperCase()}</span></span>
+                    <span>Total: <span className="text-primary">Rs. {Number(result.total_amount || 0).toLocaleString()}</span></span>
+                    <span>Date: <span className="text-secondary">{new Date(result.created_at).toLocaleDateString()}</span></span>
+                  </div>
                 </div>
               </div>
               
@@ -101,6 +139,30 @@ const TrackOrder = () => {
                 <p className="text-sm text-gray-500 mb-4">Need help with this order?</p>
                 <a href="https://wa.me/923202220001" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-green-600 font-bold text-sm bg-green-50 px-6 py-3 rounded-xl hover:bg-green-100 transition-colors">
                   <MessageCircle size={18} /> Contact Support
+                </a>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Not Found */}
+          {notFound && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginTop: 32 }}
+              className="border-t border-gray-100 pt-8"
+            >
+              <div className="flex items-start gap-4 p-5 bg-gray-50 border border-gray-200 rounded-2xl">
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-gray-400 shrink-0">
+                  <Search size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-secondary text-lg mb-1">No Order Found</h4>
+                  <p className="text-gray-500 text-sm mb-2">We couldn't find an order matching "{trackingId}". Please double-check your Order ID or phone number.</p>
+                </div>
+              </div>
+              <div className="mt-6 text-center">
+                <a href="https://wa.me/923202220001" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-green-600 font-bold text-sm bg-green-50 px-6 py-3 rounded-xl hover:bg-green-100 transition-colors">
+                  <MessageCircle size={18} /> Ask on WhatsApp
                 </a>
               </div>
             </motion.div>
