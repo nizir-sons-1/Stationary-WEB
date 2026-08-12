@@ -88,4 +88,49 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  /*
+   * PERFORMANCE LAYER
+   *
+   * 1. Layout containment on cards: hover/GSAP transforms on one card stop
+   *    the browser recalculating the whole page. style containment stops style
+   *    inheritance leaking outside — safe because these are self-contained articles.
+   */
+  .product-card,
+  .category-card {
+    contain: layout style;
+    will-change: transform, box-shadow;
+  }
+
+  /*
+   * 2. content-visibility: auto tells the browser it can skip painting sections
+   *    that are fully off-screen. contain-intrinsic-size provides a size hint so
+   *    the scrollbar doesn't jump when the section gets rendered.
+   *    Only applied at md+ (desktop) — on mobile the viewport is small enough
+   *    that almost everything is "near" the viewport anyway.
+   */
+  @media (min-width: 768px) {
+    .cv-section {
+      content-visibility: auto;
+      contain-intrinsic-size: 0 500px;
+    }
+  }
+
+  /*
+   * 3. GPU-promote the Navbar and floating button so scroll doesn't trigger a
+   *    repaint of those fixed/sticky elements on every frame.
+   */
+  nav,
+  .floating-fab {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  /*
+   * 4. Images: force hardware-decoded compositing so the browser doesn't block
+   *    the main thread while decoding large WebP/JPEG thumbnails.
+   */
+  img {
+    transform: translateZ(0);
+  }
 }

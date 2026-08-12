@@ -11,7 +11,7 @@ const MAIN_CATEGORIES = [
   { name: 'Fine Arts', icon: Palette, bg: 'bg-orange-50', color: 'text-orange-600', image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', count: 'Coming Soon' },
   { name: 'Stationery', icon: PenTool, bg: 'bg-blue-50', color: 'text-blue-600', image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', count: 'Coming Soon' },
   { name: 'Notebooks', icon: BookOpen, bg: 'bg-yellow-50', color: 'text-yellow-600', image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80', count: 'Coming Soon' },
-  { name: 'Accessories', icon: ShoppingBag, bg: 'bg-purple-50', color: 'text-purple-600', image: 'https://images.unsplash.com/photo-1522881118552-6d1ff8f8dc05?auto=format&fit=crop&w=400&q=80', count: 'Coming Soon' }
+  { name: 'Accessories', icon: ShoppingBag, bg: 'bg-purple-50', color: 'text-purple-600', image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80', count: 'Coming Soon' }
 ];
 
 const PAPER_CATEGORIES = [
@@ -32,6 +32,81 @@ const PAPER_CATEGORIES = [
   { name: 'Kraft Card', icon: Package, color: 'text-yellow-600', bg: 'bg-yellow-50', hover: 'group-hover:bg-yellow-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1518707399587-25e243dbf152?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
   { name: 'Book Paper', icon: BookOpen, color: 'text-lime-600', bg: 'bg-lime-50', hover: 'group-hover:bg-lime-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' }
 ];
+
+// Maps every category name to its parent department.
+// Used to filter category grid per department AND compute department-level counts.
+const DEPARTMENT_CATEGORIES = {
+  'Paper & Canvas': ['Bleach Card','Art Card','Art Paper','Matte Paper','Copy Paper','Offset Paper','Ivory Card','Color Card','Carbonless','Stickers','Local Paper','BoxBoard','News','Butter Paper','Kraft Card','Book Paper'],
+  'Fine Arts': ['Watercolor','Watercolor paints','Acryli Paints','Acrylic powder','Art Brush','Art Glitters','Art Glue','Art Marker','Art Pencil','art pencil','BRUSH','Brushes','Calligraphy Marker','Calligraphy Pen','Calligraphy Set','Canvas Board','Color Pencil','Coloring Kit','Color Kit','Crayon','Drawing Marker','Drawing Pencil Set','Epoxy Resin','Fabric Paint','Fancy Pen','Fountain Pen','Gel Pens','Gesso','gesso','Matt Varnish','Mica Powder','Micron Fineliner Pen','Modeling Clay','Modelling Clay','Modelling paste','Modelling tools','Mols & Paints','Oil Painitng Medium','Paint','Paint Accessories','Paint Marker','Painting Accessories','Painting Medium','Poster Paints','Resin Pigment Paste','Silicone Mold','Sketch Pad','Soya Wax','BEE WAX','Arts & Crafts Deals'],
+  'Stationery': ['Ballpoint Pen','Binder Clips','Binding Machine','Board Magnet','Calculator','Card Holder','Compass','Counter Pen','Cute Highlighters','Cute Pencil','Desk Organzier','Geometry Box','Geometry Pouch','Highlighters','Id Card Holder','Lead','Magnifying Glass','Markers','Mechanical Pencil','Menu Folder','Money Box','Name Badge','Name Plate','name plate','Notice Board','Numbering Stamps','Paper Cutter','Pen Stand','Photo Paper','Punch Machine','Receipt Folder','Roller Refills','Scissor','Sticky Notes','Table Planner','Tape Dispenser','White board','Whiteboard Eraser','Whiteboard Marker Ink','coin Box','corner cutter','key chain','paper soap','Stationery','Stationery set','Office Supplies Deals'],
+  'Notebooks': ['Note book','Diary','diary','Leaf Paper'],
+  'Accessories': ['Birthday Balloon','Brush Case','Candle','Confetti Beads','Craft Accessories','Digital Clock','Educational Toy','Educational Wooden Toy','Fishing Game','Foaming Alphabets','Foaming Sheet','FOAMING FLOWER','Gift Bag','Gift Bags','Gift Box','Gift Paper','Globe','Glitter sticker','Gloves','Lunch Box','Pom pom','RIBBONS','School Accessories','School Supplies Deals','Sign Sticker','Sponge','Table Lamp&Clock','Thread Cutter','Tube Extractor','Wall','Wallet','Washi Tapes','Water Bottles','water bottles','Wooden Plate','Wooden Puzzle Plate','kids Toys','kids toys','Learning & Activity Toys'],
+};
+
+// Per-category Unsplash images for non-paper departments.
+const CATEGORY_IMAGE_MAP = {
+  'Watercolor': 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&q=80',
+  'Watercolor paints': 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&q=80',
+  'Art Brush': 'https://images.unsplash.com/photo-1560421683-6856ea585c78?w=600&q=80',
+  'Brushes': 'https://images.unsplash.com/photo-1560421683-6856ea585c78?w=600&q=80',
+  'BRUSH': 'https://images.unsplash.com/photo-1560421683-6856ea585c78?w=600&q=80',
+  'Canvas Board': 'https://images.unsplash.com/photo-1615729947596-a598e5de0ab3?w=600&q=80',
+  'Color Pencil': 'https://images.unsplash.com/photo-1513185158878-8d8c2a2a3da3?w=600&q=80',
+  'Crayon': 'https://images.unsplash.com/photo-1513185158878-8d8c2a2a3da3?w=600&q=80',
+  'Sketch Pad': 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=600&q=80',
+  'Drawing Marker': 'https://images.unsplash.com/photo-1584473457406-6240486418e9?w=600&q=80',
+  'Markers': 'https://images.unsplash.com/photo-1584473457406-6240486418e9?w=600&q=80',
+  'Art Marker': 'https://images.unsplash.com/photo-1584473457406-6240486418e9?w=600&q=80',
+  'Modeling Clay': 'https://images.unsplash.com/photo-1574607383476-f517f260d30b?w=600&q=80',
+  'Modelling Clay': 'https://images.unsplash.com/photo-1574607383476-f517f260d30b?w=600&q=80',
+  'Modelling paste': 'https://images.unsplash.com/photo-1574607383476-f517f260d30b?w=600&q=80',
+  'Epoxy Resin': 'https://images.unsplash.com/photo-1617576683096-00fc8eecb3af?w=600&q=80',
+  'Silicone Mold': 'https://images.unsplash.com/photo-1617576683096-00fc8eecb3af?w=600&q=80',
+  'Resin Pigment Paste': 'https://images.unsplash.com/photo-1617576683096-00fc8eecb3af?w=600&q=80',
+  'Calligraphy Pen': 'https://images.unsplash.com/photo-1455885661740-29cbf08a42fa?w=600&q=80',
+  'Calligraphy Marker': 'https://images.unsplash.com/photo-1455885661740-29cbf08a42fa?w=600&q=80',
+  'Calligraphy Set': 'https://images.unsplash.com/photo-1455885661740-29cbf08a42fa?w=600&q=80',
+  'Poster Paints': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+  'Paint': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+  'Acryli Paints': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+  'Fabric Paint': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+  'Gel Pens': 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&q=80',
+  'Fancy Pen': 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&q=80',
+  'Fountain Pen': 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&q=80',
+  'Ballpoint Pen': 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&q=80',
+  'Sticky Notes': 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=600&q=80',
+  'Calculator': 'https://images.unsplash.com/photo-1564473185935-58e7e40c0f31?w=600&q=80',
+  'Notice Board': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80',
+  'White board': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80',
+  'Geometry Box': 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&q=80',
+  'Geometry Pouch': 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&q=80',
+  'Scissor': 'https://images.unsplash.com/photo-1519222970733-f546218fa6d7?w=600&q=80',
+  'Highlighters': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&q=80',
+  'Cute Highlighters': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&q=80',
+  'Note book': 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&q=80',
+  'Diary': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&q=80',
+  'diary': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&q=80',
+  'Leaf Paper': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&q=80',
+  'Gift Box': 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=600&q=80',
+  'Gift Bag': 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=600&q=80',
+  'Gift Bags': 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=600&q=80',
+  'Gift Paper': 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=600&q=80',
+  'Water Bottles': 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80',
+  'water bottles': 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80',
+  'Educational Toy': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
+  'Educational Wooden Toy': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
+  'Washi Tapes': 'https://images.unsplash.com/photo-1558618047-f4992c7e5e53?w=600&q=80',
+  'Craft Accessories': 'https://images.unsplash.com/photo-1522881118552-6d1ff8f8dc05?w=600&q=80',
+  'School Accessories': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&q=80',
+  'Lunch Box': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80',
+};
+
+const DEPT_FALLBACK_IMAGE = {
+  'Fine Arts': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+  'Stationery': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&q=80',
+  'Notebooks': 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&q=80',
+  'Accessories': 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=600&q=80',
+};
 
 const formatPrice = (priceStr) => {
   const num = Number(priceStr);
@@ -348,42 +423,46 @@ const Shop = () => {
     }).filter(group => group.variations.length > 0);
   }, [dbProducts]);
 
-  // Create dynamic categories from counts
+  // Create dynamic categories from counts — filtered by the exact selected department.
   const dynamicCategories = useMemo(() => {
-    const paperCatNames = PAPER_CATEGORIES.map(c => c.name.toLowerCase());
-    
-    let filteredKeys = Object.keys(categoryCounts);
-    
-    if (selectedMainCategory === 'Paper & Canvas') {
-      // Only show paper categories
-      filteredKeys = filteredKeys.filter(catName => paperCatNames.includes(catName.toLowerCase()));
-    } else if (selectedMainCategory) {
-      // For other departments (which are mostly placeholders from scraped data), show non-paper categories
-      filteredKeys = filteredKeys.filter(catName => !paperCatNames.includes(catName.toLowerCase()));
-    }
+    if (!selectedMainCategory) return [];
+    const deptCats = DEPARTMENT_CATEGORIES[selectedMainCategory] || [];
+    const deptCatsLower = new Set(deptCats.map(c => c.toLowerCase()));
+
+    const filteredKeys = Object.keys(categoryCounts).filter(catName =>
+      deptCatsLower.has(catName.toLowerCase())
+    );
+
+    const colors = [
+      { color: 'text-blue-600', bg: 'bg-blue-50', hover: 'group-hover:bg-blue-600 group-hover:text-white' },
+      { color: 'text-purple-600', bg: 'bg-purple-50', hover: 'group-hover:bg-purple-600 group-hover:text-white' },
+      { color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'group-hover:bg-emerald-600 group-hover:text-white' },
+      { color: 'text-amber-600', bg: 'bg-amber-50', hover: 'group-hover:bg-amber-600 group-hover:text-white' },
+      { color: 'text-rose-600', bg: 'bg-rose-50', hover: 'group-hover:bg-rose-600 group-hover:text-white' },
+    ];
 
     return filteredKeys.map((catName, idx) => {
       const staticCat = PAPER_CATEGORIES.find(c => c.name.toLowerCase() === catName.toLowerCase());
       if (staticCat) return { ...staticCat, count: categoryCounts[catName] };
-      
-      const colors = [
-        { color: 'text-blue-600', bg: 'bg-blue-50', hover: 'group-hover:bg-blue-600 group-hover:text-white' },
-        { color: 'text-purple-600', bg: 'bg-purple-50', hover: 'group-hover:bg-purple-600 group-hover:text-white' },
-        { color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'group-hover:bg-emerald-600 group-hover:text-white' },
-        { color: 'text-amber-600', bg: 'bg-amber-50', hover: 'group-hover:bg-amber-600 group-hover:text-white' },
-        { color: 'text-rose-600', bg: 'bg-rose-50', hover: 'group-hover:bg-rose-600 group-hover:text-white' },
-      ];
+
       const style = colors[idx % colors.length];
-      
-      return {
-        name: catName,
-        icon: Box,
-        ...style,
-        image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        count: categoryCounts[catName]
-      };
+      const image = CATEGORY_IMAGE_MAP[catName]
+        || DEPT_FALLBACK_IMAGE[selectedMainCategory]
+        || 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=400&q=80';
+
+      return { name: catName, icon: Box, ...style, image, count: categoryCounts[catName] };
     }).sort((a, b) => b.count - a.count);
   }, [categoryCounts, selectedMainCategory]);
+
+  // How many categories (from DB) each department has — drives the count badges on department cards.
+  const departmentCounts = useMemo(() => {
+    const result = {};
+    for (const [dept, cats] of Object.entries(DEPARTMENT_CATEGORIES)) {
+      const catsLower = new Set(cats.map(c => c.toLowerCase()));
+      result[dept] = Object.keys(categoryCounts).filter(cat => catsLower.has(cat.toLowerCase())).length;
+    }
+    return result;
+  }, [categoryCounts]);
 
   if (!selectedMainCategory) {
     return (
@@ -409,7 +488,9 @@ const Shop = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/40 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
                 <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-4 md:p-6' : 'p-2 sm:p-3 md:p-5'}`}>
                   <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-xl text-[24px] sm:text-[28px] md:text-[36px]' : 'font-headline-md text-[13px] sm:text-[15px] md:text-[20px]'}`}>{cat.name}</span>
-                  <span className={`text-white/90 mt-1.5 md:mt-2 uppercase tracking-widest font-bold bg-white/25 rounded-full border border-white/20 ${isFeatured ? 'text-[10px] md:text-[12px] px-3 py-1 md:px-4 md:py-1.5' : 'text-[7px] sm:text-[8px] md:text-[10px] px-2 py-0.5 md:px-3 md:py-1'}`}>{cat.count}</span>
+                  <span className={`text-white/90 mt-1.5 md:mt-2 uppercase tracking-widest font-bold bg-white/25 rounded-full border border-white/20 ${isFeatured ? 'text-[10px] md:text-[12px] px-3 py-1 md:px-4 md:py-1.5' : 'text-[7px] sm:text-[8px] md:text-[10px] px-2 py-0.5 md:px-3 md:py-1'}`}>
+                    {countsLoading ? '...' : (() => { const dc = departmentCounts[cat.name] || 0; return dc > 0 ? `${dc} Categories` : 'Coming Soon'; })()}
+                  </span>
                 </div>
               </div>
             );

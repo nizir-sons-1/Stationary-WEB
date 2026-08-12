@@ -10,7 +10,7 @@ const FloatingWhatsApp = () => {
   const whatsappUrl = `https://wa.me/${whatsappNumber}`;
 
   return (
-    <div className="fixed bottom-24 right-6 md:bottom-10 md:right-10 z-[60] flex flex-col-reverse items-end pointer-events-none">
+    <div className="floating-fab fixed bottom-24 right-6 md:bottom-10 md:right-10 z-[60] flex flex-col-reverse items-end pointer-events-none">
 
       {/* Button (first in DOM so the tooltip can be its `peer`) */}
       <a
