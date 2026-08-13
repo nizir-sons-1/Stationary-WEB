@@ -267,10 +267,23 @@ const PALETTE = [
  *
  * @param {Record<string, number>} counts  raw category string -> product count
  * @param {Record<string, string>} images  raw category string -> product photo
+ * @param {Record<string, string>} overrides  artwork chosen in the admin panel,
+ *        keyed by either the customer-facing name or any of the raw database
+ *        spellings — the panel lists shelves by their raw `products.category`
+ *        value, while this file has already merged those into one display name,
+ *        so a saved image has to be findable under both.
  * @returns {Record<string, Array>} department name -> cards, busiest first
  */
-export function groupCategories(counts, images = {}) {
+export function groupCategories(counts, images = {}, overrides = {}) {
   const merged = new Map(); // display name -> card
+
+  const overrideFor = (entry) => {
+    if (overrides[entry.name]) return overrides[entry.name];
+    for (const raw of entry.db) {
+      if (overrides[raw]) return overrides[raw];
+    }
+    return null;
+  };
 
   const push = (entry, rawName) => {
     const n = counts[rawName] || 0;
@@ -281,7 +294,10 @@ export function groupCategories(counts, images = {}) {
         name: entry.name,
         dept: entry.dept,
         icon: entry.icon || Box,
-        image: entry.image || null,
+        // Admin artwork outranks the bundled art, which outranks a borrowed
+        // product photo — a picture someone deliberately chose should never be
+        // overruled by a default.
+        image: overrideFor(entry) || entry.image || null,
         count: 0,
         // Kept so a merged card can query every spelling it stands for.
         dbNames: [],

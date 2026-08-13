@@ -117,13 +117,44 @@ async function fetchCatalogue() {
 }
 
 /**
+ * Category artwork chosen in the admin panel, keyed by shelf name.
+ *
+ * Optional in exactly the way it is optional at runtime: if the table has not
+ * been created the build carries on with the bundled artwork rather than
+ * failing, which keeps a deploy from depending on a migration having been run.
+ */
+async function fetchTaxonomyImages() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) return { department: {}, category: {} };
+
+  try {
+    const res = await fetch(`${url}/rest/v1/taxonomy_images?select=kind,name,image_url`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) {
+      console.warn(`[prerender] taxonomy_images returned ${res.status} — using built-in artwork.`);
+      return { department: {}, category: {} };
+    }
+    const byKind = { department: {}, category: {} };
+    for (const row of await res.json()) {
+      if (row.image_url && byKind[row.kind]) byKind[row.kind][row.name] = row.image_url;
+    }
+    return byKind;
+  } catch (err) {
+    console.warn(`[prerender] taxonomy_images unreachable (${err.message}) — using built-in artwork.`);
+    return { department: {}, category: {} };
+  }
+}
+
+/**
  * Folds the raw rows into the same shape the shop renders: departments holding
  * merged category cards, and one entry per distinct product name.
  *
  * Reuses groupCategories from src/data/categories.js rather than reimplementing
  * the merge, so the URLs written here are byte-identical to the ones the app links to.
  */
-function buildTree(rows) {
+function buildTree(rows, categoryOverrides = {}) {
   const counts = {};
   const images = {};
   for (const row of rows) {
@@ -132,7 +163,7 @@ function buildTree(rows) {
     if (row.image_url && !images[row.category]) images[row.category] = row.image_url;
   }
 
-  const byDepartment = groupCategories(counts, images);
+  const byDepartment = groupCategories(counts, images, categoryOverrides);
 
   // Product name -> every row and variation carrying that name. The catalogue
   // has 23 duplicate names across categories, and /product/:name shows them as
@@ -811,8 +842,8 @@ async function main() {
     throw new Error('dist/index.html has no <div id="root"> mount point to fill.');
   }
 
-  const rows = await fetchCatalogue();
-  const { byDepartment, products, productsByCategory } = buildTree(rows);
+  const [rows, taxonomyImages] = await Promise.all([fetchCatalogue(), fetchTaxonomyImages()]);
+  const { byDepartment, products, productsByCategory } = buildTree(rows, taxonomyImages.category);
 
   const sitemap = [];
 

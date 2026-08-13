@@ -211,6 +211,58 @@ export function useCategoryCounts() {
   };
 }
 
+// ── Department & category artwork ────────────────────────────────────────
+//
+// Departments and categories are free-text columns on `products`, so until now
+// their pictures could only live in src/data/categories.js — editing one meant
+// a code change and a redeploy. `taxonomy_images` is a small table the admin
+// panel writes to (see supabase/taxonomy_images.sql in the admin repo); a row
+// there overrides the bundled artwork for one shelf.
+//
+// The table is treated as optional on purpose. If it has not been created the
+// request 404s, the shop logs it and carries on with exactly the artwork it had
+// before — a missing image table is not a reason to take the storefront down.
+
+const TAXONOMY_KEY = 'taxonomy-images';
+const EMPTY_TAXONOMY = Object.freeze({ department: {}, category: {} });
+
+export function useTaxonomyImages() {
+  const subscribe = useCallback((notify) => subscribeTo(TAXONOMY_KEY, notify), []);
+  const getSnapshot = useCallback(() => read(TAXONOMY_KEY), []);
+
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  useEffect(() => {
+    load(TAXONOMY_KEY, async () => {
+      const { data, error } = await supabase
+        .from('taxonomy_images')
+        .select('kind, name, image_url');
+
+      // PGRST205 is "no such table" — the migration has not been run yet.
+      if (error) {
+        if (error.code === 'PGRST205') return EMPTY_TAXONOMY;
+        throw error;
+      }
+
+      const byKind = { department: {}, category: {} };
+      for (const row of data || []) {
+        if (row.image_url && byKind[row.kind]) byKind[row.kind][row.name] = row.image_url;
+      }
+      return byKind;
+    });
+  }, []);
+
+  // An outright failure falls back to the bundled artwork rather than blanking
+  // every tile on the homepage.
+  const data = snapshot.loading || snapshot.error || snapshot.data === EMPTY ? EMPTY_TAXONOMY : snapshot.data;
+
+  return {
+    departmentImages: data.department || EMPTY_COUNTS,
+    categoryImages: data.category || EMPTY_COUNTS,
+    loading: snapshot.loading,
+  };
+}
+
 export function useProduct(productName) {
   const cacheKey = productName ? `product:${productName}` : null;
 

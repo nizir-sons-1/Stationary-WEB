@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useCategoryCounts } from '../hooks/useSupabase';
+import { useCategoryCounts, useTaxonomyImages } from '../hooks/useSupabase';
 import { groupCategories, PAPER_AND_CANVAS } from '../data/categories';
 import { fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
 import { categoryPath } from '../lib/site';
@@ -43,19 +43,24 @@ const containerVariants = {
 
 const CategoryCards = () => {
   const { counts, images, loading } = useCategoryCounts();
+  // Artwork chosen in the admin panel. Empty until someone sets one, in which
+  // case every tile keeps the picture it has always had.
+  const { departmentImages, categoryImages } = useTaxonomyImages();
 
   const categories = useMemo(() => {
-    const byDept = groupCategories(counts, images);
+    const byDept = groupCategories(counts, images, categoryImages);
     return DEPARTMENT_CARDS.map((dept) => {
       const cards = byDept[dept.name] || [];
       const products = cards.reduce((sum, c) => sum + c.count, 0);
       return {
         ...dept,
-        img: dept.img || cards.find((c) => c.image)?.image || null,
+        // Admin choice first, then the commissioned photo this card was born
+        // with, then a picture borrowed from the department's own stock.
+        img: departmentImages[dept.name] || dept.img || cards.find((c) => c.image)?.image || null,
         count: loading ? ' ' : products > 0 ? `${products} Products` : 'Coming Soon',
       };
     });
-  }, [counts, images, loading]);
+  }, [counts, images, loading, departmentImages, categoryImages]);
 
   return (
     <section className="py-8 md:py-12 px-0 md:px-gutter max-w-container-max mx-auto bg-white font-sans text-center overflow-hidden">

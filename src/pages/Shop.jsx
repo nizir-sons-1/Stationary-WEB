@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Package, ShoppingBag, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useProducts, useCategoryCounts } from '../hooks/useSupabase';
+import { useProducts, useCategoryCounts, useTaxonomyImages } from '../hooks/useSupabase';
 import {
   DEPARTMENTS,
   PAPER_AND_CANVAS,
@@ -348,14 +348,19 @@ const Shop = () => {
 
   const { counts: categoryCounts, images: categoryImages, loading: countsLoading } = useCategoryCounts();
 
+  // Artwork set from the admin panel. Absent until someone sets one, at which
+  // point it takes precedence over both the bundled art and the borrowed photo.
+  const { departmentImages: adminDepartmentImages, categoryImages: adminCategoryImages } =
+    useTaxonomyImages();
+
   /*
    * One pass folds the raw Supabase tallies into the cards the shop shows:
    * spellings of the same shelf are merged, each card is handed a photo of
    * something actually inside it, and anything unrecognised still surfaces.
    */
   const cardsByDepartment = useMemo(
-    () => groupCategories(categoryCounts, categoryImages),
-    [categoryCounts, categoryImages]
+    () => groupCategories(categoryCounts, categoryImages, adminCategoryImages),
+    [categoryCounts, categoryImages, adminCategoryImages]
   );
 
   const dynamicCategories = useMemo(
@@ -452,13 +457,17 @@ const Shop = () => {
         return {
           ...dept,
           categoryCount: cards.length,
+          // A picture chosen in the admin panel wins over everything else,
+          // including the flagship's pinned photograph — the whole point of
+          // setting one is that it is meant to replace the default.
           image:
-            dept.name === PAPER_AND_CANVAS
+            adminDepartmentImages[dept.name] ||
+            (dept.name === PAPER_AND_CANVAS
               ? PAPER_DEPARTMENT_IMAGE
-              : cards.find((c) => c.image)?.image || PLACEHOLDER_IMAGE,
+              : cards.find((c) => c.image)?.image || PLACEHOLDER_IMAGE),
         };
       }),
-    [cardsByDepartment]
+    [cardsByDepartment, adminDepartmentImages]
   );
 
   /*
