@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { usePageSeo } from '../lib/seo';
 
 const OurStory = () => {
+  usePageSeo('/about', { pageType: 'AboutPage' });
   return (
     <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto">
       

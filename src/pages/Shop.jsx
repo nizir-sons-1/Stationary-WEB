@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Package, ShoppingBag, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useProducts, useCategoryCounts } from '../hooks/useSupabase';
@@ -8,12 +8,18 @@ import {
   PAPER_AND_CANVAS,
   PAPER_CATEGORY_NAMES,
   dbNamesFor,
+  categoryFromSlug,
+  departmentFromSlug,
   departmentOf,
   displayNameOf,
   groupCategories,
 } from '../data/categories';
 import { PLACEHOLDER_IMAGE, fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
 import TermsModal from '../components/TermsModal';
+import { usePageSeo } from '../lib/seo';
+import { itemListSchema } from '../lib/schema';
+import { categoryPath, productPath, slugify, titleFromSlug } from '../lib/site';
+import { ROUTES } from '../data/seo-content';
 import gsap from 'gsap';
 
 /*
@@ -302,44 +308,97 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
 
 const Shop = () => {
   const location = useLocation();
-  const [selectedMainCategory, setSelectedMainCategory] = useState(
-    () => location.state?.mainCategory || (location.state?.subCategory ? departmentOf(location.state.subCategory) : null)
-  );
-  const [selectedSubCategory, setSelectedSubCategory] = useState(
-    () => (location.state?.subCategory ? displayNameOf(location.state.subCategory) : null)
-  );
+  const navigate = useNavigate();
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────────
+   * WHICH SHELF IS OPEN LIVES IN THE URL, NOT IN COMPONENT STATE
+   * ───────────────────────────────────────────────────────────────────────────
+   *
+   * This used to be two useState values. That made the entire catalogue — five
+   * departments and around 170 categories — reachable only by clicking: every
+   * one of those views was served at the single URL /shop, so there was nothing
+   * for a search engine to index, nothing to link to, nothing to put in a
+   * sitemap, and no way for a customer to send someone "the ivory card page".
+   * The browser's back button did not work through the drill-down either.
+   *
+   * /shop/paper-and-canvas/art-card is now a real page: it has its own title,
+   * its own description, its own structured data, and a static HTML file
+   * written for it at build time.
+   */
+  const { deptSlug, categorySlug } = useParams();
+  const selectedMainCategory = deptSlug ? departmentFromSlug(deptSlug) : null;
+
   const categoriesGridRef = useRef(null);
   const productsGridRef = useRef(null);
 
   /*
-   * Search results and footer links hand over whatever the database calls the
-   * category ("art pencil", "Acryli Paints"). The grid works in customer-facing
-   * names, so translate on the way in — and derive the department from the
-   * category when only the category was given, otherwise the page lands on a
-   * product list with no way back up the tree.
+   * Anything still navigating the old way — `<Link to="/shop" state={{...}}>` —
+   * is redirected to the addressable URL on arrival, and the history entry
+   * replaced, so a shared or bookmarked link is always the canonical form.
    */
   useEffect(() => {
     const sub = location.state?.subCategory;
     const main = location.state?.mainCategory;
-    if (main) setSelectedMainCategory(main);
-    else if (sub) setSelectedMainCategory(departmentOf(sub));
-    if (sub) setSelectedSubCategory(displayNameOf(sub));
-  }, [location.state]);
+    if (!sub && !main) return;
+
+    const dept = main || departmentOf(sub);
+    navigate(categoryPath(dept, sub ? displayNameOf(sub) : null), { replace: true });
+  }, [location.state, navigate]);
+
+  const { counts: categoryCounts, images: categoryImages, loading: countsLoading } = useCategoryCounts();
+
+  /*
+   * One pass folds the raw Supabase tallies into the cards the shop shows:
+   * spellings of the same shelf are merged, each card is handed a photo of
+   * something actually inside it, and anything unrecognised still surfaces.
+   */
+  const cardsByDepartment = useMemo(
+    () => groupCategories(categoryCounts, categoryImages),
+    [categoryCounts, categoryImages]
+  );
+
+  const dynamicCategories = useMemo(
+    () => (selectedMainCategory ? cardsByDepartment[selectedMainCategory] || [] : []),
+    [cardsByDepartment, selectedMainCategory]
+  );
+
+  /*
+   * The slug in the URL, turned back into the name the catalogue uses.
+   *
+   * Most shelves are in the static map in src/data/categories.js and resolve
+   * immediately. A shelf the database has grown since that file was last
+   * touched is not there, so it is matched against the live category list once
+   * the tally lands — which is why new stock is never a dead URL.
+   */
+  const selectedSubCategory = useMemo(() => {
+    if (!categorySlug) return null;
+    const known = categoryFromSlug(categorySlug);
+    if (known) return known;
+    const hit = dynamicCategories.find((c) => slugify(c.name) === categorySlug);
+    return hit ? hit.name : null;
+  }, [categorySlug, dynamicCategories]);
+
+  // Which of the three views to render is decided by the URL alone, not by
+  // whether the name has resolved yet — otherwise a slug awaiting the live
+  // category list would flash the category grid before the product list.
+  const showingProducts = Boolean(categorySlug);
+  const categoryHeading = selectedSubCategory || titleFromSlug(categorySlug);
 
   // Stagger categories on mount
   useEffect(() => {
-    if ((!selectedMainCategory || !selectedSubCategory) && categoriesGridRef.current) {
-      gsap.fromTo('.category-card', 
+    if (!showingProducts && categoriesGridRef.current) {
+      gsap.fromTo('.category-card',
         { y: 50, opacity: 0, scale: 0.9, rotateX: 20 },
         { y: 0, opacity: 1, scale: 1, rotateX: 0, duration: 0.8, stagger: 0.1, ease: 'back.out(1.5)', clearProps: 'all' }
       );
     }
-  }, [selectedMainCategory, selectedSubCategory]);
+  }, [selectedMainCategory, showingProducts]);
 
   // Stagger products when selected category changes
   useEffect(() => {
     if (selectedSubCategory && productsGridRef.current) {
-      gsap.fromTo('.product-card', 
+      gsap.fromTo('.product-card',
         { y: 60, opacity: 0, scale: 0.95 },
         { y: 0, opacity: 1, scale: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out', clearProps: 'all' }
       );
@@ -364,7 +423,6 @@ const Shop = () => {
     activeDbCategories,
     Boolean(selectedSubCategory)
   );
-  const { counts: categoryCounts, images: categoryImages, loading: countsLoading } = useCategoryCounts();
 
   // Group products by PRODUCT_NAME mapping Supabase data to existing format
   const groupedProducts = useMemo(() => {
@@ -386,21 +444,6 @@ const Shop = () => {
     }).filter(group => group.variations.length > 0);
   }, [dbProducts]);
 
-  /*
-   * One pass folds the raw Supabase tallies into the cards the shop shows:
-   * spellings of the same shelf are merged, each card is handed a photo of
-   * something actually inside it, and anything unrecognised still surfaces.
-   */
-  const cardsByDepartment = useMemo(
-    () => groupCategories(categoryCounts, categoryImages),
-    [categoryCounts, categoryImages]
-  );
-
-  const dynamicCategories = useMemo(
-    () => (selectedMainCategory ? cardsByDepartment[selectedMainCategory] || [] : []),
-    [cardsByDepartment, selectedMainCategory]
-  );
-
   // Department tiles: how many categories each holds, and the artwork to use.
   const departments = useMemo(
     () =>
@@ -418,7 +461,96 @@ const Shop = () => {
     [cardsByDepartment]
   );
 
-  if (!selectedMainCategory) {
+  /*
+   * One shop component serves three different kinds of page — the department
+   * index, a department's category index, and a category's product list — so
+   * it has to describe whichever one it is currently rendering. Sharing /shop's
+   * title across all ~175 of them is what would make them duplicates.
+   *
+   * Computed before the early returns below because it feeds a hook.
+   */
+  const canonicalPath = showingProducts
+    ? `/shop/${deptSlug}/${categorySlug}`
+    : selectedMainCategory
+      ? categoryPath(selectedMainCategory)
+      : '/shop';
+
+  const seo = useMemo(() => {
+    if (showingProducts) {
+      const count = groupedProducts.length;
+      return {
+        title: `${categoryHeading} — Price & Sizes in Lahore | Nazir & Sons`,
+        description: `Buy ${categoryHeading} from Nazir & Sons, Lahore. ${
+          count ? `${count} products` : 'Stock'
+        } listed by size and GSM with live prices in PKR — wholesale and retail, delivered across Pakistan.`,
+        trail: [
+          { name: 'Home', path: '/' },
+          { name: 'Shop', path: '/shop' },
+          { name: selectedMainCategory || 'Catalogue', path: categoryPath(selectedMainCategory) },
+          { name: categoryHeading, path: canonicalPath },
+        ],
+        extraNodes: groupedProducts.length
+          ? [
+              itemListSchema({
+                name: categoryHeading,
+                path: canonicalPath,
+                items: groupedProducts.map((g) => ({ name: g.name, path: productPath(g.name) })),
+              }),
+            ]
+          : [],
+      };
+    }
+
+    if (selectedMainCategory) {
+      return {
+        title: `${selectedMainCategory} — Buy Online in Pakistan | Nazir & Sons`,
+        description: `Browse ${
+          dynamicCategories.length ? `${dynamicCategories.length} categories of ` : ''
+        }${selectedMainCategory} at Nazir & Sons, Lahore. Live prices in PKR, wholesale and retail, delivered nationwide.`,
+        trail: [
+          { name: 'Home', path: '/' },
+          { name: 'Shop', path: '/shop' },
+          { name: selectedMainCategory, path: canonicalPath },
+        ],
+        extraNodes: dynamicCategories.length
+          ? [
+              itemListSchema({
+                name: selectedMainCategory,
+                path: canonicalPath,
+                items: dynamicCategories.map((c) => ({
+                  name: c.name,
+                  path: categoryPath(selectedMainCategory, c.name),
+                })),
+              }),
+            ]
+          : [],
+      };
+    }
+
+    return {
+      title: ROUTES['/shop'].title,
+      description: ROUTES['/shop'].description,
+      trail: undefined,
+      extraNodes: [
+        itemListSchema({
+          name: 'Departments',
+          path: '/shop',
+          items: departments.map((d) => ({ name: d.name, path: categoryPath(d.name) })),
+        }),
+      ],
+    };
+  }, [selectedMainCategory, showingProducts, categoryHeading, canonicalPath, groupedProducts, dynamicCategories, departments]);
+
+  usePageSeo('/shop', {
+    title: seo.title,
+    description: seo.description,
+    canonicalPath,
+    trail: seo.trail,
+    pageType: 'CollectionPage',
+    extraNodes: seo.extraNodes,
+  });
+
+  if (!selectedMainCategory && !showingProducts) {
     return (
       <main className="flex-1 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full flex flex-col pt-16 md:pt-20 pb-stack-lg">
         <div className="mb-stack-lg border-b border-outline-variant pb-stack-sm flex justify-between items-end">
@@ -432,12 +564,13 @@ const Shop = () => {
           {departments.map((cat, idx) => {
             const isFeatured = cat.name === PAPER_AND_CANVAS;
             return (
-              <div
+              // A real anchor rather than a div with a click handler: this is
+              // the only path a crawler has into the departments, and it is now
+              // one it can follow.
+              <Link
                 key={cat.name}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedMainCategory(cat.name); } }}
-                onClick={() => setSelectedMainCategory(cat.name)}
+                to={categoryPath(cat.name)}
+                aria-label={`${cat.name} — ${cat.categoryCount} categories`}
                 className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[16px] md:rounded-[24px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-[transform,box-shadow] duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'}`}
               >
                 <CardArt
@@ -454,7 +587,7 @@ const Shop = () => {
                     {countsLoading ? '...' : cat.categoryCount > 0 ? `${cat.categoryCount} Categories` : 'Coming Soon'}
                   </span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -462,17 +595,17 @@ const Shop = () => {
     );
   }
 
-  if (selectedMainCategory && !selectedSubCategory) {
-
-
+  if (!showingProducts) {
     return (
       <main className="flex-1 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full flex flex-col pt-16 md:pt-20 pb-stack-lg">
         <div className="mb-stack-lg border-b border-outline-variant pb-stack-sm flex flex-col gap-4">
-          <button onClick={() => setSelectedMainCategory(null)} className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm w-fit text-[10px] transition-colors">
+          <Link to="/shop" className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm w-fit text-[10px] transition-colors">
             <ArrowLeft size={14} /> Back to Departments
-          </button>
+          </Link>
           <div>
-            <h1 className="font-headline-xl text-[28px] md:text-headline-xl text-on-surface">Shop by Category</h1>
+            {/* Named after the department rather than "Shop by Category", so the
+                heading, the title tag and the URL all say the same thing. */}
+            <h1 className="font-headline-xl text-[28px] md:text-headline-xl text-on-surface">{selectedMainCategory}</h1>
             <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">Select a category to view available stock and pricing.</p>
           </div>
         </div>
@@ -484,12 +617,10 @@ const Shop = () => {
             const isFeatured = idx === 0 || idx === 5 || idx === 10 || idx === 14;
             
             return (
-              <div
+              <Link
                 key={cat.name}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedSubCategory(cat.name); } }}
-                onClick={() => setSelectedSubCategory(cat.name)}
+                to={categoryPath(selectedMainCategory, cat.name)}
+                aria-label={`${cat.name} — ${count} items`}
                 className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[12px] md:rounded-[20px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-all duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'}`}
               >
                 <CardArt
@@ -506,7 +637,7 @@ const Shop = () => {
                     {countsLoading ? '...' : (count > 0 ? `${count} Items` : 'Soon')}
                   </span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -519,9 +650,9 @@ const Shop = () => {
       {/* SideNavBar - Desktop Only */}
       <aside className="hidden md:flex flex-col py-stack-md px-margin-mobile h-full w-[280px] border-r border-gray-100 bg-white shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto hide-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.01)]">
         <div className="mb-stack-md pl-2">
-          <button onClick={() => setSelectedSubCategory(null)} className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase mb-4 text-[11px] transition-colors">
+          <Link to={categoryPath(selectedMainCategory)} className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase mb-4 text-[11px] transition-colors">
             <ArrowLeft size={16} /> All Categories
-          </button>
+          </Link>
           <h2 className="font-headline-md text-[22px] font-bold text-[#111111] tracking-tight">{selectedMainCategory}</h2>
           <p className="font-body-sm text-gray-500 mt-1">Premium Stock Catalog</p>
         </div>
@@ -529,16 +660,17 @@ const Shop = () => {
           {dynamicCategories.map((cat) => {
             const isSelected = selectedSubCategory === cat.name;
             return (
-              <button
+              <Link
                 key={cat.name}
-                onClick={() => setSelectedSubCategory(cat.name)}
+                to={categoryPath(selectedMainCategory, cat.name)}
+                aria-current={isSelected ? 'page' : undefined}
                 className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-300 ease-in-out ${isSelected ? 'bg-gray-50 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100' : 'hover:bg-gray-50/50 border border-transparent'}`}
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-300 ${isSelected ? cat.bg + ' ' + cat.color : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}>
                   <cat.icon size={18} strokeWidth={2.5} />
                 </div>
                 <span className={`font-body-sm font-bold text-[14px] ${isSelected ? 'text-[#111111]' : 'text-gray-500'}`}>{cat.name}</span>
-              </button>
+              </Link>
             );
           })}
         </nav>
@@ -548,9 +680,9 @@ const Shop = () => {
       <main className="flex-1 p-4 md:p-8 flex flex-col gap-6 md:gap-8 pb-stack-lg bg-[#fcfcfc]">
         {/* Back Button (Mobile) */}
         <div className="md:hidden">
-          <button onClick={() => setSelectedSubCategory(null)} className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase bg-white px-5 py-2.5 rounded-xl border border-gray-200 shadow-sm w-fit text-[11px] transition-colors">
+          <Link to={categoryPath(selectedMainCategory)} className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase bg-white px-5 py-2.5 rounded-xl border border-gray-200 shadow-sm w-fit text-[11px] transition-colors">
             <ArrowLeft size={16} /> Back to Categories
-          </button>
+          </Link>
         </div>
 
         {/* Header Bar */}
@@ -564,13 +696,13 @@ const Shop = () => {
                 </div>
               ) : null;
             })()}
-            {selectedSubCategory}
+            {categoryHeading}
             <span className="text-[16px] md:text-[20px] text-gray-400 font-medium ml-2">({groupedProducts.length} Products)</span>
           </h1>
         </section>
 
         {/* Product Grid */}
-        {productsLoading ? (
+        {productsLoading || (!selectedSubCategory && countsLoading) ? (
           <div className="flex flex-col items-center justify-center py-32 bg-white rounded-3xl border border-gray-100 shadow-sm animate-pulse">
             <div className="w-16 h-16 bg-gray-200 rounded-full mb-4"></div>
             <div className="h-6 bg-gray-200 rounded w-48 mb-2"></div>

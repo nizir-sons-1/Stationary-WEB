@@ -5,7 +5,10 @@ import { useCart } from '../context/CartContext';
 import { useProduct } from '../hooks/useSupabase';
 import TermsModal from '../components/TermsModal';
 import { PLACEHOLDER_IMAGE, fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
-import { displayNameOf } from '../data/categories';
+import { displayNameOf, departmentOf } from '../data/categories';
+import { usePageSeo } from '../lib/seo';
+import { productSchema } from '../lib/schema';
+import { categoryPath, productPath } from '../lib/site';
 
 const ProductDetails = () => {
   const { name } = useParams();
@@ -65,6 +68,111 @@ const ProductDetails = () => {
       setSelectedGsm(availableGsms[0]);
     }
   }, [availableGsms, selectedGsm]);
+
+  /*
+   * ───────────────────────────────────────────────────────────────────────────
+   * WHAT THIS PRODUCT IS, IN MACHINE-READABLE FORM
+   * ───────────────────────────────────────────────────────────────────────────
+   *
+   * Around 580 products share this one component, and until now they shared one
+   * title and one description too — the home page's. Every one of them looked
+   * like the same page to a crawler.
+   *
+   * The description is assembled from what the catalogue actually knows: the
+   * category, the sizes, the GSM range and the price. That is also exactly the
+   * shape of question people ask an answer engine ("20x30 300gsm art card price
+   * in Lahore"), so the sentence is written to contain the answer rather than
+   * to sell.
+   *
+   * Declared above the early returns below because it drives a hook, and hooks
+   * cannot be skipped on the loading and not-found paths.
+   */
+  const catalogue = useMemo(() => {
+    if (!currentProduct || productVariations.length === 0) return null;
+
+    const category = currentProduct.category || '';
+    const displayCategory = displayNameOf(category);
+    const department = departmentOf(category);
+    const sizes = [...new Set(productVariations.map((v) => v.Display_Size).filter(Boolean))];
+    const gsms = [...new Set(productVariations.map((v) => v.GSM).filter((g) => g && g !== 'null'))]
+      .map(Number)
+      .filter((n) => !Number.isNaN(n) && n > 0)
+      .sort((a, b) => a - b);
+    const prices = productVariations
+      .map((v) => Number(v.CALCULATED_PRICE_RS))
+      .filter((n) => n > 0);
+
+    const facts = [
+      sizes.length ? `Sizes: ${sizes.slice(0, 4).join(', ')}` : null,
+      gsms.length
+        ? `GSM: ${gsms[0] === gsms[gsms.length - 1] ? gsms[0] : `${gsms[0]}–${gsms[gsms.length - 1]}`}`
+        : null,
+      prices.length ? `From Rs. ${Math.min(...prices).toLocaleString()}` : null,
+    ].filter(Boolean);
+
+    return {
+      displayCategory,
+      department,
+      title: `${decodedName}${displayCategory ? ` — ${displayCategory}` : ''} | Nazir & Sons`,
+      description: [
+        `Buy ${decodedName}${displayCategory ? ` (${displayCategory})` : ''} from Nazir & Sons, Lahore.`,
+        facts.join('. ') + (facts.length ? '.' : ''),
+        'Wholesale and retail, delivered across Pakistan.',
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .slice(0, 300),
+      image: currentProduct.image_url || productVariations[0]?.IMAGE_URL,
+    };
+  }, [currentProduct, productVariations, decodedName]);
+
+  usePageSeo('/product', {
+    title: catalogue?.title || `${decodedName} | Nazir & Sons`,
+    description:
+      catalogue?.description ||
+      `${decodedName} from Nazir & Sons — premium paper, fine arts and stationery in Lahore, delivered across Pakistan.`,
+    canonicalPath: productPath(decodedName),
+    image: catalogue?.image,
+    imageAlt: decodedName,
+    type: 'product',
+    pageType: 'ItemPage',
+    // A product that failed to load has nothing to say about itself; leaving it
+    // indexable would put an empty page in the results under the product's name.
+    noindex: !catalogue,
+    trail: [
+      { name: 'Home', path: '/' },
+      { name: 'Shop', path: '/shop' },
+      ...(catalogue
+        ? [
+            { name: catalogue.department, path: categoryPath(catalogue.department) },
+            {
+              name: catalogue.displayCategory,
+              path: categoryPath(catalogue.department, catalogue.displayCategory),
+            },
+          ]
+        : []),
+      { name: decodedName, path: productPath(decodedName) },
+    ],
+    extraNodes: catalogue
+      ? [
+          productSchema({
+            name: decodedName,
+            description: currentProduct.description,
+            category: catalogue.displayCategory,
+            image: catalogue.image,
+            path: productPath(decodedName),
+            variations: productVariations.map((v) => ({
+              sku: v.ProductID,
+              size: v.Display_Size,
+              gsm: v.GSM,
+              price: Number(v.CALCULATED_PRICE_RS),
+              stock: Number(v.Stock),
+              packingType: v.PACKING_TYPE,
+            })),
+          }),
+        ]
+      : [],
+  });
 
   if (loading) {
     return (

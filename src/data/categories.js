@@ -8,6 +8,7 @@ import {
   Presentation, Printer, Puzzle, Ribbon, Ruler, Scissors, Shapes, Shirt, ShoppingBag, Slice,
   Sparkles, Square, Stamp, Sticker, StickyNote, Tag, Ticket, Wallet, Wrench,
 } from 'lucide-react';
+import { slugify } from '../lib/site.js';
 
 /*
  * ─────────────────────────────────────────────────────────────────────────────
@@ -316,6 +317,31 @@ export function groupCategories(counts, images = {}) {
   }
 
   return byDept;
+}
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * SLUG ↔ NAME
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * The shop is addressed by path — /shop/paper-and-canvas/art-card — so a URL
+ * has to be turned back into the department and category it names. The map is
+ * built from the catalogue above, which covers every shelf this file knows
+ * about; anything the database has grown since is resolved against the live
+ * category list instead (see Shop.jsx), so a new shelf is never a dead URL.
+ */
+const BY_DEPT_SLUG = new Map(DEPARTMENT_NAMES.map((name) => [slugify(name), name]));
+const BY_CATEGORY_SLUG = new Map(CATALOGUE.map((e) => [slugify(e.name), e]));
+
+/** "paper-and-canvas" → "Paper & Canvas", or null if no department matches. */
+export function departmentFromSlug(slug) {
+  return BY_DEPT_SLUG.get(String(slug || '').toLowerCase()) || null;
+}
+
+/** "art-card" → "Art Card", or null if the catalogue map has no such shelf. */
+export function categoryFromSlug(slug) {
+  const entry = BY_CATEGORY_SLUG.get(String(slug || '').toLowerCase());
+  return entry ? entry.name : null;
 }
 
 /** Cards whose stock is priced by weight/GSM and so can be bought in instalments. */

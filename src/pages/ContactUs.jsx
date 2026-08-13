@@ -1,8 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Mail, MapPin, Phone, MessageCircle, Clock, Globe } from 'lucide-react';
+import { usePageSeo } from '../lib/seo';
 
 const ContactUs = () => {
+  // ContactPage rather than plain WebPage: the store node with the address,
+  // phone number and opening hours is already in the graph on every route, and
+  // this type is what marks this URL as the page it belongs to.
+  usePageSeo('/contact', { pageType: 'ContactPage' });
+
   return (
     <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto">
       <motion.div 

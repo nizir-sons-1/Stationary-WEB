@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Star, ThumbsUp, ThumbsDown, CheckCircle, X, ChevronDown, MessageSquare, Edit3 } from 'lucide-react';
 import { useReviews, submitReview } from '../hooks/useSupabase';
+import { usePageSeo } from '../lib/seo';
 
 const Reviews = () => {
+  usePageSeo('/reviews');
   const { reviews, loading } = useReviews();
   const [filterStar, setFilterStar] = useState('All');
   const [sortBy, setSortBy] = useState('newest');

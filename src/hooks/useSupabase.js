@@ -234,14 +234,38 @@ export function useProduct(productName) {
       return;
     }
 
+    /*
+     * Deliberately not `.maybeSingle()`.
+     *
+     * 23 product names exist on more than one row — the same stock catalogued
+     * under two categories, e.g. "IP SUN Art Card". PostgREST answers a
+     * single-object request over two rows with a 406 and PGRST116, so every one
+     * of those products rendered "Product not found" rather than a page. The
+     * shop grid meanwhile showed a card for each row, so two tiles led to the
+     * same dead URL.
+     *
+     * Fetching the rows and folding their variations together is what the page
+     * has always claimed to show: one product, every size and GSM it comes in.
+     * scripts/prerender.js merges them the same way, so the static HTML and the
+     * live page describe the same thing.
+     */
     load(cacheKey, async () => {
       const { data, error } = await supabase
         .from('products')
         .select(PRODUCT_FIELDS)
-        .eq('product_name', productName)
-        .maybeSingle();
+        .eq('product_name', productName);
       if (error) throw error;
-      return data;
+      if (!data || data.length === 0) return null;
+
+      const [first, ...rest] = data;
+      if (rest.length === 0) return first;
+
+      return {
+        ...first,
+        description: first.description || rest.find((r) => r.description)?.description || null,
+        image_url: first.image_url || rest.find((r) => r.image_url)?.image_url || null,
+        product_variations: data.flatMap((row) => row.product_variations || []),
+      };
     });
   }, [cacheKey, productName]);
 

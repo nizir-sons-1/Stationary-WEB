@@ -1,8 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Home } from 'lucide-react';
+import { useSeo } from '../lib/seo';
 
 const NotFound = () => {
+  // Explicitly noindex. A soft 404 that returns 200 and gets indexed is worse
+  // than a missing page: it competes with the real routes for the same terms.
+  useSeo({
+    title: 'Page Not Found | Nazir & Sons',
+    description: 'This page does not exist. Browse the Nazir & Sons paper, fine arts and stationery catalogue instead.',
+    noindex: true,
+  });
+
   return (
     <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center">
       {/* Big 404 */}

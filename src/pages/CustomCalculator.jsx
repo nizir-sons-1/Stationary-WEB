@@ -3,10 +3,61 @@ import { Calculator, Maximize, Layers, Copy, HelpCircle } from 'lucide-react';
 // Pre-digested at build time from products.json by scripts/build-calculator-data.cjs.
 // Importing the raw catalogue here put 428 kB of product rows in the bundle.
 import categories from '../data/calculator-rates.json';
+import { usePageSeo } from '../lib/seo';
+import { howToSchema, faqSchema } from '../lib/schema';
+import { FAQS } from '../data/seo-content';
 
 const EMPTY_OPTIONS = { gsms: [], lengths: [], widths: [] };
 
+/*
+ * The arithmetic this page performs, written out as data.
+ *
+ * `weight = (l * w * g * s) / 1550000` a few lines below is the whole product;
+ * 1,550,000 is 1,000 (grams to kilograms) × 1,550 (square inches in a square
+ * metre). Stating it here means the formula is machine-readable, so "how do you
+ * calculate paper weight from GSM" can be answered with this page as the source
+ * rather than with the page merely being a calculator nobody can quote.
+ */
+const CALCULATOR_HOWTO = howToSchema({
+  name: 'How to calculate the weight and price of a custom paper size',
+  description:
+    'Convert sheet dimensions and GSM into a weight in kilograms, then into a price in Pakistani rupees at the per-kilogram rate for that paper.',
+  path: '/calculator',
+  supply: ['Sheet length in inches', 'Sheet width in inches', 'Paper GSM', 'Number of sheets'],
+  tool: ['Nazir & Sons custom size calculator'],
+  steps: [
+    {
+      name: 'Measure the sheet',
+      text: 'Take the length and the width of one sheet in inches. Multiply them to get the area of a single sheet in square inches.',
+    },
+    {
+      name: 'Bring in the GSM and the sheet count',
+      text: 'Multiply that area by the GSM of the paper and by the number of sheets you want. GSM is the weight in grams of one square metre of that paper.',
+    },
+    {
+      name: 'Convert to kilograms',
+      text: 'Divide the result by 1,550,000. That constant is 1,550 square inches per square metre multiplied by 1,000 grams per kilogram, so the answer comes out in kilograms. In full: weight in kg = (length × width × GSM × sheets) ÷ 1,550,000.',
+    },
+    {
+      name: 'Convert to a price',
+      text: 'Multiply the weight in kilograms by the per-kilogram rate for that brand and category. The calculator uses the same live rates the shop charges.',
+    },
+  ],
+});
+
+// The two questions this page exists to answer, drawn from the shared list so
+// the wording never drifts from /faq.
+const CALCULATOR_FAQS = FAQS.filter((f) =>
+  ['How do I calculate the weight of a custom paper size?', 'What GSM should I choose?'].includes(
+    f.question
+  )
+);
+
 const CustomCalculator = () => {
+  usePageSeo('/calculator', {
+    extraNodes: [CALCULATOR_HOWTO, faqSchema(CALCULATOR_FAQS)],
+  });
+
   const [category, setCategory] = useState(categories.length > 0 ? categories[0].name : '');
   const [brand, setBrand] = useState('');
   const [length, setLength] = useState('');
@@ -238,6 +289,48 @@ const CustomCalculator = () => {
           </div>
         </div>
       </div>
+
+      {/*
+        The formula the calculator runs, spelled out, plus the two questions
+        people ask on the way to using it. This is the visible counterpart of
+        the HowTo and FAQPage structured data above — the markup describes this
+        section, and nothing in it that a machine can read is hidden from a
+        reader.
+      */}
+      <section className="mt-16 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-5 bg-gray-50 border border-gray-100 rounded-3xl p-6 md:p-8">
+          <h2 className="text-[18px] font-bold text-[#111111] mb-4">How the figure is worked out</h2>
+          <p className="text-[13px] text-gray-500 leading-relaxed mb-4">
+            Paper is sold by weight, not by the sheet, so the price of a ream follows from its
+            dimensions and its GSM:
+          </p>
+          <p className="font-mono text-[12px] md:text-[13px] bg-white border border-gray-200 rounded-xl p-4 text-[#111111] leading-relaxed">
+            weight&nbsp;in&nbsp;kg = (length&nbsp;×&nbsp;width&nbsp;×&nbsp;GSM&nbsp;×&nbsp;sheets) ÷
+            1,550,000
+            <br />
+            price = weight&nbsp;in&nbsp;kg × rate&nbsp;per&nbsp;kg
+          </p>
+          <p className="text-[12px] text-gray-400 leading-relaxed mt-4">
+            Length and width in inches. The constant 1,550,000 is 1,550 square inches per square
+            metre multiplied by 1,000 grams per kilogram, which is what converts the result to
+            kilograms.
+          </p>
+        </div>
+
+        <div className="lg:col-span-7 flex flex-col gap-4">
+          {CALCULATOR_FAQS.map((faq) => (
+            <div
+              key={faq.question}
+              className="bg-white border border-gray-100 rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)]"
+            >
+              <h2 className="text-[16px] md:text-[17px] font-bold text-[#111111] mb-2 leading-snug">
+                {faq.question}
+              </h2>
+              <p className="text-[13px] md:text-[14px] text-gray-500 leading-relaxed">{faq.answer}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

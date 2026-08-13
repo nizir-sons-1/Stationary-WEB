@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender.js",
+    "build:app": "vite build",
+    "prerender": "node scripts/prerender.js",
+    "og": "node scripts/make-og-image.js",
     "build:data": "node scripts/build-calculator-data.cjs",
     "lint": "oxlint",
     "preview": "vite preview"

@@ -13,10 +13,33 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png" />
     <meta name="theme-color" content="#0f172a" />
+
+    <!--
+      Baseline head.
+
+      `npm run build` runs scripts/prerender.js afterwards, which replaces the
+      title, description and canonical below with the real ones for each route
+      and appends that route's Open Graph tags and schema.org graph. What is
+      left here is what the dev server serves, and what any route that could not
+      be prerendered falls back to — so it still has to be correct, just generic.
+    -->
     <meta
       name="description"
       content="Nazir & Sons — premium paper, fine arts materials and stationery. Direct importers serving Pakistan's printing industry since 1993."
     />
+    <link rel="canonical" href="https://www.nazirandsons.shop/" />
+    <meta
+      name="robots"
+      content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+    />
+    <meta property="og:site_name" content="Nazir &amp; Sons" />
+    <meta property="og:locale" content="en_PK" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.nazirandsons.shop/" />
+    <meta property="og:image" content="https://www.nazirandsons.shop/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="geo.region" content="PK-PB" />
+    <meta name="geo.placename" content="Lahore" />
 
     <!-- Warm up the origins the first paint depends on, before the JS bundle asks for them. -->
     <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />

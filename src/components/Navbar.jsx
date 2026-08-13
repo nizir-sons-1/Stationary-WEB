@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Search, ShoppingCart, User, Phone, Palette, BookOpen, Layers, PenTool } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { categoryPath } from '../lib/site';
 
 // The search modal pulls in framer-motion and the full product catalog. Neither
 // belongs in the first paint, so the chunk is fetched the moment it's opened.
@@ -146,8 +147,7 @@ const Navbar = () => {
                   {CATEGORY_LINKS.map(({ label, icon: Icon }) => (
                     <Link
                       key={`${pass}-${label}`}
-                      to="/shop"
-                      state={{ mainCategory: label }}
+                      to={categoryPath(label)}
                       className="flex items-center gap-2 text-[12px] font-bold text-white/80 hover:text-white transition-colors whitespace-nowrap uppercase tracking-[0.1em]"
                     >
                       <Icon size={14} className="text-orange-400" /> {label}

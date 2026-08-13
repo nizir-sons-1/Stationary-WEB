@@ -4,8 +4,10 @@ import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePageSeo } from '../lib/seo';
 
 const Cart = () => {
+  usePageSeo('/cart');
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   

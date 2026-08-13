@@ -17,6 +17,7 @@ const Cart = lazy(() => import('./pages/Cart'));
 const ProductDetails = lazy(() => import('./pages/ProductDetails'));
 const CustomCalculator = lazy(() => import('./pages/CustomCalculator'));
 const Reviews = lazy(() => import('./pages/Reviews'));
+const Faq = lazy(() => import('./pages/Faq'));
 
 // New Footer Pages
 const ContactUs = lazy(() => import('./pages/ContactUs'));
@@ -49,11 +50,17 @@ function App() {
               <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route path="/" element={<Home />} />
+                  {/* One component, three depths of the catalogue tree. Each
+                      depth is its own URL so it can be linked, indexed and
+                      prerendered — see the note at the top of Shop.jsx. */}
                   <Route path="/shop" element={<Shop />} />
+                  <Route path="/shop/:deptSlug" element={<Shop />} />
+                  <Route path="/shop/:deptSlug/:categorySlug" element={<Shop />} />
                   <Route path="/product/:name" element={<ProductDetails />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/calculator" element={<CustomCalculator />} />
                   <Route path="/reviews" element={<Reviews />} />
+                  <Route path="/faq" element={<Faq />} />
                   
                   {/* Footer Page Routes */}
                   <Route path="/contact" element={<ContactUs />} />

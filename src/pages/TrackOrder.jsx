@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Search, Package, ArrowRight, CheckCircle2, MessageCircle, Clock, Truck, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { usePageSeo } from '../lib/seo';
 
 const STATUS_MAP = {
   pending: { label: 'Order Received', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
@@ -13,6 +14,7 @@ const STATUS_MAP = {
 };
 
 const TrackOrder = () => {
+  usePageSeo('/track-order');
   const [trackingId, setTrackingId] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState(null);

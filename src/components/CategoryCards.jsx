@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useCategoryCounts } from '../hooks/useSupabase';
 import { groupCategories, PAPER_AND_CANVAS } from '../data/categories';
 import { fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
+import { categoryPath } from '../lib/site';
 
 /*
  * The five departments, in the order the homepage shows them.
@@ -96,7 +97,7 @@ const CategoryCards = () => {
                 transition={{ type: "spring", stiffness: 250, damping: 25 }}
                 className="w-full h-full preserve-3d cursor-pointer will-change-transform"
               >
-                <Link to="/shop" state={{ mainCategory: cat.name }} className="flex flex-col items-center group relative w-full h-full preserve-3d">
+                <Link to={categoryPath(cat.name)} className="flex flex-col items-center group relative w-full h-full preserve-3d">
                   
                   {/* Glowing shadow behind image (optimized with radial gradient instead of blur) */}
                   <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full rounded-2xl bg-gradient-to-tr ${cat.color} opacity-0 group-hover:opacity-30 transition-opacity duration-500 ${isBig ? 'h-[140px] md:h-[180px]' : 'h-[110px] md:h-[150px]'}`} style={{ transform: 'translateZ(-50px) scale(1.5)', backgroundImage: `radial-gradient(circle, var(--tw-gradient-from) 0%, transparent 70%)` }}></div>

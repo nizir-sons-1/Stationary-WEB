@@ -1,8 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, Heart, Zap, Sparkles } from 'lucide-react';
+import { usePageSeo } from '../lib/seo';
 
 const Careers = () => {
+  usePageSeo('/careers');
   return (
     <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto">
       
