@@ -1,19 +1,35 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 /**
  * Lightweight error boundary for individual route content.
  * If a single page crashes, the shell (Navbar + Footer) stays intact and the
  * user gets a friendly inline message instead of a full-screen blow-up.
  */
-class RouteErrorBoundary extends React.Component {
+class RouteErrorBoundaryInner extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, routeKey: props.routeKey };
   }
 
   static getDerivedStateFromError() {
     return { hasError: true };
+  }
+
+  /*
+   * Clear the error the moment the route changes.
+   *
+   * Without this the boundary latched: after one page threw, every subsequent
+   * navigation kept rendering this same screen because `hasError` was never
+   * reset. Even the "Back to Shop" button below only changed the URL — the
+   * shop then rendered underneath a boundary that was still showing the error,
+   * so the site looked permanently broken until a hard reload.
+   */
+  static getDerivedStateFromProps(props, state) {
+    if (props.routeKey !== state.routeKey) {
+      return { hasError: false, routeKey: props.routeKey };
+    }
+    return null;
   }
 
   componentDidCatch(error, info) {
@@ -65,5 +81,14 @@ class RouteErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+// Boundaries have to be class components, but the route they are guarding is
+// only available through a hook — hence the thin wrapper.
+const RouteErrorBoundary = ({ children }) => {
+  const location = useLocation();
+  return (
+    <RouteErrorBoundaryInner routeKey={location.pathname}>{children}</RouteErrorBoundaryInner>
+  );
+};
 
 export default RouteErrorBoundary;

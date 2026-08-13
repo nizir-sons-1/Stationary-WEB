@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProductIndex } from '../hooks/useSupabase';
+import { fallbackOnError, thumb } from '../lib/images';
+import { displayNameOf } from '../data/categories';
 
 const SearchModal = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
@@ -104,14 +106,25 @@ const SearchModal = ({ isOpen, onClose }) => {
                       >
                         <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                           {p.image_url ? (
-                            <img src={p.image_url} alt={p.product_name} className="w-full h-full object-cover mix-blend-multiply" />
+                            // 48 px on screen; asking the CDN for 96 keeps it
+                            // sharp on retina without pulling the 2000 px original.
+                            <img
+                              src={thumb(p.image_url, 96)}
+                              alt={p.product_name}
+                              width={48}
+                              height={48}
+                              loading="lazy"
+                              decoding="async"
+                              onError={fallbackOnError}
+                              className="w-full h-full object-cover mix-blend-multiply"
+                            />
                           ) : (
                             <Package className="text-gray-400" size={20} />
                           )}
                         </div>
                         <div className="flex flex-col flex-1">
                           <span className="font-bold text-secondary group-hover:text-primary transition-colors">{p.product_name}</span>
-                          <span className="text-xs text-gray-400 uppercase tracking-widest font-bold mt-1">{p.category}</span>
+                          <span className="text-xs text-gray-400 uppercase tracking-widest font-bold mt-1">{displayNameOf(p.category)}</span>
                         </div>
                         <Search size={16} className="text-gray-300 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
                       </button>

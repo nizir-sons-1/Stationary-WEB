@@ -3,8 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <!--
+      These were a 900 KB PNG and a 1.2 MB SVG (the same PNG again, base64'd
+      inside an <image> tag) — 2 MB of full-resolution logo downloaded on every
+      page load to paint a 16 px tab icon, dwarfing the entire JS bundle. Same
+      artwork, rendered at the sizes it is actually displayed at. The 1254 px
+      original is still in the repo root if it is ever needed again.
+    -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png" />
     <meta name="theme-color" content="#0f172a" />
     <meta
       name="description"
@@ -12,28 +19,35 @@
     />
 
     <!-- Warm up the origins the first paint depends on, before the JS bundle asks for them. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
-    <link rel="preconnect" href="https://images.unsplash.com" />
+    <!-- Nearly all catalogue photography lives here. -->
+    <link rel="preconnect" href="https://cdn.shopify.com" crossorigin />
+    <link rel="dns-prefetch" href="https://i.postimg.cc" />
+    <!-- Only the Paper & Canvas artwork still comes from here. -->
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
 
     <!--
-      Fonts load without blocking the first paint: the browser fetches the
-      stylesheet at high priority but only applies it once it lands. `display=swap`
-      keeps text visible with the fallback face in the meantime.
+      Fonts are self-hosted (see src/fonts.css), so there is no third-party CSS
+      round trip standing between the HTML and the first correctly-typeset frame.
+      These two carry everything visible above the fold — the Playfair wordmark
+      and the Jakarta UI — so they are fetched in parallel with the JS bundle
+      rather than after it. Inter (body copy) loads normally; its metric-matched
+      fallback holds the layout in the meantime.
     -->
     <link
       rel="preload"
-      as="style"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,500&display=swap"
-      onload="this.onload=null;this.rel='stylesheet'"
+      as="font"
+      type="font/woff2"
+      href="/fonts/playfair-latin.woff2"
+      crossorigin
     />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,500&display=swap"
-      />
-    </noscript>
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/jakarta-latin.woff2"
+      crossorigin
+    />
 
     <title>Nazir & Sons — Premium Paper, Fine Arts & Stationery</title>
   </head>

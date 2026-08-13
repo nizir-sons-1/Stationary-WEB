@@ -1,3 +1,7 @@
+/* Must come first: the @font-face rules have to be parsed before anything
+   references the families, otherwise the first paint has no face to reach for. */
+@import './fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -99,6 +103,22 @@
   .product-card,
   .category-card {
     contain: layout style;
+  }
+
+  /*
+   *    `will-change` used to sit on every card unconditionally. It is a hint
+   *    that costs real memory: the browser hoists each element onto its own
+   *    compositor layer and keeps it there. A busy category holds 69 product
+   *    cards and Fine Arts holds 47 category tiles, so a phone was being asked
+   *    to hold well over a hundred permanent layers — the point at which
+   *    Chrome starts evicting them and scrolling gets *worse*, not better.
+   *    Announcing it on hover still gives the compositor its warning for the
+   *    one card that is about to move.
+   */
+  .product-card:hover,
+  .category-card:hover,
+  .product-card:focus-within,
+  .category-card:focus-within {
     will-change: transform, box-shadow;
   }
 
@@ -127,10 +147,14 @@
   }
 
   /*
-   * 4. Images: force hardware-decoded compositing so the browser doesn't block
-   *    the main thread while decoding large WebP/JPEG thumbnails.
+   * 4. Images decode off the main thread because every <img> that matters
+   *    carries `decoding="async"` — that is the attribute which actually
+   *    controls it.
+   *
+   *    A blanket `transform: translateZ(0)` used to live here in the name of
+   *    the same goal. It does not affect decoding at all; what it does is
+   *    promote every single image on the page to its own compositor layer.
+   *    On a category page that is one layer per tile plus one per product
+   *    photo, all of it resident GPU memory, for no decoding benefit.
    */
-  img {
-    transform: translateZ(0);
-  }
 }

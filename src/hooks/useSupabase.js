@@ -79,28 +79,37 @@ const PRODUCT_FIELDS = `
 `;
 
 /**
- * @param {string|null} category  Filter by category, or null for the whole catalog.
+ * @param {string|string[]|null} category  One category, several (the same shelf
+ *                                is spelled more than one way in the data — see
+ *                                src/data/categories.js), or null for everything.
  * @param {boolean} enabled       Set false to hold off the request until it is
  *                                actually needed (e.g. a closed search modal).
  */
 export function useProducts(category = null, enabled = true) {
-  const cacheKey = `products:${category || 'all'}`;
+  // Sorted so ['A','B'] and ['B','A'] share one cache entry and one request.
+  const names = category == null ? [] : [].concat(category).filter(Boolean).sort();
+  const cacheKey = `products:${names.length ? names.join('|') : 'all'}`;
 
   const subscribe = useCallback((notify) => subscribeTo(cacheKey, notify), [cacheKey]);
   const getSnapshot = useCallback(() => (enabled ? read(cacheKey) : IDLE), [cacheKey, enabled]);
 
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
+  // `names` is a fresh array each render; the key already encodes its contents.
+  const filter = names.join('|');
+
   useEffect(() => {
     if (!enabled) return;
     load(cacheKey, async () => {
+      const list = filter ? filter.split('|') : [];
       let query = supabase.from('products').select(PRODUCT_FIELDS).eq('is_hidden', false);
-      if (category) query = query.eq('category', category);
+      if (list.length === 1) query = query.eq('category', list[0]);
+      else if (list.length > 1) query = query.in('category', list);
       const { data, error } = await query;
       if (error) throw error;
       return data;
     });
-  }, [cacheKey, category, enabled]);
+  }, [cacheKey, filter, enabled]);
 
   return { products: snapshot.data, loading: snapshot.loading, error: snapshot.error };
 }
@@ -136,26 +145,67 @@ export function useProductIndex(enabled = true) {
   return { products: snapshot.data, loading: snapshot.loading, error: snapshot.error };
 }
 
+const EMPTY_STATS = Object.freeze({ counts: EMPTY_COUNTS, images: EMPTY_COUNTS });
+
+/**
+ * Per-category product tally plus one representative photo for each.
+ *
+ * The photo used to come from a hand-written table of stock Unsplash links,
+ * which is why so many shelves shared a picture and several showed something
+ * unrelated to what they sell. Pulling it from a product that is actually in
+ * the category makes it correct by construction, and the extra column costs
+ * one field on a query that was already being made.
+ */
 export function useCategoryCounts() {
   const snapshot = useSyncExternalStore(subscribeCounts, readCounts, readCounts);
 
   useEffect(() => {
     load(COUNTS_KEY, async () => {
-      // Only the category column travels over the wire; the tally is done here.
-      const { data, error } = await supabase.from('products').select('category').eq('is_hidden', false);
+      // Two narrow columns travel over the wire; the tally is done here.
+      // Ordering makes the chosen photo stable between loads — without it
+      // Postgres is free to return rows in any order and the card art would
+      // flicker between products on every visit.
+      const { data, error } = await supabase
+        .from('products')
+        .select('category, image_url')
+        .eq('is_hidden', false)
+        .order('product_name', { ascending: true });
       if (error) throw error;
 
       const counts = {};
+      const images = {};
+      const taken = new Set();
+
       for (const row of data) {
         if (!row.category) continue;
         counts[row.category] = (counts[row.category] || 0) + 1;
+
+        // First usable photo wins, but never one another category already
+        // claimed — a handful of products share a stock image, and two cards
+        // showing the same picture is exactly what this is meant to prevent.
+        if (row.image_url && !images[row.category] && !taken.has(row.image_url)) {
+          images[row.category] = row.image_url;
+          taken.add(row.image_url);
+        }
       }
-      return counts;
+
+      // Categories whose every photo was already spoken for still deserve one;
+      // a repeat beats a blank tile.
+      for (const row of data) {
+        if (row.category && row.image_url && !images[row.category]) {
+          images[row.category] = row.image_url;
+        }
+      }
+
+      return { counts, images };
     });
   }, []);
 
+  const stats = snapshot.loading || snapshot.error ? EMPTY_STATS : snapshot.data;
+
   return {
-    counts: snapshot.loading || snapshot.error ? EMPTY_COUNTS : snapshot.data,
+    counts: stats.counts || EMPTY_COUNTS,
+    images: stats.images || EMPTY_COUNTS,
     loading: snapshot.loading,
     error: snapshot.error,
   };

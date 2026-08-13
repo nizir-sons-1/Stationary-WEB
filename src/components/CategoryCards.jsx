@@ -1,48 +1,31 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useCategoryCounts } from '../hooks/useSupabase';
+import { groupCategories, PAPER_AND_CANVAS } from '../data/categories';
+import { fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
 
-const categories = [
+/*
+ * The five departments, in the order the homepage shows them.
+ *
+ * The product counts used to be typed in by hand ("320 Products", "450
+ * Products") and had drifted a long way from the actual catalogue, and one of
+ * the stock photos had since been taken down at the source — the Accessories
+ * card was rendering a broken image on the homepage. Both now come from the
+ * same data the shop uses: the tally is real, and the picture is a product
+ * that department genuinely stocks.
+ */
+const DEPARTMENT_CARDS = [
+  { name: 'Fine Arts', color: 'from-orange-400 to-pink-500' },
+  { name: 'Stationery', color: 'from-blue-400 to-indigo-500' },
   {
-    name: 'Fine Arts',
-    count: '320 Products',
-    img: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    link: '/shop',
-    categoryState: 'Fine Arts',
-    color: 'from-orange-400 to-pink-500'
-  },
-  {
-    name: 'Stationery',
-    count: '450 Products',
-    img: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    link: '/shop',
-    categoryState: 'Stationery',
-    color: 'from-blue-400 to-indigo-500'
-  },
-  {
-    name: 'Paper & Canvas',
-    count: '150 Products',
+    name: PAPER_AND_CANVAS,
+    color: 'from-green-400 to-emerald-500',
+    // The flagship keeps its commissioned photograph.
     img: 'https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=400&q=80',
-    link: '/shop',
-    categoryState: 'Paper & Canvas',
-    color: 'from-green-400 to-emerald-500'
   },
-  {
-    name: 'Notebooks',
-    count: '210 Products',
-    img: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80',
-    link: '/shop',
-    categoryState: 'Notebooks',
-    color: 'from-yellow-400 to-orange-500'
-  },
-  {
-    name: 'Accessories',
-    count: '95 Products',
-    img: 'https://images.unsplash.com/photo-1522881118552-6d1ff8f8dc05?auto=format&fit=crop&w=400&q=80',
-    link: '/shop',
-    categoryState: 'Accessories',
-    color: 'from-purple-400 to-pink-500'
-  }
+  { name: 'Notebooks', color: 'from-yellow-400 to-orange-500' },
+  { name: 'Accessories', color: 'from-purple-400 to-pink-500' },
 ];
 
 const containerVariants = {
@@ -58,6 +41,21 @@ const containerVariants = {
 // Removed unused itemVariants
 
 const CategoryCards = () => {
+  const { counts, images, loading } = useCategoryCounts();
+
+  const categories = useMemo(() => {
+    const byDept = groupCategories(counts, images);
+    return DEPARTMENT_CARDS.map((dept) => {
+      const cards = byDept[dept.name] || [];
+      const products = cards.reduce((sum, c) => sum + c.count, 0);
+      return {
+        ...dept,
+        img: dept.img || cards.find((c) => c.image)?.image || null,
+        count: loading ? ' ' : products > 0 ? `${products} Products` : 'Coming Soon',
+      };
+    });
+  }, [counts, images, loading]);
+
   return (
     <section className="py-8 md:py-12 px-0 md:px-gutter max-w-container-max mx-auto bg-white font-sans text-center overflow-hidden">
       
@@ -89,7 +87,7 @@ const CategoryCards = () => {
           const isBig = index % 2 === 0;
           
           return (
-            <div key={index} className={`snap-center shrink-0 perspective-1000 flex justify-center items-center ${isBig ? 'w-[160px] h-[220px] md:w-[220px] md:h-[280px]' : 'w-[130px] h-[190px] md:w-[180px] md:h-[240px] mt-8 md:mt-12'}`}>
+            <div key={cat.name} className={`snap-center shrink-0 perspective-1000 flex justify-center items-center ${isBig ? 'w-[160px] h-[220px] md:w-[220px] md:h-[280px]' : 'w-[130px] h-[190px] md:w-[180px] md:h-[240px] mt-8 md:mt-12'}`}>
               <motion.div 
                 initial={{ scale: 0.85, opacity: 0.5, rotateX: 50, rotateZ: -25, y: 20 }}
                 whileInView={{ scale: 1.1, opacity: 1, rotateX: 10, rotateZ: 0, y: -10, zIndex: 40 }}
@@ -98,21 +96,28 @@ const CategoryCards = () => {
                 transition={{ type: "spring", stiffness: 250, damping: 25 }}
                 className="w-full h-full preserve-3d cursor-pointer will-change-transform"
               >
-                <Link to={cat.link} state={{ mainCategory: cat.categoryState }} className="flex flex-col items-center group relative w-full h-full preserve-3d">
+                <Link to="/shop" state={{ mainCategory: cat.name }} className="flex flex-col items-center group relative w-full h-full preserve-3d">
                   
                   {/* Glowing shadow behind image (optimized with radial gradient instead of blur) */}
                   <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full rounded-2xl bg-gradient-to-tr ${cat.color} opacity-0 group-hover:opacity-30 transition-opacity duration-500 ${isBig ? 'h-[140px] md:h-[180px]' : 'h-[110px] md:h-[150px]'}`} style={{ transform: 'translateZ(-50px) scale(1.5)', backgroundImage: `radial-gradient(circle, var(--tw-gradient-from) 0%, transparent 70%)` }}></div>
 
                   <div className={`relative z-10 rounded-2xl overflow-hidden mb-4 border-[2px] border-white/60 shadow-glass glass-panel group-hover:shadow-antigravity transition-all duration-500 ease-out mx-auto ${isBig ? 'w-[140px] h-[140px] md:w-[180px] md:h-[180px]' : 'w-[110px] h-[110px] md:w-[150px] md:h-[150px]'}`}>
-                    <img
-                      src={cat.img}
-                      alt={cat.name}
-                      width={180}
-                      height={180}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
-                    />
+                    {/* Until the tally lands there is no photo to show; the tile
+                        keeps its glass surface rather than flashing a broken one. */}
+                    {cat.img && (
+                      <img
+                        src={thumb(cat.img, 360)}
+                        srcSet={thumbSrcSet(cat.img, [180, 240, 360, 480])}
+                        sizes="(min-width: 768px) 180px, 140px"
+                        alt={cat.name}
+                        width={180}
+                        height={180}
+                        loading="lazy"
+                        decoding="async"
+                        onError={fallbackOnError}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-secondary/0 group-hover:bg-secondary/10 transition-colors duration-500"></div>
                   </div>
 

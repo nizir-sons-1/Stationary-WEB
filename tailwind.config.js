@@ -30,18 +30,21 @@ module.exports = {
       maxWidth: {
         'container-max': '1440px',
       },
+      // Every stack falls through a metric-matched stand-in (defined in
+      // src/fonts.css) before it reaches the generic family, so the moment the
+      // real woff2 arrives nothing on the page reflows.
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-        serif: ['"Playfair Display"', 'serif'],
-        'headline-xl': ['"Plus Jakarta Sans"', 'sans-serif'],
-        'headline-lg': ['"Plus Jakarta Sans"', 'sans-serif'],
-        'headline-md': ['"Plus Jakarta Sans"', 'sans-serif'],
-        'headline-sm': ['"Plus Jakarta Sans"', 'sans-serif'],
-        'label-caps': ['"Plus Jakarta Sans"', 'sans-serif'],
-        'body-lg': ['"Inter"', 'sans-serif'],
-        'body-md': ['"Inter"', 'sans-serif'],
-        'body-sm': ['"Inter"', 'sans-serif'],
-        'price-display': ['"Plus Jakarta Sans"', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', '"Jakarta Fallback"', 'sans-serif'],
+        serif: ['"Playfair Display"', '"Playfair Fallback"', 'serif'],
+        'headline-xl': ['"Plus Jakarta Sans"', '"Jakarta Fallback"', 'sans-serif'],
+        'headline-lg': ['"Plus Jakarta Sans"', '"Jakarta Fallback"', 'sans-serif'],
+        'headline-md': ['"Plus Jakarta Sans"', '"Jakarta Fallback"', 'sans-serif'],
+        'headline-sm': ['"Plus Jakarta Sans"', '"Jakarta Fallback"', 'sans-serif'],
+        'label-caps': ['"Plus Jakarta Sans"', '"Jakarta Fallback"', 'sans-serif'],
+        'body-lg': ['"Inter"', '"Inter Fallback"', 'sans-serif'],
+        'body-md': ['"Inter"', '"Inter Fallback"', 'sans-serif'],
+        'body-sm': ['"Inter"', '"Inter Fallback"', 'sans-serif'],
+        'price-display': ['"Plus Jakarta Sans"', '"Jakarta Fallback"', 'sans-serif'],
       },
       fontSize: {
         'headline-xl': ['32px', '1.2'],

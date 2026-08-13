@@ -4,9 +4,8 @@ import { ArrowLeft, ShoppingBag, Plus, Minus, Truck, ShieldCheck, Phone } from '
 import { useCart } from '../context/CartContext';
 import { useProduct } from '../hooks/useSupabase';
 import TermsModal from '../components/TermsModal';
-
-const FALLBACK_IMAGE =
-  'https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+import { PLACEHOLDER_IMAGE, fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
+import { displayNameOf } from '../data/categories';
 
 const ProductDetails = () => {
   const { name } = useParams();
@@ -110,7 +109,7 @@ const ProductDetails = () => {
       gsm: currentVariation.GSM,
       size: selectedSize,
       price: price,
-      image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
+      image: currentVariation.IMAGE_URL || PLACEHOLDER_IMAGE,
       packingType: currentVariation.PACKING_TYPE || 'ream',
       category: currentVariation.Category
     };
@@ -134,16 +133,17 @@ const ProductDetails = () => {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-orange-200/50 rounded-full opacity-60 -z-10 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
             
             <img
-              src={currentVariation.IMAGE_URL || FALLBACK_IMAGE}
-              alt={name}
+              src={thumb(currentVariation.IMAGE_URL, 800)}
+              srcSet={thumbSrcSet(currentVariation.IMAGE_URL, [400, 600, 800, 1200])}
+              // Full width on a phone, half the 1440 container on desktop.
+              sizes="(min-width: 1024px) 700px, 100vw"
+              alt={decodedName}
               // The hero image of this route — worth fetching at high priority.
               fetchPriority="high"
               decoding="async"
               className="w-full h-full object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-500 preserve-3d mix-blend-multiply"
               style={{ transform: 'translateZ(30px)' }}
-              onError={(e) => {
-                if (e.currentTarget.src !== FALLBACK_IMAGE) e.currentTarget.src = FALLBACK_IMAGE;
-              }}
+              onError={fallbackOnError}
             />
             
             {!inStock && (
@@ -157,7 +157,9 @@ const ProductDetails = () => {
         {/* Right: Product Details & Controls */}
         <div className="flex flex-col pt-4">
           <div className="inline-block px-3 py-1 rounded-full bg-orange-50 border border-orange-100 mb-4 w-fit">
-            <p className="text-primary text-[11px] font-bold uppercase tracking-widest">{currentVariation.Category || 'Premium Paper'}</p>
+            {/* The raw column still holds things like "Acryli Paints"; show the
+                tidied name the rest of the shop uses. */}
+            <p className="text-primary text-[11px] font-bold uppercase tracking-widest">{displayNameOf(currentVariation.Category) || 'Premium Paper'}</p>
           </div>
           
           <h1 className="text-[32px] lg:text-[48px] font-black text-secondary leading-tight mb-2 tracking-tight">

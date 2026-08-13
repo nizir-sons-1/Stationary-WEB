@@ -1,136 +1,72 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Layers, ArrowLeft, FileText, Package, BookOpen, Newspaper, Tag, Box, CreditCard, Sparkles, Feather, Archive, Palette, PenTool, ShoppingBag, Check } from 'lucide-react';
+import { ArrowLeft, Package, ShoppingBag, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useProducts, useCategoryCounts } from '../hooks/useSupabase';
+import {
+  DEPARTMENTS,
+  PAPER_AND_CANVAS,
+  PAPER_CATEGORY_NAMES,
+  dbNamesFor,
+  departmentOf,
+  displayNameOf,
+  groupCategories,
+} from '../data/categories';
+import { PLACEHOLDER_IMAGE, fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
 import TermsModal from '../components/TermsModal';
 import gsap from 'gsap';
 
-const MAIN_CATEGORIES = [
-  { name: 'Paper & Canvas', icon: Layers, bg: 'bg-emerald-50', color: 'text-emerald-600', image: 'https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=600&q=80', count: '16 Categories' },
-  { name: 'Fine Arts', icon: Palette, bg: 'bg-orange-50', color: 'text-orange-600', image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', count: 'Coming Soon' },
-  { name: 'Stationery', icon: PenTool, bg: 'bg-blue-50', color: 'text-blue-600', image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80', count: 'Coming Soon' },
-  { name: 'Notebooks', icon: BookOpen, bg: 'bg-yellow-50', color: 'text-yellow-600', image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80', count: 'Coming Soon' },
-  { name: 'Accessories', icon: ShoppingBag, bg: 'bg-purple-50', color: 'text-purple-600', image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80', count: 'Coming Soon' }
-];
+/*
+ * Department artwork.
+ *
+ * Only Paper & Canvas is pinned — it is the flagship and its photograph is
+ * deliberate. The other four take the photo of their busiest category, which
+ * means the tile always shows something the department genuinely stocks and
+ * updates itself as the catalogue changes.
+ */
+const PAPER_DEPARTMENT_IMAGE =
+  'https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=600&q=80';
 
-const PAPER_CATEGORIES = [
-  { name: 'Bleach Card', icon: CreditCard, color: 'text-blue-600', bg: 'bg-blue-50', hover: 'group-hover:bg-blue-600 group-hover:text-white', image: '/images/white_paper.webp' },
-  { name: 'Art Card', icon: Sparkles, color: 'text-purple-600', bg: 'bg-purple-50', hover: 'group-hover:bg-purple-600 group-hover:text-white', image: '/images/art_card.webp' },
-  { name: 'Art Paper', icon: FileText, color: 'text-pink-600', bg: 'bg-pink-50', hover: 'group-hover:bg-pink-600 group-hover:text-white', image: '/images/art_paper.webp' },
-  { name: 'Matte Paper', icon: Layers, color: 'text-amber-600', bg: 'bg-amber-50', hover: 'group-hover:bg-amber-600 group-hover:text-white', image: '/images/matte_paper.webp' },
-  { name: 'Copy Paper', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'group-hover:bg-emerald-600 group-hover:text-white', image: '/images/copy_paper.webp' },
-  { name: 'Offset Paper', icon: Archive, color: 'text-cyan-600', bg: 'bg-cyan-50', hover: 'group-hover:bg-cyan-600 group-hover:text-white', image: '/images/offset_paper.webp' },
-  { name: 'Ivory Card', icon: CreditCard, color: 'text-stone-600', bg: 'bg-stone-50', hover: 'group-hover:bg-stone-600 group-hover:text-white', image: '/images/ivory_card.webp' },
-  { name: 'Color Card', icon: Layers, color: 'text-rose-600', bg: 'bg-rose-50', hover: 'group-hover:bg-rose-600 group-hover:text-white', image: '/images/color_card.webp' },
-  { name: 'Carbonless', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50', hover: 'group-hover:bg-indigo-600 group-hover:text-white', image: '/images/carbonless.webp' },
-  { name: 'Stickers', icon: Tag, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', hover: 'group-hover:bg-fuchsia-600 group-hover:text-white', image: '/images/stickers.webp' },
-  { name: 'Local Paper', icon: FileText, color: 'text-teal-600', bg: 'bg-teal-50', hover: 'group-hover:bg-teal-600 group-hover:text-white', image: '/images/local_paper.webp' },
-  { name: 'BoxBoard', icon: Box, color: 'text-orange-600', bg: 'bg-orange-50', hover: 'group-hover:bg-orange-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?auto=format&fit=crop&w=600&q=80' },
-  { name: 'News', icon: Newspaper, color: 'text-slate-600', bg: 'bg-slate-50', hover: 'group-hover:bg-slate-600 group-hover:text-white', image: '/images/news_paper.webp' },
-  { name: 'Butter Paper', icon: Feather, color: 'text-sky-600', bg: 'bg-sky-50', hover: 'group-hover:bg-sky-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
-  { name: 'Kraft Card', icon: Package, color: 'text-yellow-600', bg: 'bg-yellow-50', hover: 'group-hover:bg-yellow-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1518707399587-25e243dbf152?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
-  { name: 'Book Paper', icon: BookOpen, color: 'text-lime-600', bg: 'bg-lime-50', hover: 'group-hover:bg-lime-600 group-hover:text-white', image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' }
-];
-
-// Maps every category name to its parent department.
-// Used to filter category grid per department AND compute department-level counts.
-const DEPARTMENT_CATEGORIES = {
-  'Paper & Canvas': ['Bleach Card','Art Card','Art Paper','Matte Paper','Copy Paper','Offset Paper','Ivory Card','Color Card','Carbonless','Stickers','Local Paper','BoxBoard','News','Butter Paper','Kraft Card','Book Paper'],
-  'Fine Arts': ['Watercolor','Watercolor paints','Acryli Paints','Acrylic powder','Art Brush','Art Glitters','Art Glue','Art Marker','Art Pencil','art pencil','BRUSH','Brushes','Calligraphy Marker','Calligraphy Pen','Calligraphy Set','Canvas Board','Color Pencil','Coloring Kit','Color Kit','Crayon','Drawing Marker','Drawing Pencil Set','Epoxy Resin','Fabric Paint','Fancy Pen','Fountain Pen','Gel Pens','Gesso','gesso','Matt Varnish','Mica Powder','Micron Fineliner Pen','Modeling Clay','Modelling Clay','Modelling paste','Modelling tools','Mols & Paints','Oil Painitng Medium','Paint','Paint Accessories','Paint Marker','Painting Accessories','Painting Medium','Poster Paints','Resin Pigment Paste','Silicone Mold','Sketch Pad','Soya Wax','BEE WAX','Arts & Crafts Deals'],
-  'Stationery': ['Ballpoint Pen','Binder Clips','Binding Machine','Board Magnet','Calculator','Card Holder','Compass','Counter Pen','Cute Highlighters','Cute Pencil','Desk Organzier','Geometry Box','Geometry Pouch','Highlighters','Id Card Holder','Lead','Magnifying Glass','Markers','Mechanical Pencil','Menu Folder','Money Box','Name Badge','Name Plate','name plate','Notice Board','Numbering Stamps','Paper Cutter','Pen Stand','Photo Paper','Punch Machine','Receipt Folder','Roller Refills','Scissor','Sticky Notes','Table Planner','Tape Dispenser','White board','Whiteboard Eraser','Whiteboard Marker Ink','coin Box','corner cutter','key chain','paper soap','Stationery','Stationery set','Office Supplies Deals'],
-  'Notebooks': ['Note book','Diary','diary','Leaf Paper'],
-  'Accessories': ['Birthday Balloon','Brush Case','Candle','Confetti Beads','Craft Accessories','Digital Clock','Educational Toy','Educational Wooden Toy','Fishing Game','Foaming Alphabets','Foaming Sheet','FOAMING FLOWER','Gift Bag','Gift Bags','Gift Box','Gift Paper','Globe','Glitter sticker','Gloves','Lunch Box','Pom pom','RIBBONS','School Accessories','School Supplies Deals','Sign Sticker','Sponge','Table Lamp&Clock','Thread Cutter','Tube Extractor','Wall','Wallet','Washi Tapes','Water Bottles','water bottles','Wooden Plate','Wooden Puzzle Plate','kids Toys','kids toys','Learning & Activity Toys'],
-};
-
-// Per-category Unsplash images for non-paper departments.
-const CATEGORY_IMAGE_MAP = {
-  'Watercolor': 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&q=80',
-  'Watercolor paints': 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&q=80',
-  'Art Brush': 'https://images.unsplash.com/photo-1560421683-6856ea585c78?w=600&q=80',
-  'Brushes': 'https://images.unsplash.com/photo-1560421683-6856ea585c78?w=600&q=80',
-  'BRUSH': 'https://images.unsplash.com/photo-1560421683-6856ea585c78?w=600&q=80',
-  'Canvas Board': 'https://images.unsplash.com/photo-1615729947596-a598e5de0ab3?w=600&q=80',
-  'Color Pencil': 'https://images.unsplash.com/photo-1513185158878-8d8c2a2a3da3?w=600&q=80',
-  'Crayon': 'https://images.unsplash.com/photo-1513185158878-8d8c2a2a3da3?w=600&q=80',
-  'Sketch Pad': 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=600&q=80',
-  'Drawing Marker': 'https://images.unsplash.com/photo-1584473457406-6240486418e9?w=600&q=80',
-  'Markers': 'https://images.unsplash.com/photo-1584473457406-6240486418e9?w=600&q=80',
-  'Art Marker': 'https://images.unsplash.com/photo-1584473457406-6240486418e9?w=600&q=80',
-  'Modeling Clay': 'https://images.unsplash.com/photo-1574607383476-f517f260d30b?w=600&q=80',
-  'Modelling Clay': 'https://images.unsplash.com/photo-1574607383476-f517f260d30b?w=600&q=80',
-  'Modelling paste': 'https://images.unsplash.com/photo-1574607383476-f517f260d30b?w=600&q=80',
-  'Epoxy Resin': 'https://images.unsplash.com/photo-1617576683096-00fc8eecb3af?w=600&q=80',
-  'Silicone Mold': 'https://images.unsplash.com/photo-1617576683096-00fc8eecb3af?w=600&q=80',
-  'Resin Pigment Paste': 'https://images.unsplash.com/photo-1617576683096-00fc8eecb3af?w=600&q=80',
-  'Calligraphy Pen': 'https://images.unsplash.com/photo-1455885661740-29cbf08a42fa?w=600&q=80',
-  'Calligraphy Marker': 'https://images.unsplash.com/photo-1455885661740-29cbf08a42fa?w=600&q=80',
-  'Calligraphy Set': 'https://images.unsplash.com/photo-1455885661740-29cbf08a42fa?w=600&q=80',
-  'Poster Paints': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
-  'Paint': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
-  'Acryli Paints': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
-  'Fabric Paint': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
-  'Gel Pens': 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&q=80',
-  'Fancy Pen': 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&q=80',
-  'Fountain Pen': 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&q=80',
-  'Ballpoint Pen': 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&q=80',
-  'Sticky Notes': 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=600&q=80',
-  'Calculator': 'https://images.unsplash.com/photo-1564473185935-58e7e40c0f31?w=600&q=80',
-  'Notice Board': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80',
-  'White board': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80',
-  'Geometry Box': 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&q=80',
-  'Geometry Pouch': 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&q=80',
-  'Scissor': 'https://images.unsplash.com/photo-1519222970733-f546218fa6d7?w=600&q=80',
-  'Highlighters': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&q=80',
-  'Cute Highlighters': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&q=80',
-  'Note book': 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&q=80',
-  'Diary': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&q=80',
-  'diary': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&q=80',
-  'Leaf Paper': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&q=80',
-  'Gift Box': 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=600&q=80',
-  'Gift Bag': 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=600&q=80',
-  'Gift Bags': 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=600&q=80',
-  'Gift Paper': 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=600&q=80',
-  'Water Bottles': 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80',
-  'water bottles': 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80',
-  'Educational Toy': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
-  'Educational Wooden Toy': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
-  'Washi Tapes': 'https://images.unsplash.com/photo-1558618047-f4992c7e5e53?w=600&q=80',
-  'Craft Accessories': 'https://images.unsplash.com/photo-1522881118552-6d1ff8f8dc05?w=600&q=80',
-  'School Accessories': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&q=80',
-  'Lunch Box': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80',
-};
-
-const DEPT_FALLBACK_IMAGE = {
-  'Fine Arts': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
-  'Stationery': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&q=80',
-  'Notebooks': 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&q=80',
-  'Accessories': 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=600&q=80',
-};
 
 const formatPrice = (priceStr) => {
   const num = Number(priceStr);
   return isNaN(num) ? priceStr : num.toLocaleString();
 };
 
-const FALLBACK_IMAGE =
-  'https://images.unsplash.com/photo-1596484552993-9c878e11a37c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-
 /*
  * Category art used to be a CSS `background-image`, which the browser always
  * downloads eagerly — 16 categories meant 16 full-size fetches before anything
  * below the fold was even visible. A real <img> gets native lazy loading.
+ *
+ * The source is now a genuine product photo from inside the category, served
+ * at tile size rather than at the 2000 px the catalogue stores, and any image
+ * that fails falls back to artwork that ships with the site.
  */
-const CardArt = ({ src, alt, eager }) => (
+const CardArt = ({ src, alt, eager, width = 400, sizes }) => (
   <img
-    src={src}
+    src={thumb(src, width)}
+    srcSet={thumbSrcSet(src)}
+    sizes={sizes}
     alt={alt}
     loading={eager ? 'eager' : 'lazy'}
     decoding="async"
     fetchPriority={eager ? 'high' : 'low'}
+    onError={fallbackOnError}
     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
   />
 );
+
+/*
+ * How wide each tile actually renders, mirroring the grid definitions below.
+ * These are what let the browser pick the right candidate from the srcset —
+ * without them it assumes the image fills the viewport and always takes the
+ * largest one.
+ */
+const DEPARTMENT_SIZES = { featured: '(min-width: 768px) 50vw, 100vw', normal: '(min-width: 768px) 25vw, 50vw' };
+const CATEGORY_SIZES = {
+  featured: '(min-width: 1024px) 480px, (min-width: 768px) 380px, 66vw',
+  normal: '(min-width: 1024px) 240px, (min-width: 768px) 190px, 33vw',
+};
 
 // Memoised: a grid can hold dozens of these, and without it every one of them
 // re-rendered whenever the cart changed.
@@ -231,14 +167,14 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
         )}
         <img
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out absolute inset-0 mix-blend-multiply"
-          src={currentVariation.IMAGE_URL || FALLBACK_IMAGE}
+          src={thumb(currentVariation.IMAGE_URL, 400)}
+          srcSet={thumbSrcSet(currentVariation.IMAGE_URL)}
+          // 2 across on a phone, up to 4 on a wide desktop.
+          sizes="(min-width: 1536px) 300px, (min-width: 1024px) 340px, 50vw"
           alt={productName}
           loading="lazy"
           decoding="async"
-          onError={(e) => {
-            // Guard against an unreachable fallback re-triggering onError forever.
-            if (e.currentTarget.src !== FALLBACK_IMAGE) e.currentTarget.src = FALLBACK_IMAGE;
-          }}
+          onError={fallbackOnError}
         />
       </Link>
 
@@ -278,7 +214,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
         </div>
 
         {/* Installment Toggle */}
-        {PAPER_CATEGORIES.map(c => c.name.toLowerCase()).includes((currentVariation?.Category || '').toLowerCase()) && (
+        {PAPER_CATEGORY_NAMES.has((currentVariation?.Category || '').toLowerCase()) && (
           <div className="flex items-center gap-1.5 mb-3 -mt-1 bg-indigo-50/50 p-1.5 rounded-lg border border-indigo-100">
             <input 
               type="checkbox" 
@@ -315,7 +251,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
                     gsm: currentVariation.GSM,
                     size: selectedSize,
                     price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
-                    image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
+                    image: currentVariation.IMAGE_URL || PLACEHOLDER_IMAGE,
                     packingType: currentVariation.PACKING_TYPE || 'ream',
                     category: currentVariation.Category
                   }, 1, false, null, false, null);
@@ -354,7 +290,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
             gsm: currentVariation.GSM,
             size: selectedSize,
             price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
-            image: currentVariation.IMAGE_URL || FALLBACK_IMAGE,
+            image: currentVariation.IMAGE_URL || PLACEHOLDER_IMAGE,
             packingType: currentVariation.PACKING_TYPE || 'ream',
             category: currentVariation.Category
           }, 1, false, null, true, '3 Months');
@@ -366,18 +302,28 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
 
 const Shop = () => {
   const location = useLocation();
-  const [selectedMainCategory, setSelectedMainCategory] = useState(location.state?.mainCategory || null);
-  const [selectedSubCategory, setSelectedSubCategory] = useState(location.state?.subCategory || null);
+  const [selectedMainCategory, setSelectedMainCategory] = useState(
+    () => location.state?.mainCategory || (location.state?.subCategory ? departmentOf(location.state.subCategory) : null)
+  );
+  const [selectedSubCategory, setSelectedSubCategory] = useState(
+    () => (location.state?.subCategory ? displayNameOf(location.state.subCategory) : null)
+  );
   const categoriesGridRef = useRef(null);
   const productsGridRef = useRef(null);
 
+  /*
+   * Search results and footer links hand over whatever the database calls the
+   * category ("art pencil", "Acryli Paints"). The grid works in customer-facing
+   * names, so translate on the way in — and derive the department from the
+   * category when only the category was given, otherwise the page lands on a
+   * product list with no way back up the tree.
+   */
   useEffect(() => {
-    if (location.state?.mainCategory) {
-      setSelectedMainCategory(location.state.mainCategory);
-    }
-    if (location.state?.subCategory) {
-      setSelectedSubCategory(location.state.subCategory);
-    }
+    const sub = location.state?.subCategory;
+    const main = location.state?.mainCategory;
+    if (main) setSelectedMainCategory(main);
+    else if (sub) setSelectedMainCategory(departmentOf(sub));
+    if (sub) setSelectedSubCategory(displayNameOf(sub));
   }, [location.state]);
 
   // Stagger categories on mount
@@ -400,8 +346,25 @@ const Shop = () => {
     }
   }, [selectedSubCategory]);
 
-  const { products: dbProducts, loading: productsLoading } = useProducts(selectedSubCategory);
-  const { counts: categoryCounts, loading: countsLoading } = useCategoryCounts();
+  // A card can stand for several raw category strings (see src/data/categories.js),
+  // so ask for all of them — otherwise a merged card would show only part of
+  // the stock its badge promises.
+  const activeDbCategories = useMemo(
+    () => (selectedSubCategory ? dbNamesFor(selectedSubCategory) : null),
+    [selectedSubCategory]
+  );
+
+  /*
+   * Only ask for products once a category is actually open. Passing a null
+   * category made this fall through to "fetch the entire catalogue" — roughly
+   * a megabyte of variations pulled down on the department and category
+   * screens, neither of which renders a single product.
+   */
+  const { products: dbProducts, loading: productsLoading } = useProducts(
+    activeDbCategories,
+    Boolean(selectedSubCategory)
+  );
+  const { counts: categoryCounts, images: categoryImages, loading: countsLoading } = useCategoryCounts();
 
   // Group products by PRODUCT_NAME mapping Supabase data to existing format
   const groupedProducts = useMemo(() => {
@@ -423,46 +386,37 @@ const Shop = () => {
     }).filter(group => group.variations.length > 0);
   }, [dbProducts]);
 
-  // Create dynamic categories from counts — filtered by the exact selected department.
-  const dynamicCategories = useMemo(() => {
-    if (!selectedMainCategory) return [];
-    const deptCats = DEPARTMENT_CATEGORIES[selectedMainCategory] || [];
-    const deptCatsLower = new Set(deptCats.map(c => c.toLowerCase()));
+  /*
+   * One pass folds the raw Supabase tallies into the cards the shop shows:
+   * spellings of the same shelf are merged, each card is handed a photo of
+   * something actually inside it, and anything unrecognised still surfaces.
+   */
+  const cardsByDepartment = useMemo(
+    () => groupCategories(categoryCounts, categoryImages),
+    [categoryCounts, categoryImages]
+  );
 
-    const filteredKeys = Object.keys(categoryCounts).filter(catName =>
-      deptCatsLower.has(catName.toLowerCase())
-    );
+  const dynamicCategories = useMemo(
+    () => (selectedMainCategory ? cardsByDepartment[selectedMainCategory] || [] : []),
+    [cardsByDepartment, selectedMainCategory]
+  );
 
-    const colors = [
-      { color: 'text-blue-600', bg: 'bg-blue-50', hover: 'group-hover:bg-blue-600 group-hover:text-white' },
-      { color: 'text-purple-600', bg: 'bg-purple-50', hover: 'group-hover:bg-purple-600 group-hover:text-white' },
-      { color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'group-hover:bg-emerald-600 group-hover:text-white' },
-      { color: 'text-amber-600', bg: 'bg-amber-50', hover: 'group-hover:bg-amber-600 group-hover:text-white' },
-      { color: 'text-rose-600', bg: 'bg-rose-50', hover: 'group-hover:bg-rose-600 group-hover:text-white' },
-    ];
-
-    return filteredKeys.map((catName, idx) => {
-      const staticCat = PAPER_CATEGORIES.find(c => c.name.toLowerCase() === catName.toLowerCase());
-      if (staticCat) return { ...staticCat, count: categoryCounts[catName] };
-
-      const style = colors[idx % colors.length];
-      const image = CATEGORY_IMAGE_MAP[catName]
-        || DEPT_FALLBACK_IMAGE[selectedMainCategory]
-        || 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=400&q=80';
-
-      return { name: catName, icon: Box, ...style, image, count: categoryCounts[catName] };
-    }).sort((a, b) => b.count - a.count);
-  }, [categoryCounts, selectedMainCategory]);
-
-  // How many categories (from DB) each department has — drives the count badges on department cards.
-  const departmentCounts = useMemo(() => {
-    const result = {};
-    for (const [dept, cats] of Object.entries(DEPARTMENT_CATEGORIES)) {
-      const catsLower = new Set(cats.map(c => c.toLowerCase()));
-      result[dept] = Object.keys(categoryCounts).filter(cat => catsLower.has(cat.toLowerCase())).length;
-    }
-    return result;
-  }, [categoryCounts]);
+  // Department tiles: how many categories each holds, and the artwork to use.
+  const departments = useMemo(
+    () =>
+      DEPARTMENTS.map((dept) => {
+        const cards = cardsByDepartment[dept.name] || [];
+        return {
+          ...dept,
+          categoryCount: cards.length,
+          image:
+            dept.name === PAPER_AND_CANVAS
+              ? PAPER_DEPARTMENT_IMAGE
+              : cards.find((c) => c.image)?.image || PLACEHOLDER_IMAGE,
+        };
+      }),
+    [cardsByDepartment]
+  );
 
   if (!selectedMainCategory) {
     return (
@@ -475,21 +429,29 @@ const Shop = () => {
         </div>
 
         <div ref={categoriesGridRef} className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 lg:gap-6 auto-rows-[120px] sm:auto-rows-[140px] md:auto-rows-[200px]">
-          {MAIN_CATEGORIES.map((cat, idx) => {
-            const isFeatured = cat.name === 'Paper & Canvas';
+          {departments.map((cat, idx) => {
+            const isFeatured = cat.name === PAPER_AND_CANVAS;
             return (
               <div
-                key={idx}
+                key={cat.name}
                 role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedMainCategory(cat.name); } }}
                 onClick={() => setSelectedMainCategory(cat.name)}
                 className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[16px] md:rounded-[24px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-[transform,box-shadow] duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'}`}
               >
-                <CardArt src={cat.image} alt={cat.name} eager={idx < 3} />
+                <CardArt
+                  src={cat.image}
+                  alt={cat.name}
+                  eager={idx < 3}
+                  width={isFeatured ? 800 : 400}
+                  sizes={isFeatured ? DEPARTMENT_SIZES.featured : DEPARTMENT_SIZES.normal}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/40 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
                 <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-4 md:p-6' : 'p-2 sm:p-3 md:p-5'}`}>
                   <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-xl text-[24px] sm:text-[28px] md:text-[36px]' : 'font-headline-md text-[13px] sm:text-[15px] md:text-[20px]'}`}>{cat.name}</span>
                   <span className={`text-white/90 mt-1.5 md:mt-2 uppercase tracking-widest font-bold bg-white/25 rounded-full border border-white/20 ${isFeatured ? 'text-[10px] md:text-[12px] px-3 py-1 md:px-4 md:py-1.5' : 'text-[7px] sm:text-[8px] md:text-[10px] px-2 py-0.5 md:px-3 md:py-1'}`}>
-                    {countsLoading ? '...' : (() => { const dc = departmentCounts[cat.name] || 0; return dc > 0 ? `${dc} Categories` : 'Coming Soon'; })()}
+                    {countsLoading ? '...' : cat.categoryCount > 0 ? `${cat.categoryCount} Categories` : 'Coming Soon'}
                   </span>
                 </div>
               </div>
@@ -523,12 +485,20 @@ const Shop = () => {
             
             return (
               <div
-                key={idx}
+                key={cat.name}
                 role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedSubCategory(cat.name); } }}
                 onClick={() => setSelectedSubCategory(cat.name)}
                 className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[12px] md:rounded-[20px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-all duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'}`}
               >
-                <CardArt src={cat.image} alt={cat.name} eager={idx < 4} />
+                <CardArt
+                  src={cat.image}
+                  alt={cat.name}
+                  eager={idx < 4}
+                  width={isFeatured ? 600 : 300}
+                  sizes={isFeatured ? CATEGORY_SIZES.featured : CATEGORY_SIZES.normal}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/50 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
                 <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-3 md:p-6' : 'p-1.5 md:p-3'}`}>
                   <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-lg text-[18px] sm:text-[22px] md:text-[28px]' : 'font-headline-sm text-[10px] sm:text-[12px] md:text-[15px]'}`}>{cat.name}</span>
@@ -556,11 +526,11 @@ const Shop = () => {
           <p className="font-body-sm text-gray-500 mt-1">Premium Stock Catalog</p>
         </div>
         <nav className="flex flex-col gap-1.5 flex-1 pr-2">
-          {dynamicCategories.map((cat, idx) => {
+          {dynamicCategories.map((cat) => {
             const isSelected = selectedSubCategory === cat.name;
             return (
               <button
-                key={idx}
+                key={cat.name}
                 onClick={() => setSelectedSubCategory(cat.name)}
                 className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-300 ease-in-out ${isSelected ? 'bg-gray-50 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100' : 'hover:bg-gray-50/50 border border-transparent'}`}
               >
@@ -614,8 +584,8 @@ const Shop = () => {
           </div>
         ) : (
           <section ref={productsGridRef} className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-6 perspective-1000">
-            {groupedProducts.map((group, idx) => (
-              <ProductGroupCard key={idx} productName={group.name} variations={group.variations} />
+            {groupedProducts.map((group) => (
+              <ProductGroupCard key={group.name} productName={group.name} variations={group.variations} />
             ))}
           </section>
         )}
