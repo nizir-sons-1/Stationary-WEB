@@ -116,34 +116,60 @@ async function fetchCatalogue() {
   return res.json();
 }
 
+const EMPTY_TAXONOMY = { department: {}, category: {}, hidden: { department: {}, category: {} } };
+
 /**
- * Category artwork chosen in the admin panel, keyed by shelf name.
+ * Artwork and visibility chosen in the admin panel, keyed by shelf name.
  *
  * Optional in exactly the way it is optional at runtime: if the table has not
  * been created the build carries on with the bundled artwork rather than
  * failing, which keeps a deploy from depending on a migration having been run.
+ * The `is_hidden` column is optional separately — a build against a database
+ * with only the first migration asks for it, gets a 400, and retries without,
+ * leaving every shelf visible.
+ *
+ * Reading the flag here matters as much as reading it in the app: this script
+ * writes the static HTML and the sitemap, so a hidden shelf left in would keep
+ * its indexed page serving a full category listing to anyone who still had the
+ * link.
  */
 async function fetchTaxonomyImages() {
   const url = process.env.VITE_SUPABASE_URL;
   const key = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !key) return { department: {}, category: {} };
+  if (!url || !key) return EMPTY_TAXONOMY;
+
+  const headers = { apikey: key, Authorization: `Bearer ${key}` };
+
+  const get = async (select) => {
+    const res = await fetch(`${url}/rest/v1/taxonomy_images?select=${select}`, { headers });
+    return res;
+  };
 
   try {
-    const res = await fetch(`${url}/rest/v1/taxonomy_images?select=kind,name,image_url`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-    });
+    let res = await get('kind,name,image_url,is_hidden');
+
+    // 400 here is PostgREST rejecting the unknown column; everything else is a
+    // real failure and falls through to the warning below.
+    if (res.status === 400) {
+      console.warn('[prerender] taxonomy_images has no is_hidden column — nothing will be hidden.');
+      res = await get('kind,name,image_url');
+    }
+
     if (!res.ok) {
       console.warn(`[prerender] taxonomy_images returned ${res.status} — using built-in artwork.`);
-      return { department: {}, category: {} };
+      return EMPTY_TAXONOMY;
     }
-    const byKind = { department: {}, category: {} };
+
+    const byKind = { department: {}, category: {}, hidden: { department: {}, category: {} } };
     for (const row of await res.json()) {
-      if (row.image_url && byKind[row.kind]) byKind[row.kind][row.name] = row.image_url;
+      if (!byKind[row.kind]) continue;
+      if (row.image_url) byKind[row.kind][row.name] = row.image_url;
+      if (row.is_hidden) byKind.hidden[row.kind][row.name] = true;
     }
     return byKind;
   } catch (err) {
     console.warn(`[prerender] taxonomy_images unreachable (${err.message}) — using built-in artwork.`);
-    return { department: {}, category: {} };
+    return EMPTY_TAXONOMY;
   }
 }
 
@@ -154,7 +180,7 @@ async function fetchTaxonomyImages() {
  * Reuses groupCategories from src/data/categories.js rather than reimplementing
  * the merge, so the URLs written here are byte-identical to the ones the app links to.
  */
-function buildTree(rows, categoryOverrides = {}) {
+function buildTree(rows, categoryOverrides = {}, hiddenCategories = {}) {
   const counts = {};
   const images = {};
   for (const row of rows) {
@@ -163,7 +189,15 @@ function buildTree(rows, categoryOverrides = {}) {
     if (row.image_url && !images[row.category]) images[row.category] = row.image_url;
   }
 
-  const byDepartment = groupCategories(counts, images, categoryOverrides);
+  const grouped = groupCategories(counts, images, categoryOverrides);
+
+  // Hidden categories are dropped once, here, so every consumer below — the
+  // static pages, the sitemap and llms.txt — is working from the same list and
+  // none of them can reintroduce a shelf the others left out.
+  const byDepartment = {};
+  for (const [department, cards] of Object.entries(grouped)) {
+    byDepartment[department] = cards.filter((card) => !hiddenCategories[card.name]);
+  }
 
   // Product name -> every row and variation carrying that name. The catalogue
   // has 23 duplicate names across categories, and /product/:name shows them as
@@ -730,7 +764,10 @@ function writeSitemap(urls) {
  * gets retrieved and quoted when someone asks a chatbot where to buy paper in
  * Lahore, so it states the facts plainly and in full sentences.
  */
-function writeLlmsTxt({ byDepartment, productsByCategory }) {
+// `departments` is the visible list, not the full one — llms.txt is a public
+// description of the catalogue, so a hidden shelf has no more business here
+// than it has on the sitemap.
+function writeLlmsTxt({ byDepartment, productsByCategory, departments = DEPARTMENTS }) {
   const home = ROUTES['/'];
 
   const sections = [
@@ -762,7 +799,7 @@ function writeLlmsTxt({ byDepartment, productsByCategory }) {
     '',
   ];
 
-  for (const department of DEPARTMENTS) {
+  for (const department of departments) {
     const cards = byDepartment[department.name] || [];
     if (!cards.length) continue;
     sections.push(`### ${department.name}`, '');
@@ -795,7 +832,7 @@ function writeLlmsTxt({ byDepartment, productsByCategory }) {
     '',
   ];
 
-  for (const department of DEPARTMENTS) {
+  for (const department of departments) {
     const cards = byDepartment[department.name] || [];
     if (!cards.length) continue;
     full.push(`## ${department.name}`, '');
@@ -843,7 +880,15 @@ async function main() {
   }
 
   const [rows, taxonomyImages] = await Promise.all([fetchCatalogue(), fetchTaxonomyImages()]);
-  const { byDepartment, products, productsByCategory } = buildTree(rows, taxonomyImages.category);
+  const { byDepartment, products, productsByCategory } = buildTree(
+    rows,
+    taxonomyImages.category,
+    taxonomyImages.hidden.category
+  );
+
+  // Hidden departments never reach a page, a sitemap entry or llms.txt. Computed
+  // once and reused so the three writers below cannot disagree.
+  const visibleDepartments = DEPARTMENTS.filter((d) => !taxonomyImages.hidden.department[d.name]);
 
   const sitemap = [];
 
@@ -860,7 +905,7 @@ async function main() {
   }
 
   // Departments and categories.
-  for (const department of DEPARTMENTS) {
+  for (const department of visibleDepartments) {
     const cards = byDepartment[department.name] || [];
     if (!cards.length) continue;
 
@@ -886,18 +931,24 @@ async function main() {
 
   writeRobots();
   writeSitemap(sitemap);
-  writeLlmsTxt({ byDepartment, productsByCategory });
+  writeLlmsTxt({ byDepartment, productsByCategory, departments: visibleDepartments });
 
-  const categoryCount = DEPARTMENTS.reduce(
+  const categoryCount = visibleDepartments.reduce(
     (sum, d) => sum + (byDepartment[d.name] || []).length,
     0
   );
 
+  const hiddenCount =
+    DEPARTMENTS.length - visibleDepartments.length + Object.keys(taxonomyImages.hidden.category).length;
+
   console.log(
     `[prerender] ${written.length} pages written ` +
-      `(${Object.keys(ROUTES).length} static, ${DEPARTMENTS.length} departments, ` +
+      `(${Object.keys(ROUTES).length} static, ${visibleDepartments.length} departments, ` +
       `${categoryCount} categories, ${products.size} products)`
   );
+  if (hiddenCount) {
+    console.log(`[prerender] ${hiddenCount} shelf/shelves hidden by the admin panel — not written.`);
+  }
   console.log(`[prerender] sitemap.xml: ${sitemap.length} URLs · robots.txt · llms.txt · llms-full.txt`);
 
   if (skipped.length) {

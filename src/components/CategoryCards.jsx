@@ -45,12 +45,16 @@ const CategoryCards = () => {
   const { counts, images, loading } = useCategoryCounts();
   // Artwork chosen in the admin panel. Empty until someone sets one, in which
   // case every tile keeps the picture it has always had.
-  const { departmentImages, categoryImages } = useTaxonomyImages();
+  const { departmentImages, categoryImages, hiddenDepartments, hiddenCategories } =
+    useTaxonomyImages();
 
   const categories = useMemo(() => {
     const byDept = groupCategories(counts, images, categoryImages);
-    return DEPARTMENT_CARDS.map((dept) => {
-      const cards = byDept[dept.name] || [];
+    // A hidden department loses its homepage card; a hidden category stops
+    // counting towards its department's total, so the "N Products" badge only
+    // ever promises stock a visitor can actually reach.
+    return DEPARTMENT_CARDS.filter((dept) => !hiddenDepartments[dept.name]).map((dept) => {
+      const cards = (byDept[dept.name] || []).filter((c) => !hiddenCategories[c.name]);
       const products = cards.reduce((sum, c) => sum + c.count, 0);
       return {
         ...dept,
@@ -60,7 +64,7 @@ const CategoryCards = () => {
         count: loading ? ' ' : products > 0 ? `${products} Products` : 'Coming Soon',
       };
     });
-  }, [counts, images, loading, departmentImages, categoryImages]);
+  }, [counts, images, loading, departmentImages, categoryImages, hiddenDepartments, hiddenCategories]);
 
   return (
     <section className="py-8 md:py-12 px-0 md:px-gutter max-w-container-max mx-auto bg-white font-sans text-center overflow-hidden">

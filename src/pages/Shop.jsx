@@ -327,7 +327,7 @@ const Shop = () => {
    * written for it at build time.
    */
   const { deptSlug, categorySlug } = useParams();
-  const selectedMainCategory = deptSlug ? departmentFromSlug(deptSlug) : null;
+  const requestedMainCategory = deptSlug ? departmentFromSlug(deptSlug) : null;
 
   const categoriesGridRef = useRef(null);
   const productsGridRef = useRef(null);
@@ -350,8 +350,31 @@ const Shop = () => {
 
   // Artwork set from the admin panel. Absent until someone sets one, at which
   // point it takes precedence over both the bundled art and the borrowed photo.
-  const { departmentImages: adminDepartmentImages, categoryImages: adminCategoryImages } =
-    useTaxonomyImages();
+  // `hidden*` are the shelves an admin has taken off the shop entirely.
+  const {
+    departmentImages: adminDepartmentImages,
+    categoryImages: adminCategoryImages,
+    hiddenDepartments,
+    hiddenCategories,
+    loading: taxonomyLoading,
+  } = useTaxonomyImages();
+
+  /*
+   * Hiding a department has to close its URL too, not just remove its tile.
+   *
+   * /shop/stationery stays in Google's index and in customers' history long
+   * after the shelf comes off the shop, and a filter applied only to the grid
+   * would leave that link serving the full category list — the one thing hiding
+   * it was meant to prevent. Treating the slug as unresolved routes the visitor
+   * to the department index, which is already what an unknown slug does.
+   *
+   * Gated on the flag having actually arrived: until then nothing is hidden, so
+   * a slow request cannot bounce someone off a page that is perfectly visible.
+   */
+  const selectedMainCategory =
+    !taxonomyLoading && requestedMainCategory && hiddenDepartments[requestedMainCategory]
+      ? null
+      : requestedMainCategory;
 
   /*
    * One pass folds the raw Supabase tallies into the cards the shop shows:
@@ -364,8 +387,11 @@ const Shop = () => {
   );
 
   const dynamicCategories = useMemo(
-    () => (selectedMainCategory ? cardsByDepartment[selectedMainCategory] || [] : []),
-    [cardsByDepartment, selectedMainCategory]
+    () =>
+      selectedMainCategory
+        ? (cardsByDepartment[selectedMainCategory] || []).filter((c) => !hiddenCategories[c.name])
+        : [],
+    [cardsByDepartment, selectedMainCategory, hiddenCategories]
   );
 
   /*
@@ -379,10 +405,14 @@ const Shop = () => {
   const selectedSubCategory = useMemo(() => {
     if (!categorySlug) return null;
     const known = categoryFromSlug(categorySlug);
-    if (known) return known;
+    // A hidden category has to fail to resolve for the same reason a hidden
+    // department does — otherwise its old URL keeps serving the product list.
+    // `dynamicCategories` is already filtered, so only the static map needs the
+    // extra check.
+    if (known) return !taxonomyLoading && hiddenCategories[known] ? null : known;
     const hit = dynamicCategories.find((c) => slugify(c.name) === categorySlug);
     return hit ? hit.name : null;
-  }, [categorySlug, dynamicCategories]);
+  }, [categorySlug, dynamicCategories, hiddenCategories, taxonomyLoading]);
 
   // Which of the three views to render is decided by the URL alone, not by
   // whether the name has resolved yet — otherwise a slug awaiting the live
@@ -450,10 +480,13 @@ const Shop = () => {
   }, [dbProducts]);
 
   // Department tiles: how many categories each holds, and the artwork to use.
+  // A department an admin has hidden is dropped here, which is what takes it off
+  // the index; its own hidden categories are dropped from the tally too, so the
+  // "N Categories" badge never promises shelves the visitor cannot open.
   const departments = useMemo(
     () =>
-      DEPARTMENTS.map((dept) => {
-        const cards = cardsByDepartment[dept.name] || [];
+      DEPARTMENTS.filter((dept) => !hiddenDepartments[dept.name]).map((dept) => {
+        const cards = (cardsByDepartment[dept.name] || []).filter((c) => !hiddenCategories[c.name])
         return {
           ...dept,
           categoryCount: cards.length,
@@ -467,7 +500,7 @@ const Shop = () => {
               : cards.find((c) => c.image)?.image || PLACEHOLDER_IMAGE),
         };
       }),
-    [cardsByDepartment, adminDepartmentImages]
+    [cardsByDepartment, adminDepartmentImages, hiddenDepartments, hiddenCategories]
   );
 
   /*
