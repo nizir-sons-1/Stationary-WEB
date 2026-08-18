@@ -79,6 +79,13 @@
     />
 
     <title>Nazir & Sons — Premium Paper, Fine Arts & Stationery</title>
+    <style>
+      /* Prevent FOUC: Hide the SEO fallback skeleton from human visitors. 
+         Bots without JS will still see the #prerender content. */
+      html.js-enabled #prerender { display: none !important; }
+      html.js-enabled body { background-color: #0a0a0a; }
+    </style>
+    <script>document.documentElement.className += ' js-enabled';</script>
   </head>
   <body>
     <div id="root"></div>
