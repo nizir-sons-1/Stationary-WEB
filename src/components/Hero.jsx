@@ -267,9 +267,8 @@ const Hero = () => {
                         alt={img.alt}
                         width={320}
                         height={400}
-                        loading={i === 0 ? 'eager' : 'lazy'}
-                        fetchPriority={i === 0 ? 'high' : 'low'}
-                        decoding="async"
+                        loading="eager"
+                        fetchPriority="high"
                         className="w-full h-auto object-cover aspect-[4/5] hover:scale-110 transition-transform duration-700 ease-in-out"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
