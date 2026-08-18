@@ -403,6 +403,7 @@ function head({ title, description, canonical, image, noindex, jsonLd }) {
     <link rel="alternate" hreflang="en-PK" href="${esc(url)}" />
     <link rel="alternate" hreflang="x-default" href="${esc(url)}" />
     <style>${SHELL_CSS}</style>
+    <script>document.documentElement.className += ' js-enabled';</script>
     <script type="application/ld+json" data-seo-graph>${escJson(jsonLd)}</script>`;
 }
 

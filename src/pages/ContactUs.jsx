@@ -152,7 +152,18 @@ const ContactUs = () => {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="lg:col-span-12 mt-4"
         >
-          <div className="rounded-[32px] overflow-hidden shadow-glass border border-white/60 h-[400px] relative">
+          <div className="rounded-[32px] overflow-hidden shadow-glass border border-white/60 h-[400px] relative hover:scale-[1.02] transition-transform duration-300">
+            <a 
+              href="https://maps.google.com?q=Nazir%20and%20Sons%20Paper,%20Lahore%20paper%20market,%20Abkari%20Road,%20Anarkali%20Bazaar%20Lahore" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="absolute inset-0 z-10 cursor-pointer"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/80 to-transparent flex flex-col justify-end p-8">
+                <h3 className="text-white text-2xl font-bold font-serif italic mb-1 group-hover:text-primary transition-colors">Visit our Store</h3>
+                <p className="text-white/80 text-sm">Experience the quality of our premium paper in person. Click for directions.</p>
+              </div>
+            </a>
             <iframe 
               src="https://maps.google.com/maps?q=Nazir%20and%20Sons%20Paper,%20Lahore&t=&z=15&ie=UTF8&iwloc=&output=embed" 
               width="100%" 
@@ -161,12 +172,8 @@ const ContactUs = () => {
               allowFullScreen="" 
               loading="lazy" 
               referrerPolicy="no-referrer-when-downgrade"
-              className="absolute inset-0 grayscale contrast-125 opacity-80 mix-blend-multiply"
+              className="absolute inset-0 grayscale contrast-125 opacity-80 mix-blend-multiply pointer-events-none"
             ></iframe>
-            <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/80 to-transparent pointer-events-none flex flex-col justify-end p-8">
-              <h3 className="text-white text-2xl font-bold font-serif italic mb-1">Visit our Store</h3>
-              <p className="text-white/80 text-sm">Experience the quality of our premium paper in person.</p>
-            </div>
           </div>
         </motion.div>
 
