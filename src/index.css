@@ -7,10 +7,6 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    /* Removed scroll-behavior: smooth because it interferes with native iOS momentum scrolling. */
-  }
-
   body {
     @apply antialiased text-gray-900 bg-[#f4f4f5];
   }
