@@ -90,14 +90,14 @@ const CategoryCards = () => {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "-50px" }}
-        className="flex overflow-x-auto md:flex-wrap justify-start md:justify-center gap-6 md:gap-10 lg:gap-16 px-margin-mobile md:px-0 pb-12 pt-6 hide-scrollbar scroll-row-x snap-x snap-mandatory"
+        className="flex overflow-x-auto md:flex-wrap justify-start md:justify-center gap-6 md:gap-10 lg:gap-16 px-margin-mobile md:px-0 pb-12 pt-6 hide-scrollbar scroll-row-x"
       >
         {categories.map((cat, index) => {
           // Stagger sizes: Even items are big, Odd items are small and pushed down slightly
           const isBig = index % 2 === 0;
           
           return (
-            <div key={cat.name} className={`snap-center shrink-0 perspective-1000 flex justify-center items-center ${isBig ? 'w-[160px] h-[220px] md:w-[220px] md:h-[280px]' : 'w-[130px] h-[190px] md:w-[180px] md:h-[240px] mt-8 md:mt-12'}`}>
+            <div key={cat.name} className={`shrink-0 perspective-1000 flex justify-center items-center ${isBig ? 'w-[160px] h-[220px] md:w-[220px] md:h-[280px]' : 'w-[130px] h-[190px] md:w-[180px] md:h-[240px] mt-8 md:mt-12'}`}>
               <motion.div 
                 initial={{ scale: 0.85, opacity: 0.5, rotateX: 50, rotateZ: -25, y: 20 }}
                 whileInView={{ scale: 1.1, opacity: 1, rotateX: 10, rotateZ: 0, y: -10, zIndex: 40 }}
