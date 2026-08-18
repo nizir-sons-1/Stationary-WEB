@@ -74,11 +74,11 @@ const SalesPopup = () => {
     <AnimatePresence>
       {isVisible && currentNotification && (
         <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.9 }}
+          initial={{ opacity: 0, y: -20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          exit={{ opacity: 0, y: -10, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className="fixed bottom-24 left-4 md:bottom-8 md:left-8 z-[100] max-w-[320px] w-[calc(100%-2rem)] bg-white/90 backdrop-blur-md border border-white/50 shadow-glass rounded-2xl p-4 flex items-start gap-3"
+          className="fixed top-24 left-4 md:top-auto md:bottom-8 md:left-8 z-[100] max-w-[320px] w-[calc(100%-2rem)] bg-white/90 backdrop-blur-md border border-white/50 shadow-glass rounded-2xl p-4 flex items-start gap-3"
         >
           {/* Icon */}
           <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${

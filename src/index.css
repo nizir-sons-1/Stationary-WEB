@@ -8,7 +8,7 @@
 
 @layer base {
   body {
-    @apply antialiased text-gray-900 bg-[#f4f4f5];
+    @apply antialiased text-gray-900 bg-[#f4f4f5] overflow-x-hidden;
   }
 
   /* Anyone who asked the OS to calm motion down gets a still page. */

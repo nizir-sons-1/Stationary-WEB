@@ -172,7 +172,7 @@ const Hero = () => {
             </span>
           </div>
 
-          <h1 className="text-[48px] md:text-[64px] lg:text-[72px] font-bold text-secondary leading-[1.06] mb-6 block">
+          <h1 className="text-[42px] md:text-[64px] lg:text-[72px] font-bold text-secondary leading-[1.06] mb-6 block">
             {headlineText.map((word, i) => (
               <React.Fragment key={i}>
                 <span className={`split-word inline-block ${word === 'Paper' ? 'text-primary relative' : ''}`}>
