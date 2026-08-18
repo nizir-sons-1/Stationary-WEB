@@ -331,7 +331,7 @@ const Reviews = () => {
       )}
 
       {/* Floating Action Button (Mobile only) */}
-      <div className="fixed bottom-20 right-4 sm:hidden z-40">
+      <div className="fixed bottom-20 left-4 sm:hidden z-40">
         <button 
           onClick={() => setIsModalOpen(true)}
           className="bg-[#111111] text-white p-4 rounded-full shadow-lg active:scale-95 transition-transform"
