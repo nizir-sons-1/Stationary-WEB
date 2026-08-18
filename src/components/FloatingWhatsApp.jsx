@@ -20,9 +20,12 @@ const FloatingWhatsApp = () => {
         className="peer relative group pointer-events-auto"
         aria-label="Chat on WhatsApp"
       >
-        {/* Pulse Effect Rings */}
-        <div className="absolute inset-0 rounded-full bg-[#25D366] opacity-30 animate-ping" style={{ animationDuration: '2s' }}></div>
-        <div className="absolute inset-[-4px] rounded-full bg-[#25D366] opacity-20 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }}></div>
+        {/* Pulse Effect Rings — play 3 times then stop, not infinite.
+            The old `animate-ping` ran two permanent GPU loops for a decoration
+            users glance at once; three cycles draw enough attention, then the
+            compositor layer is released. */}
+        <div className="absolute inset-0 rounded-full bg-[#25D366] opacity-30 animate-ping" style={{ animationDuration: '2s', animationIterationCount: 3 }}></div>
+        <div className="absolute inset-[-4px] rounded-full bg-[#25D366] opacity-20 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s', animationIterationCount: 3 }}></div>
         
         {/* Main Button Body */}
         <div

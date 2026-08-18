@@ -26,6 +26,7 @@ import {
   SITE_NAME,
   SITE_LOCALE,
   DEFAULT_OG_IMAGE,
+  BUSINESS,
   absoluteUrl,
 } from './site';
 import { ROUTES, trailFor } from '../data/seo-content';
@@ -120,9 +121,20 @@ export function useSeo({
     setMeta('twitter:description', description);
     setMeta('twitter:image', ogImage);
 
+    // GEO + AEO tags
+    setMeta('geo.position', `${BUSINESS.latitude};${BUSINESS.longitude}`);
+    setMeta('ICBM', `${BUSINESS.latitude}, ${BUSINESS.longitude}`);
+    setMeta('author', SITE_NAME);
+
+    // hreflang: update the canonical URL for the current route
+    const hreflangPK = upsert('link[hreflang="en-PK"]', 'link', { rel: 'alternate', hreflang: 'en-PK' });
+    hreflangPK.setAttribute('href', url);
+    const hreflangDefault = upsert('link[hreflang="x-default"]', 'link', { rel: 'alternate', hreflang: 'x-default' });
+    hreflangDefault.setAttribute('href', url);
+
     // The graph is replaced wholesale on every route change rather than merged.
     // Leaving the previous page's Product node behind would tell a crawler that
-    // this URL is two different things at once.
+    // this URL is two different things at all.
     const previous = document.head.querySelectorAll(`script[${JSONLD_MARK}]`);
     for (const node of previous) node.remove();
 

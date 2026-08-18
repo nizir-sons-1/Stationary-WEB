@@ -9,8 +9,8 @@ const Footer = () => {
       
       {/* Background Ambient Glows */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] mix-blend-screen"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] mix-blend-screen"></div>
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]"></div>
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px]"></div>
       </div>
 
       <div className="max-w-container-max mx-auto px-margin-mobile md:px-gutter relative z-10">
@@ -143,7 +143,7 @@ const Footer = () => {
           <p>&copy; {new Date().getFullYear()} NAZIR & SONS. All rights reserved.</p>
           <div className="flex items-center gap-2">
             <span>Crafted with</span>
-            <Sparkles size={12} className="text-primary animate-pulse" />
+            <Sparkles size={12} className="text-primary" />
             <span>by Nexsol</span>
           </div>
         </div>

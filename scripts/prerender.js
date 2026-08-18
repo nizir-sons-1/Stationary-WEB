@@ -348,6 +348,9 @@ function stripHead(html) {
     .replace(/<meta\s+property="og:[\s\S]*?>\s*/gi, '')
     .replace(/<meta\s+name="twitter:[\s\S]*?>\s*/gi, '')
     .replace(/<meta\s+name="geo\.[\s\S]*?>\s*/gi, '')
+    .replace(/<meta\s+name="ICBM"[\s\S]*?>\s*/gi, '')
+    .replace(/<meta\s+name="author"[\s\S]*?>\s*/gi, '')
+    .replace(/<link\s+rel="alternate"\s+hreflang[\s\S]*?>\s*/gi, '')
     // Only ever present if this script has already run over this dist — see below.
     .replace(/<style>[\s\S]*?<\/style>\s*/gi, '')
     .replace(/<script type="application\/ld\+json"[\s\S]*?<\/script>\s*/gi, '');
@@ -392,6 +395,11 @@ function head({ title, description, canonical, image, noindex, jsonLd }) {
     <meta name="twitter:image" content="${esc(ogImage)}" />
     <meta name="geo.region" content="PK-PB" />
     <meta name="geo.placename" content="${esc(BUSINESS.city)}" />
+    <meta name="geo.position" content="${BUSINESS.latitude};${BUSINESS.longitude}" />
+    <meta name="ICBM" content="${BUSINESS.latitude}, ${BUSINESS.longitude}" />
+    <meta name="author" content="${esc(SITE_NAME)}" />
+    <link rel="alternate" hreflang="en-PK" href="${esc(url)}" />
+    <link rel="alternate" hreflang="x-default" href="${esc(url)}" />
     <style>${SHELL_CSS}</style>
     <script type="application/ld+json" data-seo-graph>${escJson(jsonLd)}</script>`;
 }

@@ -69,6 +69,10 @@ export const BUSINESS = {
   currency: 'PKR',
   areaServed: 'Pakistan',
   paymentAccepted: ['Cash', 'Bank Transfer', 'EasyPaisa'],
+
+  // Anarkali Bazaar, Lahore — derived from the Google Maps ftid in `mapUrl`.
+  latitude: 31.5615,
+  longitude: 74.3230,
 };
 
 /** Top-level shelves, in the order the shop presents them. */

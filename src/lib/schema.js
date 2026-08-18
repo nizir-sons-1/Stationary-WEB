@@ -107,11 +107,16 @@ export function localBusinessSchema() {
     logo: absoluteUrl('/ns-logo.webp'),
     telephone: BUSINESS.phoneE164,
     email: BUSINESS.email,
-    priceRange: '$$',
+    priceRange: '$',
     currenciesAccepted: BUSINESS.currency,
     paymentAccepted: BUSINESS.paymentAccepted.join(', '),
     address: postalAddress(),
     hasMap: BUSINESS.mapUrl,
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: BUSINESS.latitude,
+      longitude: BUSINESS.longitude,
+    },
     openingHoursSpecification: openingHoursSpecification(),
     areaServed: {
       '@type': 'Country',
@@ -159,6 +164,10 @@ export function webPageSchema({ path, title, description, type = 'WebPage' }) {
     isPartOf: { '@id': WEBSITE_ID },
     about: { '@id': ORG_ID },
     inLanguage: 'en',
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['h1', '.lede', '[data-speakable]'],
+    },
   };
 }
 
