@@ -1,9 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, MapPin, Phone, ArrowRight, Sparkles } from 'lucide-react';
 import { BUSINESS, DEPARTMENT_NAMES, categoryPath } from '../lib/site';
 
 const Footer = () => {
+  const [subState, setSubState] = useState('idle'); // idle | loading | success | error
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    const email = e.target.elements.newsletter_email.value;
+    if (!email || subState === 'loading') return;
+
+    setSubState('loading');
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      setSubState('success');
+      e.target.reset();
+      setTimeout(() => setSubState('idle'), 4000);
+    } catch {
+      setSubState('error');
+      setTimeout(() => setSubState('idle'), 3000);
+    }
+  };
+
   return (
     <footer className="relative w-full overflow-hidden bg-[#0a0a0a] text-white pt-20 pb-[calc(30px+80px)] md:pb-8 font-sans border-t border-white/10">
       
@@ -32,10 +56,10 @@ const Footer = () => {
               Your ultimate destination for premium fine arts, aesthetics, stationery, and high-quality paper. Elevating creativity since inception.
             </p>
             <div className="flex items-center gap-4 mt-2">
-              <a href="https://wa.me/923202220001" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full glass-panel border border-white/10 flex items-center justify-center text-gray-400 hover:text-green-400 hover:bg-white/10 hover:scale-110 hover:shadow-antigravity transition-all duration-300 preserve-3d">
+              <a href="https://wa.me/923202220001" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-gradient-to-br from-[#25D366] to-[#128C7E] shadow-[0_4px_14px_rgba(37,211,102,0.3)] hover:scale-110 hover:shadow-[0_4px_20px_rgba(37,211,102,0.5)] transition-all duration-300">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
               </a>
-              <a href="tel:+923202220001" className="w-10 h-10 rounded-full glass-panel border border-white/10 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-white/10 hover:scale-110 hover:shadow-antigravity transition-all duration-300 preserve-3d">
+              <a href="tel:+923202220001" className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-gradient-to-br from-primary to-orange-600 shadow-[0_4px_14px_rgba(234,88,12,0.3)] hover:scale-110 hover:shadow-[0_4px_20px_rgba(234,88,12,0.5)] transition-all duration-300">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
               </a>
             </div>
@@ -48,25 +72,37 @@ const Footer = () => {
             </h3>
             <p className="text-gray-400 text-[14px]">Subscribe to our newsletter for exclusive offers, updates, and artistic inspiration.</p>
             <div className="relative mt-2 group">
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const email = e.target.elements.newsletter_email.value;
-                if (email) {
-                  window.open(`https://wa.me/923202220001?text=${encodeURIComponent(`Hi, I'd like to subscribe to your newsletter. My email: ${email}`)}`, '_blank');
-                  e.target.reset();
-                }
-              }}>
+              <form onSubmit={handleSubscribe}>
                 <input 
                   name="newsletter_email"
                   type="email" 
                   required
+                  disabled={subState === 'loading' || subState === 'success'}
                   placeholder="Enter your email address" 
-                  className="w-full bg-white/5 border border-white/10 rounded-full py-4 pl-6 pr-32 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-colors duration-300"
+                  className="w-full bg-white/5 border border-white/10 rounded-full py-4 pl-6 pr-32 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-colors duration-300 disabled:opacity-50"
                 />
-                <button type="submit" className="absolute right-1.5 top-1.5 bottom-1.5 bg-primary hover:bg-orange-500 text-white font-bold text-[13px] px-4 md:px-6 rounded-full flex items-center gap-2 transition-colors duration-300 shadow-[0_4px_14px_rgba(234,88,12,0.3)] hover:shadow-[0_4px_20px_rgba(234,88,12,0.5)]">
-                  Subscribe <ArrowRight size={14} className="hidden sm:block" />
-                </button>
+                {subState === 'success' ? (
+                  <div className="absolute right-1.5 top-1.5 bottom-1.5 bg-green-500 text-white font-bold text-[13px] px-4 md:px-6 rounded-full flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Subscribed!
+                  </div>
+                ) : (
+                  <button 
+                    type="submit" 
+                    disabled={subState === 'loading'}
+                    className="absolute right-1.5 top-1.5 bottom-1.5 bg-primary hover:bg-orange-500 text-white font-bold text-[13px] px-4 md:px-6 rounded-full flex items-center gap-2 transition-colors duration-300 shadow-[0_4px_14px_rgba(234,88,12,0.3)] hover:shadow-[0_4px_20px_rgba(234,88,12,0.5)] disabled:opacity-70"
+                  >
+                    {subState === 'loading' ? (
+                      <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    ) : (
+                      <>Subscribe <ArrowRight size={14} className="hidden sm:block" /></>
+                    )}
+                  </button>
+                )}
               </form>
+              {subState === 'error' && (
+                <p className="text-red-400 text-[12px] mt-2 pl-2">Something went wrong. Please try again.</p>
+              )}
             </div>
           </div>
 
