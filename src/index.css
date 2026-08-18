@@ -8,10 +8,7 @@
 
 @layer base {
   html {
-    /* Anchor jumps and programmatic scrolls glide. Wheel and touch stay
-       native — nothing is hijacked onto the main thread, which is what makes
-       "smooth scroll" libraries feel heavy on mid-range phones. */
-    scroll-behavior: smooth;
+    /* Removed scroll-behavior: smooth because it interferes with native iOS momentum scrolling. */
   }
 
   body {
