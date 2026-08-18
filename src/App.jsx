@@ -33,7 +33,7 @@ function App() {
         <ScrollToTop />
         <div className="flex flex-col min-h-screen bg-background">
           <Navbar />
-          <main className="flex-grow pt-16">
+          <main className="flex-grow pt-[120px] md:pt-[160px]">
             <RouteErrorBoundary>
               <Routes>
                 <Route path="/" element={<Home />} />

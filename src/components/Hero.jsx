@@ -159,7 +159,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section ref={containerRef} className="relative w-full min-h-[85vh] flex items-center bg-[#fafaf9] pt-40 pb-8 overflow-hidden font-sans">
+    <section ref={containerRef} className="relative w-full min-h-[85vh] flex items-center bg-[#fafaf9] pt-24 md:pt-16 pb-8 overflow-hidden font-sans">
 
       <div className="px-margin-mobile md:px-gutter max-w-container-max mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
 
