@@ -26,6 +26,9 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import NotFound from './pages/NotFound';
 
+import SalesPopup from './components/SalesPopup';
+import PageTransition from './components/PageTransition';
+
 function App() {
   return (
     <ErrorBoundary>
@@ -35,30 +38,33 @@ function App() {
           <Navbar />
           <main className="flex-grow pt-[120px] md:pt-[160px]">
             <RouteErrorBoundary>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/shop/:deptSlug" element={<Shop />} />
-                <Route path="/shop/:deptSlug/:categorySlug" element={<Shop />} />
-                <Route path="/product/:name" element={<ProductDetails />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/calculator" element={<CustomCalculator />} />
-                <Route path="/reviews" element={<Reviews />} />
-                <Route path="/faq" element={<Faq />} />
-                <Route path="/contact" element={<ContactUs />} />
-                <Route path="/track-order" element={<TrackOrder />} />
-                <Route path="/shipping" element={<ShippingPolicy />} />
-                <Route path="/returns" element={<ReturnsRefunds />} />
-                <Route path="/about" element={<OurStory />} />
-                <Route path="/careers" element={<Careers />} />
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                <Route path="/terms" element={<TermsOfService />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <PageTransition>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/shop/:deptSlug" element={<Shop />} />
+                  <Route path="/shop/:deptSlug/:categorySlug" element={<Shop />} />
+                  <Route path="/product/:name" element={<ProductDetails />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/calculator" element={<CustomCalculator />} />
+                  <Route path="/reviews" element={<Reviews />} />
+                  <Route path="/faq" element={<Faq />} />
+                  <Route path="/contact" element={<ContactUs />} />
+                  <Route path="/track-order" element={<TrackOrder />} />
+                  <Route path="/shipping" element={<ShippingPolicy />} />
+                  <Route path="/returns" element={<ReturnsRefunds />} />
+                  <Route path="/about" element={<OurStory />} />
+                  <Route path="/careers" element={<Careers />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </PageTransition>
             </RouteErrorBoundary>
           </main>
           <Footer />
           <FloatingWhatsApp />
+          <SalesPopup />
           <BottomNav />
         </div>
       </Router>
