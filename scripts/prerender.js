@@ -267,6 +267,8 @@ function buildTree(rows, categoryOverrides = {}, hiddenCategories = {}) {
  * live.
  */
 const SHELL_CSS = `
+html.js-enabled #prerender{display:none !important}
+html.js-enabled body{background-color:#0a0a0a}
 #prerender{max-width:1200px;margin:0 auto;padding:24px 20px 64px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#111;line-height:1.6}
 #prerender a{color:#ea580c;text-decoration:none}
 #prerender a:hover{text-decoration:underline}
