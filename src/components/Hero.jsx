@@ -122,7 +122,7 @@ const Hero = () => {
 
           if (headlineTargets.length) {
             tl.from(headlineTargets, {
-              yPercent: 110, duration: 0.8 * animSpeed, stagger: 0.04, ease: 'power3.out'
+              y: 24, opacity: 0, duration: 0.8 * animSpeed, stagger: 0.04, ease: 'power3.out'
             }, startTime + 0.05);
           }
 
@@ -175,18 +175,13 @@ const Hero = () => {
           <h1 className="text-[48px] md:text-[64px] lg:text-[72px] font-bold text-secondary leading-[1.06] mb-6 block">
             {headlineText.map((word, i) => (
               <React.Fragment key={i}>
-                <span className="inline-block overflow-hidden align-top pb-[0.35em] -mb-[0.35em] px-[0.05em]">
-                  {/* No permanent `will-change`: the headline is 6 words, each
-                      would hold its own compositor layer for the life of the
-                      page for one 0.8s tween. gsap adds it while it tweens. */}
-                  <span className={`split-word inline-block ${word === 'Paper' ? 'text-primary relative' : ''}`}>
-                    {word}
-                    {word === 'Paper' && (
-                      <svg className="absolute -bottom-2 md:-bottom-4 left-0 w-full h-auto text-orange-200 -z-10" viewBox="0 0 100 20" preserveAspectRatio="none">
-                        <path d="M0,15 Q50,0 100,15" fill="none" stroke="currentColor" strokeWidth="4" />
-                      </svg>
-                    )}
-                  </span>
+                <span className={`split-word inline-block ${word === 'Paper' ? 'text-primary relative' : ''}`}>
+                  {word}
+                  {word === 'Paper' && (
+                    <svg className="absolute -bottom-2 md:-bottom-4 left-0 w-full h-auto text-orange-200 -z-10" viewBox="0 0 100 20" preserveAspectRatio="none">
+                      <path d="M0,15 Q50,0 100,15" fill="none" stroke="currentColor" strokeWidth="4" />
+                    </svg>
+                  )}
                 </span>
                 {i < headlineText.length - 1 && ' '}
               </React.Fragment>
