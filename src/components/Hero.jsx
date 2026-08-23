@@ -280,17 +280,17 @@ const Hero = () => {
             the CSS float owns the inner one. Sharing a single element would let
             the CSS animation clobber gsap's inline transform.
           */}
-          <div ref={badgeRef} className="absolute z-40 top-[15%] left-[5%] md:-left-[5%]">
+          <div ref={badgeRef} className="absolute z-40 top-[12%] left-[5%] md:-left-[2%]">
             <div
-              className={`animate-float motion-reduce:animate-none glass-panel p-3 md:p-4 rounded-full shadow-[0_15px_35px_rgba(0,0,0,0.1)] flex items-center gap-3 border border-white/70 bg-white/90 ${inView ? '' : '[animation-play-state:paused]'}`}
-              style={{ '--float-z': '160px', '--float-tilt': '-1.5deg' }}
+              className={`animate-float motion-reduce:animate-none bg-white/95 backdrop-blur-sm px-5 py-2.5 md:py-3 rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] flex items-center gap-3 border border-gray-100/80 ${inView ? '' : '[animation-play-state:paused]'}`}
+              style={{ '--float-z': '160px', '--float-tilt': '-1deg' }}
             >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 via-yellow-400 to-amber-600 flex items-center justify-center text-amber-950 shadow-inner border border-yellow-300/50">
-                <Award size={20} fill="currentColor" />
+              <div className="flex items-center justify-center bg-orange-50 text-orange-500 w-8 h-8 rounded-full">
+                <Award size={16} strokeWidth={2.5} />
               </div>
-              <div className="pr-3">
-                <p className="text-[13px] md:text-[14px] font-black text-secondary uppercase tracking-widest leading-tight">Premium<br />Quality</p>
-              </div>
+              <p className="text-[12px] md:text-[13px] font-extrabold text-gray-800 uppercase tracking-widest whitespace-nowrap">
+                Premium Quality
+              </p>
             </div>
           </div>
 
