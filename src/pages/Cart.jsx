@@ -115,6 +115,29 @@ const Cart = () => {
         console.error('Supabase order insert error:', insertError);
       }
 
+      // Send Order Confirmation Email via our new serverless function
+      if (email) {
+        try {
+          // Fire and forget, don't block the WhatsApp redirect
+          fetch('/api/send-order-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderDetails: {
+                order_id: orderId,
+                customer_name: fullName,
+                customer_email: email,
+                shipping_method: shipMap[shippingMethod],
+                payment_method: payMap[paymentMethod],
+                total_amount: finalTotal
+              }
+            })
+          }).catch(err => console.error('Error triggering email API:', err));
+        } catch (emailErr) {
+          console.error('Failed to initiate email send:', emailErr);
+        }
+      }
+
       // 2. Build WhatsApp message (always runs regardless of DB result)
       let message = `*New Order Request (ID: ${orderId})*\n\n`;
       message += `*Customer Details:*\n`;
