@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageSeo } from '../lib/seo';
+import { departmentOf, PAPER_AND_CANVAS } from '../data/categories';
 
 const Cart = () => {
   usePageSeo('/cart');
@@ -127,7 +128,7 @@ const Cart = () => {
       message += `*Order Items:*\n`;
       cartItems.forEach((item, index) => {
         message += `${index + 1}. *${item.name}*\n`;
-        message += `   Size: ${item.size} | GSM: ${item.gsm}g\n`;
+        message += `   Size: ${item.size}${departmentOf(item.category) === PAPER_AND_CANVAS ? ` | GSM: ${item.gsm}g` : ''}\n`;
         message += `   Qty: ${item.quantity} ${item.packingType}\n`;
         if (item.isBulk) {
           message += `   [Bulk Request]\n`;
@@ -219,7 +220,7 @@ const Cart = () => {
                       <div>
                         <h3 className="font-headline-md text-base md:text-lg font-bold text-on-surface">{item.name}</h3>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="bg-orange-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-primary border border-orange-100 rounded-md">{item.gsm}g</span>
+                          {departmentOf(item.category) === PAPER_AND_CANVAS && <span className="bg-orange-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-primary border border-orange-100 rounded-md">{item.gsm}g</span>}
                           <span className="bg-gray-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-gray-500 border border-gray-200 rounded-md">{item.size}</span>
                           {item.isBulk && <span className="bg-blue-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-blue-600 border border-blue-100 rounded-md uppercase tracking-widest">Bulk Req</span>}
                           {item.isInstallment && <span className="bg-indigo-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-indigo-600 border border-indigo-100 rounded-md uppercase tracking-widest">Installment: {item.installmentPlan}</span>}
@@ -426,7 +427,7 @@ const Cart = () => {
                 <div className="flex flex-col gap-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                   {cartItems.map((item, i) => (
                     <div key={i} className="flex flex-col text-sm">
-                      <span className="text-gray-700 font-medium">{item.name} ({item.size}, {item.gsm}g)</span>
+                      <span className="text-gray-700 font-medium">{item.name} ({item.size}{departmentOf(item.category) === PAPER_AND_CANVAS ? `, ${item.gsm}g` : ''})</span>
                       <span className="text-[11px] text-gray-500">{item.quantity} × Rs. {(item.price * item.quantity).toLocaleString()} (Rs. {item.price.toLocaleString()}/{item.packingType})</span>
                     </div>
                   ))}

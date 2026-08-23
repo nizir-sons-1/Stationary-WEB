@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useProduct } from '../hooks/useSupabase';
 import TermsModal from '../components/TermsModal';
 import { PLACEHOLDER_IMAGE, fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
-import { displayNameOf, departmentOf } from '../data/categories';
+import { displayNameOf, departmentOf, PAPER_AND_CANVAS } from '../data/categories';
 import { usePageSeo } from '../lib/seo';
 import { productSchema } from '../lib/schema';
 import { categoryPath, productPath } from '../lib/site';
@@ -278,7 +278,7 @@ const ProductDetails = () => {
           {/* Configuration Box */}
           <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 lg:p-8 mb-8 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
             
-            <div className="grid grid-cols-2 gap-6 mb-8">
+            <div className={`grid ${departmentOf(currentVariation.Category) === PAPER_AND_CANVAS ? 'grid-cols-2' : 'grid-cols-1'} gap-6 mb-8`}>
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Select Size</label>
                 <select 
@@ -292,18 +292,20 @@ const ProductDetails = () => {
                 </select>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Select GSM</label>
-                <select 
-                  value={selectedGsm}
-                  onChange={(e) => setSelectedGsm(e.target.value)}
-                  className="bg-white border border-gray-200 text-secondary text-sm md:text-base font-bold py-3 px-4 rounded-xl outline-none focus:border-primary shadow-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] bg-[length:16px] cursor-pointer hover:border-gray-300 transition-colors"
-                >
-                  {availableGsms.map(g => (
-                    <option key={g} value={g}>{g}g</option>
-                  ))}
-                </select>
-              </div>
+              {departmentOf(currentVariation.Category) === PAPER_AND_CANVAS && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Select GSM</label>
+                  <select 
+                    value={selectedGsm}
+                    onChange={(e) => setSelectedGsm(e.target.value)}
+                    className="bg-white border border-gray-200 text-secondary text-sm md:text-base font-bold py-3 px-4 rounded-xl outline-none focus:border-primary shadow-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] bg-[length:16px] cursor-pointer hover:border-gray-300 transition-colors"
+                  >
+                    {availableGsms.map(g => (
+                      <option key={g} value={g}>{g}g</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Bulk Order Toggle */}

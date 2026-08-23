@@ -191,7 +191,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
         <p className="text-[9px] md:text-[13px] text-gray-500 mt-0.5 md:mt-1 mb-2 md:mb-4 line-clamp-1">{currentVariation?.Description || 'Premium High Quality Stock'}</p>
 
         {/* Dynamic Selectors */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className={`grid ${departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS ? 'grid-cols-2' : 'grid-cols-1'} gap-2 mb-3`}>
           <div className="flex flex-col bg-gray-50/80 rounded-lg p-1.5 border border-gray-100">
             <span className="text-[8px] md:text-[9px] text-gray-400 font-bold uppercase tracking-widest px-1">Size</span>
             <select
@@ -205,18 +205,20 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
             </select>
           </div>
           
-          <div className="flex flex-col bg-gray-50/80 rounded-lg p-1.5 border border-gray-100">
-            <span className="text-[8px] md:text-[9px] text-gray-400 font-bold uppercase tracking-widest px-1">GSM</span>
-            <select
-              value={selectedGsm}
-              onChange={(e) => setSelectedGsm(e.target.value)}
-              className="w-full bg-transparent text-[#111111] text-[10px] md:text-[11px] font-bold px-1 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:12px]"
-            >
-              {availableGsms.map(gsm => (
-                <option key={gsm} value={gsm}>{gsm}g</option>
-              ))}
-            </select>
-          </div>
+          {departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS && (
+            <div className="flex flex-col bg-gray-50/80 rounded-lg p-1.5 border border-gray-100">
+              <span className="text-[8px] md:text-[9px] text-gray-400 font-bold uppercase tracking-widest px-1">GSM</span>
+              <select
+                value={selectedGsm}
+                onChange={(e) => setSelectedGsm(e.target.value)}
+                className="w-full bg-transparent text-[#111111] text-[10px] md:text-[11px] font-bold px-1 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:12px]"
+              >
+                {availableGsms.map(gsm => (
+                  <option key={gsm} value={gsm}>{gsm}g</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Installment Toggle */}

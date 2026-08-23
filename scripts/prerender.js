@@ -377,6 +377,7 @@ function head({ title, description, canonical, image, noindex, jsonLd }) {
   const ogImage = absoluteUrl(image || DEFAULT_OG_IMAGE);
   return `
     <title>${esc(title)}</title>
+    <meta name="keywords" content="Nazir and Sons, nazirandsons, Nazir & Sons, papers wholesale, wholesale paper, stationery, paper market lahore, stationery wholesale lahore" />
     <meta name="description" content="${esc(description)}" />
     <link rel="canonical" href="${esc(url)}" />
     <meta name="robots" content="${
@@ -612,7 +613,7 @@ function productPage(product) {
 
   const facts = [
     sizes.length ? `Sizes: ${sizes.slice(0, 4).join(', ')}` : null,
-    gsms.length ? `GSM: ${gsms[0] === gsms.at(-1) ? gsms[0] : `${gsms[0]}–${gsms.at(-1)}`}` : null,
+    (department === 'Paper & Canvas' && gsms.length) ? `GSM: ${gsms[0] === gsms.at(-1) ? gsms[0] : `${gsms[0]}–${gsms.at(-1)}`}` : null,
     prices.length ? `From ${money(Math.min(...prices))}` : null,
   ].filter(Boolean);
 
@@ -639,7 +640,7 @@ function productPage(product) {
     .map(
       (v) => `<tr>
         <td>${esc(v.size || '—')}</td>
-        <td>${v.gsm ? `${esc(v.gsm)} gsm` : '—'}</td>
+        ${department === 'Paper & Canvas' ? `<td>${v.gsm ? `${esc(v.gsm)} gsm` : '—'}</td>` : ''}
         <td>${esc(money(v.price))}</td>
         <td>${v.stock > 0 ? 'In stock' : 'Out of stock'}</td>
       </tr>`
@@ -677,7 +678,7 @@ ${shellHeader()}
     rows
       ? `<h2>Sizes, weights and prices</h2>
   <table>
-    <thead><tr><th>Size</th><th>GSM</th><th>Price</th><th>Availability</th></tr></thead>
+    <thead><tr><th>Size</th>${department === 'Paper & Canvas' ? '<th>GSM</th>' : ''}<th>Price</th><th>Availability</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <p>Prices are in Pakistani rupees and follow the live per-kilogram rate for the stock, which is why the same sheet size costs more at a higher GSM. For a size not listed, use the <a href="/calculator">paper calculator</a> or ask on <a href="${BUSINESS.whatsapp}">WhatsApp</a>.</p>`
