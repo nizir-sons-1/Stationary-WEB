@@ -76,7 +76,7 @@ const CATEGORY_SIZES = {
 
 // Memoised: a grid can hold dozens of these, and without it every one of them
 // re-rendered whenever the cart changed.
-const ProductGroupCard = React.memo(function ProductGroupCard({ productName, variations }) {
+const ProductGroupCard = React.memo(function ProductGroupCard({ productName, installmentHidden, isCategoryInstallmentDisabled, variations }) {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedGsm, setSelectedGsm] = useState('');
@@ -222,7 +222,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, var
         </div>
 
         {/* Installment Toggle */}
-        {PAPER_CATEGORY_NAMES.has((currentVariation?.Category || '').toLowerCase()) && (
+        {!installmentHidden && !isCategoryInstallmentDisabled && PAPER_CATEGORY_NAMES.has((currentVariation?.Category || '').toLowerCase()) && (
           <div className="flex items-center gap-1.5 mb-3 -mt-1 bg-indigo-50/50 p-1.5 rounded-lg border border-indigo-100">
             <input 
               type="checkbox" 
@@ -358,6 +358,8 @@ const Shop = () => {
     categoryImages: adminCategoryImages,
     hiddenDepartments,
     hiddenCategories,
+    hiddenInstallmentDepartments,
+    hiddenInstallmentCategories,
     loading: taxonomyLoading,
   } = useTaxonomyImages();
 
@@ -477,7 +479,7 @@ const Shop = () => {
         Stock: v.stock,
         IMAGE_URL: v.image_url || p.image_url
       }));
-      return { name: p.product_name, variations };
+      return { name: p.product_name, installmentHidden: p.installment_hidden, variations };
     }).filter(group => group.variations.length > 0);
   }, [dbProducts]);
 
@@ -761,7 +763,13 @@ const Shop = () => {
         ) : (
           <section ref={productsGridRef} className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-6 perspective-1000">
             {groupedProducts.map((group) => (
-              <ProductGroupCard key={group.name} productName={group.name} variations={group.variations} />
+              <ProductGroupCard 
+                key={group.name} 
+                productName={group.name} 
+                installmentHidden={group.installmentHidden}
+                isCategoryInstallmentDisabled={hiddenInstallmentCategories[selectedSubCategory]}
+                variations={group.variations} 
+              />
             ))}
           </section>
         )}

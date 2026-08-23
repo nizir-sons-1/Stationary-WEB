@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ShoppingBag, Plus, Minus, Truck, ShieldCheck, Phone } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useProduct } from '../hooks/useSupabase';
+import { useProduct, useTaxonomyImages } from '../hooks/useSupabase';
 import TermsModal from '../components/TermsModal';
 import { PLACEHOLDER_IMAGE, fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
 import { displayNameOf, departmentOf, PAPER_AND_CANVAS } from '../data/categories';
@@ -17,6 +17,7 @@ const ProductDetails = () => {
   const { addToCart } = useCart();
   
   const { product: currentProduct, loading } = useProduct(decodedName);
+  const { hiddenInstallmentCategories } = useTaxonomyImages();
 
   // Map Supabase product_variations to the expected format
   const productVariations = useMemo(() => {
@@ -332,7 +333,7 @@ const ProductDetails = () => {
             </div>
 
             {/* Installment Plan Toggle (Only for Paper & Canvas) */}
-            {['bleach card', 'art card', 'art paper', 'matte paper', 'copy paper', 'offset paper', 'ivory card', 'color card', 'carbonless', 'stickers', 'local paper', 'boxboard', 'news', 'butter paper', 'kraft card', 'book paper'].includes((currentVariation.Category || '').toLowerCase()) && (
+            {!currentProduct?.installment_hidden && !hiddenInstallmentCategories?.[currentProduct?.category] && ['bleach card', 'art card', 'art paper', 'matte paper', 'copy paper', 'offset paper', 'ivory card', 'color card', 'carbonless', 'stickers', 'local paper', 'boxboard', 'news', 'butter paper', 'kraft card', 'book paper'].includes((currentVariation.Category || '').toLowerCase()) && (
               <div className="flex items-start gap-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 mb-6">
                 <input 
                   type="checkbox" 

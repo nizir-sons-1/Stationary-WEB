@@ -73,6 +73,7 @@ const PRODUCT_FIELDS = `
   category,
   description,
   image_url,
+  installment_hidden,
   product_variations (
     id, size, gsm, price, packing_type, stock, image_url
   )
@@ -232,6 +233,7 @@ const EMPTY_TAXONOMY = Object.freeze({
   department: {},
   category: {},
   hidden: { department: {}, category: {} },
+  installment_hidden: { department: {}, category: {} },
 });
 
 // Postgres' "column does not exist" — taxonomy_hidden.sql has not been run.
@@ -247,7 +249,7 @@ export function useTaxonomyImages() {
     load(TAXONOMY_KEY, async () => {
       const withHidden = await supabase
         .from('taxonomy_images')
-        .select('kind, name, image_url, is_hidden');
+        .select('kind, name, image_url, is_hidden, installment_hidden');
 
       if (!withHidden.error) return shapeTaxonomy(withHidden.data);
 
@@ -277,16 +279,19 @@ export function useTaxonomyImages() {
     categoryImages: data.category || EMPTY_COUNTS,
     hiddenDepartments: data.hidden?.department || EMPTY_COUNTS,
     hiddenCategories: data.hidden?.category || EMPTY_COUNTS,
+    hiddenInstallmentDepartments: data.installment_hidden?.department || EMPTY_COUNTS,
+    hiddenInstallmentCategories: data.installment_hidden?.category || EMPTY_COUNTS,
     loading: snapshot.loading,
   };
 }
 
 function shapeTaxonomy(rows) {
-  const out = { department: {}, category: {}, hidden: { department: {}, category: {} } };
+  const out = { department: {}, category: {}, hidden: { department: {}, category: {} }, installment_hidden: { department: {}, category: {} } };
   for (const row of rows || []) {
     if (!out[row.kind]) continue;
     if (row.image_url) out[row.kind][row.name] = row.image_url;
     if (row.is_hidden) out.hidden[row.kind][row.name] = true;
+    if (row.installment_hidden) out.installment_hidden[row.kind][row.name] = true;
   }
   return out;
 }
