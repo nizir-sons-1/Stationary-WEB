@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight, Lock, Unlock } from 'lucide-react';
+import { Sparkles, ArrowRight, Lock, Unlock, Award } from 'lucide-react';
 import { useInView } from '../hooks/useInView';
 
 // How long the intro overlay owns the screen (Preloader DURATION + EXIT).
@@ -285,8 +285,8 @@ const Hero = () => {
               className={`animate-float motion-reduce:animate-none glass-panel p-3 md:p-4 rounded-full shadow-[0_15px_35px_rgba(0,0,0,0.1)] flex items-center gap-3 border border-white/70 bg-white/90 ${inView ? '' : '[animation-play-state:paused]'}`}
               style={{ '--float-z': '160px', '--float-tilt': '-1.5deg' }}
             >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-400 to-pink-500 flex items-center justify-center text-white shadow-inner">
-                <Sparkles size={18} fill="currentColor" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 via-yellow-400 to-amber-600 flex items-center justify-center text-amber-950 shadow-inner border border-yellow-300/50">
+                <Award size={20} fill="currentColor" />
               </div>
               <div className="pr-3">
                 <p className="text-[13px] md:text-[14px] font-black text-secondary uppercase tracking-widest leading-tight">Premium<br />Quality</p>
