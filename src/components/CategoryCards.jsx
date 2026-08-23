@@ -17,14 +17,14 @@ import { categoryPath } from '../lib/site';
  * that department genuinely stocks.
  */
 const DEPARTMENT_CARDS = [
-  { name: 'Fine Arts', color: 'from-orange-400 to-pink-500' },
-  { name: 'Stationery', color: 'from-blue-400 to-indigo-500' },
   {
     name: PAPER_AND_CANVAS,
     color: 'from-green-400 to-emerald-500',
     // The flagship keeps its commissioned photograph.
     img: 'https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=400&q=80',
   },
+  { name: 'Fine Arts', color: 'from-orange-400 to-pink-500' },
+  { name: 'Stationery', color: 'from-blue-400 to-indigo-500' },
   { name: 'Notebooks', color: 'from-yellow-400 to-orange-500' },
   { name: 'Accessories', color: 'from-purple-400 to-pink-500' },
 ];
