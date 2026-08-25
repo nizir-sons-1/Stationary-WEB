@@ -20,10 +20,10 @@ async function scrapeAndPush() {
 
   try {
     // 0. Wipe existing data
-    console.log('Wiping existing test data...');
-    await supabase.from('product_variations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    console.log('Wiped.');
+    console.log('Skipping wipe to preserve existing data...');
+    // await supabase.from('product_variations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // console.log('Wiped.');
 
     // 1. Fetch from stationers.pk
     let allProducts = [];
