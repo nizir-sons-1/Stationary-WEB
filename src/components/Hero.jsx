@@ -30,13 +30,13 @@ const Hero = () => {
           fetchPriority="high"
           loading="eager"
           decoding="async"
-          className="w-full h-full object-cover object-[75%_center] sm:object-[70%_center] lg:object-center select-none pointer-events-none"
+          className="w-full h-full object-cover object-[55%_center] sm:object-[70%_center] lg:object-center select-none pointer-events-none"
         />
       </picture>
 
-      {/* Subtle readability gradient for mobile screens */}
+      {/* Subtle readability gradient for mobile screens: soft warm wash on mobile, horizontal fade on desktop */}
       <div
-        className="absolute inset-0 bg-gradient-to-r from-[#f5f2eb]/90 via-[#f5f2eb]/70 to-transparent lg:from-transparent lg:via-transparent lg:to-transparent pointer-events-none"
+        className="absolute inset-0 bg-gradient-to-b from-[#f5f2eb]/92 via-[#f5f2eb]/78 to-[#f5f2eb]/35 sm:bg-gradient-to-r sm:from-[#f5f2eb]/90 sm:via-[#f5f2eb]/70 sm:to-transparent lg:from-transparent lg:via-transparent lg:to-transparent pointer-events-none"
         aria-hidden="true"
       />
 
@@ -78,7 +78,7 @@ const Hero = () => {
             <button
               type="button"
               onClick={handleExploreDepartments}
-              className="inline-flex items-center justify-center px-6 py-3 rounded-[4px] font-semibold text-[14px] text-[#112338] border-[1.5px] border-[#112338]/70 hover:border-[#112338] bg-transparent hover:bg-black/[0.04] transition-all duration-200 active:scale-[0.99] font-sans cursor-pointer"
+              className="inline-flex items-center justify-center px-6 py-3 rounded-[4px] font-semibold text-[14px] text-[#112338] border-[1.5px] border-[#112338]/70 hover:border-[#112338] bg-white/80 sm:bg-transparent backdrop-blur-[2px] sm:backdrop-blur-none hover:bg-black/[0.04] transition-all duration-200 active:scale-[0.99] font-sans cursor-pointer"
             >
               Explore Departments
             </button>
