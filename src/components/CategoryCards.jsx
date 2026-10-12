@@ -3,37 +3,38 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, ShoppingCart, Heart, Check, Truck, ShieldCheck, Headphones } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { categoryPath } from '../lib/site';
+import { useTaxonomyImages } from '../hooks/useSupabase';
 
 const DEPARTMENTS = [
   {
     name: 'Paper & Canvas',
     path: categoryPath('Paper & Canvas'),
     desc: 'Printing paper, art paper, canvas & more',
-    image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=500&q=80',
+    image: 'https://ygfcoasnftbzavefmqmt.supabase.co/storage/v1/object/public/product-images/taxonomy/1791795813243-810a5aa4.webp',
   },
   {
     name: 'Fine Arts',
     path: categoryPath('Fine Arts'),
     desc: 'Paints, brushes, sketchbooks, art supplies',
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=500&q=80',
+    image: 'https://i.postimg.cc/CxwwZt2n/image.webp',
   },
   {
     name: 'Stationery',
     path: categoryPath('Stationery'),
     desc: 'Pens, markers, desk essentials & more',
-    image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=500&q=80',
+    image: 'https://i.postimg.cc/pL3kcbtY/image-(2).webp',
   },
   {
     name: 'Notebooks',
     path: categoryPath('Notebooks'),
     desc: 'Journals, planners, sketchbooks & notebooks',
-    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=500&q=80',
+    image: 'https://i.postimg.cc/tJbMS0WM/image-(1).webp',
   },
   {
     name: 'Accessories',
     path: categoryPath('Accessories'),
     desc: 'Bags, organizers, clips, & useful extras',
-    image: 'https://images.unsplash.com/photo-1585336261026-407421f661bb?auto=format&fit=crop&w=500&q=80',
+    image: 'https://ygfcoasnftbzavefmqmt.supabase.co/storage/v1/object/public/product-images/taxonomy/1791702902134-b5347c6a.webp',
   },
 ];
 
@@ -154,6 +155,7 @@ const VideoSection = () => {
 
 const CategoryCards = () => {
   const { addToCart } = useCart();
+  const { departmentImages } = useTaxonomyImages();
   const [wishlist, setWishlist] = useState({});
   const [addedItems, setAddedItems] = useState({});
 
@@ -183,41 +185,44 @@ const CategoryCards = () => {
       
       {/* ── 1. Compact 5-Department Showcase Grid ─────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5 mb-8 md:mb-10">
-        {DEPARTMENTS.map((dept) => (
-          <Link
-            key={dept.name}
-            to={dept.path}
-            className="group flex flex-col bg-white rounded-[3px] border border-[#e5e1d7] hover:border-[#112338]/40 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)] transition-all duration-300 overflow-hidden"
-          >
-            {/* Compact Image Container */}
-            <div className="w-full aspect-[16/11] bg-[#f8f6f0] overflow-hidden">
-              <img
-                src={dept.image}
-                alt={dept.name}
-                loading="lazy"
-                decoding="async"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/images/art_paper.webp';
-                }}
-                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
-              />
-            </div>
+        {DEPARTMENTS.map((dept) => {
+          const deptImage = departmentImages?.[dept.name] || dept.image;
+          return (
+            <Link
+              key={dept.name}
+              to={dept.path}
+              className="group flex flex-col bg-white rounded-[3px] border border-[#e5e1d7] hover:border-[#112338]/40 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)] transition-all duration-300 overflow-hidden"
+            >
+              {/* Compact Image Container */}
+              <div className="w-full aspect-[16/11] bg-[#f8f6f0] overflow-hidden">
+                <img
+                  src={deptImage}
+                  alt={dept.name}
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = dept.image;
+                  }}
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+                />
+              </div>
 
-            {/* Compact Details Matching Reference */}
-            <div className="p-2.5 sm:p-3 flex flex-col flex-1">
-              <h3 className="font-serif text-[13.5px] sm:text-[14px] font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1">
-                <span>{dept.name}</span>
-                <span className="text-[12px] text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all">
-                  &rarr;
-                </span>
-              </h3>
-              <p className="text-[10.5px] sm:text-[11px] text-[#64748b] mt-0.5 line-clamp-2 leading-relaxed">
-                {dept.desc}
-              </p>
-            </div>
-          </Link>
-        ))}
+              {/* Compact Details Matching Reference */}
+              <div className="p-2.5 sm:p-3 flex flex-col flex-1">
+                <h3 className="font-serif text-[13.5px] sm:text-[14px] font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1">
+                  <span>{dept.name}</span>
+                  <span className="text-[12px] text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all">
+                    &rarr;
+                  </span>
+                </h3>
+                <p className="text-[10.5px] sm:text-[11px] text-[#64748b] mt-0.5 line-clamp-2 leading-relaxed">
+                  {dept.desc}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
       {/* ── Mid-Page Video Showcase Section ────────────────────────────── */}
@@ -361,6 +366,7 @@ const CategoryCards = () => {
         <div className="w-full bg-[#faf8f5] border border-[#e5e1d7] rounded-[3px] overflow-hidden relative shadow-[0_1px_3px_rgba(0,0,0,0.02)] min-h-[220px] sm:min-h-[240px] flex items-center">
           {/* Full High-Resolution Background Image */}
           <picture className="absolute inset-0 w-full h-full pointer-events-none">
+            <source srcSet="/images/calculator-banner-hd.avif" type="image/avif" />
             <source srcSet="/images/calculator-banner-hd.webp" type="image/webp" />
             <img
               src="/images/calculator-banner-hd.jpg"
@@ -398,6 +404,7 @@ const CategoryCards = () => {
           {/* Left Boxes Photo */}
           <div className="w-full md:w-[240px] lg:w-[260px] shrink-0 h-36 md:h-auto overflow-hidden">
             <picture className="w-full h-full">
+              <source srcSet="/images/wholesale-boxes-hd.avif" type="image/avif" />
               <source srcSet="/images/wholesale-boxes-hd.webp" type="image/webp" />
               <img
                 src="/images/wholesale-boxes-hd.jpg"

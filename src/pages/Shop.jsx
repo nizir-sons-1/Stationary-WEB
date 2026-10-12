@@ -34,11 +34,11 @@ const PAPER_DEPARTMENT_IMAGE =
   'https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=600&q=80';
 
 const DEPARTMENT_FALLBACK_IMAGES = {
-  [PAPER_AND_CANVAS]: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80',
-  'Fine Arts': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=600&q=80',
-  'Stationery': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=600&q=80',
-  'Notebooks': 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80',
-  'Accessories': 'https://images.unsplash.com/photo-1585336261026-407421f661bb?auto=format&fit=crop&w=600&q=80',
+  [PAPER_AND_CANVAS]: 'https://ygfcoasnftbzavefmqmt.supabase.co/storage/v1/object/public/product-images/taxonomy/1791795813243-810a5aa4.webp',
+  'Fine Arts': 'https://i.postimg.cc/CxwwZt2n/image.webp',
+  'Stationery': 'https://i.postimg.cc/pL3kcbtY/image-(2).webp',
+  'Notebooks': 'https://i.postimg.cc/tJbMS0WM/image-(1).webp',
+  'Accessories': 'https://ygfcoasnftbzavefmqmt.supabase.co/storage/v1/object/public/product-images/taxonomy/1791702902134-b5347c6a.webp',
 };
 
 

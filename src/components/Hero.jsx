@@ -20,6 +20,7 @@ const Hero = () => {
         Positioned to show the full paper reams, canvas book, and supplies on the right
       */}
       <picture className="absolute inset-0 w-full h-full select-none pointer-events-none">
+        <source srcSet="/images/hero-banner.avif" type="image/avif" />
         <source srcSet="/images/hero-banner.webp" type="image/webp" />
         <img
           src="/images/hero-banner.jpeg"
