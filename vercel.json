@@ -6,7 +6,7 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/((?!assets/|images/|fonts/|.*\\..*).*)", "destination": "/index.html" }
+    { "source": "/((?!assets/|images/|videos/|fonts/|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
@@ -36,6 +36,12 @@
     },
     {
       "source": "/images/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
+      ]
+    },
+    {
+      "source": "/videos/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
       ]

@@ -134,15 +134,15 @@ const VideoSection = () => {
           autoPlay
           controls={false}
           preload="metadata"
-          poster="/public/videos/section-video-poster.jpg"
+          poster="/videos/section-video-poster.webp"
           className="w-full h-full object-cover"
         >
           {isInView && (
             <>
-              <source src="/public/videos/section-video.webm" type="video/webm" />
-              <source src="/public/videos/section-video.mp4" type="video/mp4" />
               <source src="/videos/section-video.webm" type="video/webm" />
               <source src="/videos/section-video.mp4" type="video/mp4" />
+              <source src="/public/videos/section-video.webm" type="video/webm" />
+              <source src="/public/videos/section-video.mp4" type="video/mp4" />
             </>
           )}
           Your browser does not support the video tag.
@@ -360,11 +360,14 @@ const CategoryCards = () => {
         {/* Banner 1: Custom Paper Size Calculator (Full HD Background) */}
         <div className="w-full bg-[#faf8f5] border border-[#e5e1d7] rounded-[3px] overflow-hidden relative shadow-[0_1px_3px_rgba(0,0,0,0.02)] min-h-[220px] sm:min-h-[240px] flex items-center">
           {/* Full High-Resolution Background Image */}
-          <img
-            src="/images/calculator-banner-hd.jpg"
-            alt="Paper size calculator and drafting desk"
-            className="absolute inset-0 w-full h-full object-cover object-right sm:object-center pointer-events-none"
-          />
+          <picture className="absolute inset-0 w-full h-full pointer-events-none">
+            <source srcSet="/images/calculator-banner-hd.webp" type="image/webp" />
+            <img
+              src="/images/calculator-banner-hd.jpg"
+              alt="Paper size calculator and drafting desk"
+              className="w-full h-full object-cover object-right sm:object-center"
+            />
+          </picture>
           
           {/* Subtle Mobile Readability Gradient (Only on small screens) */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#faf8f5]/95 via-[#faf8f5]/70 to-transparent sm:from-[#faf8f5]/50 sm:to-transparent pointer-events-none" />
@@ -394,11 +397,14 @@ const CategoryCards = () => {
         <div className="w-full bg-[#18424e] border border-[#143742] rounded-[3px] overflow-hidden flex flex-col md:flex-row items-stretch shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
           {/* Left Boxes Photo */}
           <div className="w-full md:w-[240px] lg:w-[260px] shrink-0 h-36 md:h-auto overflow-hidden">
-            <img
-              src="/images/wholesale-boxes-hd.jpg"
-              alt="Wholesale and bulk packaging supplies"
-              className="w-full h-full object-cover object-center"
-            />
+            <picture className="w-full h-full">
+              <source srcSet="/images/wholesale-boxes-hd.webp" type="image/webp" />
+              <img
+                src="/images/wholesale-boxes-hd.jpg"
+                alt="Wholesale and bulk packaging supplies"
+                className="w-full h-full object-cover object-center"
+              />
+            </picture>
           </div>
 
           {/* Right Text & CTA */}

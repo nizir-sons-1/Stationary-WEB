@@ -19,16 +19,19 @@ const Hero = () => {
         Full Original Banner Image (No cut, no gradient mask)
         Positioned to show the full paper reams, canvas book, and supplies on the right
       */}
-      <img
-        src="/images/hero-banner.jpeg"
-        alt="Everything for paper, print & creativity - Nazir & Sons"
-        width={1600}
-        height={900}
-        fetchPriority="high"
-        loading="eager"
-        decoding="async"
-        className="absolute inset-0 w-full h-full object-cover object-[75%_center] sm:object-[70%_center] lg:object-center select-none pointer-events-none"
-      />
+      <picture className="absolute inset-0 w-full h-full select-none pointer-events-none">
+        <source srcSet="/images/hero-banner.webp" type="image/webp" />
+        <img
+          src="/images/hero-banner.jpeg"
+          alt="Everything for paper, print & creativity - Nazir & Sons"
+          width={1600}
+          height={900}
+          fetchPriority="high"
+          loading="eager"
+          decoding="async"
+          className="w-full h-full object-cover object-[75%_center] sm:object-[70%_center] lg:object-center select-none pointer-events-none"
+        />
+      </picture>
 
       {/* Subtle readability gradient for mobile screens */}
       <div
