@@ -88,7 +88,12 @@ const PRODUCT_FIELDS = `
  */
 export function useProducts(category = null, enabled = true) {
   // Sorted so ['A','B'] and ['B','A'] share one cache entry and one request.
-  const names = category == null ? [] : [].concat(category).filter(Boolean).sort();
+  const names =
+    category == null
+      ? []
+      : (Array.isArray(category) ? category : [category])
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b));
   const cacheKey = `products:${names.length ? names.join('|') : 'all'}`;
 
   const subscribe = useCallback((notify) => subscribeTo(cacheKey, notify), [cacheKey]);
@@ -136,7 +141,7 @@ export function useProductIndex(enabled = true) {
     load(cacheKey, async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, product_name, category, image_url, product_variations(id)')
+        .select('id, product_name, category, image_url, product_variations(id, price)')
         .eq('is_hidden', false);
       if (error) throw error;
       return data.filter(p => p.product_variations && p.product_variations.length > 0);
@@ -403,7 +408,7 @@ export async function submitReview({ name, rating, text }) {
 
   // Prepend the new review to the existing cache so it shows instantly.
   const current = entries.get(REVIEWS_KEY);
-  if (current && current.data && current.data !== EMPTY) {
+  if (current?.data && current.data !== EMPTY) {
     write(REVIEWS_KEY, { ...current, data: [data, ...current.data] });
   } else {
     // Force a full refetch if cache was empty.

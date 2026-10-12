@@ -43,7 +43,7 @@ const Hero = () => {
       {/* Text & Actions Layer */}
       <div className="relative z-10 w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-8 sm:py-10 md:py-12">
         <div className="max-w-[480px] lg:max-w-[520px] flex flex-col items-start text-left">
-          
+
           {/* Eyebrow / Tagline */}
           <p className="text-[11px] sm:text-[12px] font-bold text-[#334155] uppercase tracking-[0.2em] mb-3 font-sans">
             PREMIUM PAPER &amp; CREATIVE SUPPLIES

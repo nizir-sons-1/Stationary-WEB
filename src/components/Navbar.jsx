@@ -1,12 +1,9 @@
-import React, { Suspense, lazy, useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ShoppingBag, ShoppingCart, Menu, X, ChevronRight, Phone } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { categoryPath } from '../lib/site';
-
-// The search modal pulls in framer-motion and the full product catalog.
-// Splitting keeps it off the critical first paint.
-const SearchModal = lazy(() => import('./SearchModal'));
+import SearchModal from './SearchModal';
 
 const LEFT_LINKS = [
   { label: 'Shop', path: '/shop' },
@@ -28,45 +25,27 @@ const DEPARTMENTS = [
   { label: 'Accessories', path: categoryPath('Accessories') },
 ];
 
+const getNavLinkClass = (active, isTransparent) => {
+  if (active) {
+    return 'text-[#0f172a] font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]';
+  }
+  if (isTransparent) {
+    return 'text-[#0f172a] font-semibold hover:text-primary drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]';
+  }
+  return 'text-[#0f172a] font-semibold hover:text-primary';
+};
+
 const Navbar = () => {
   const location = useLocation();
   const { cartCount } = useCart();
   const isActive = (path) => location.pathname === path;
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchMounted, setSearchMounted] = useState(false);
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const searchContainerRef = useRef(null);
-  const searchInputRef = useRef(null);
-
-  const openSearch = () => {
-    setSearchMounted(true);
-    setIsSearchOpen(true);
-  };
-
-  const handleSearchClick = () => {
-    if (!isSearchExpanded) {
-      setIsSearchExpanded(true);
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 150);
-    } else {
-      openSearch();
-    }
-  };
-
-  const handleSearchKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      setIsSearchExpanded(false);
-    } else if (e.key === 'Enter') {
-      openSearch();
-    }
-  };
-
   const [isScrolled, setIsScrolled] = useState(false);
+
   const isHomePage = location.pathname === '/';
+  const isTransparent = isHomePage && !isScrolled;
 
   // Track scroll position for transparent -> white glass transition
   useEffect(() => {
@@ -79,8 +58,9 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close mobile drawer when route changes
+  // Close search and mobile drawer when route changes
   useEffect(() => {
+    setIsSearchOpen(false);
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
@@ -96,37 +76,17 @@ const Navbar = () => {
     };
   }, [isMobileMenuOpen]);
 
-  // Escape key closes mobile menu
+  // Global Cmd+K / Ctrl+K keyboard shortcut to open search
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setIsMobileMenuOpen(false);
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  // Collapse expanded search on outside click (desktop)
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(e.target)
-      ) {
-        setIsSearchExpanded(false);
-      }
-    };
-
-    if (isSearchExpanded) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isSearchExpanded]);
-
-  const isTransparent = isHomePage && !isScrolled;
 
   return (
     <>
@@ -147,13 +107,10 @@ const Navbar = () => {
                 <Link
                   key={label}
                   to={path}
-                  className={`text-[13.5px] xl:text-[14px] tracking-wide transition-all duration-200 py-1 relative select-none ${
-                    active
-                      ? 'text-[#0f172a] font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]'
-                      : isTransparent
-                        ? 'text-[#0f172a] font-semibold hover:text-primary drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]'
-                        : 'text-[#0f172a] font-semibold hover:text-primary'
-                  }`}
+                  className={`text-[13.5px] xl:text-[14px] tracking-wide transition-all duration-200 py-1 relative select-none ${getNavLinkClass(
+                    active,
+                    isTransparent
+                  )}`}
                 >
                   {label}
                   {active && (
@@ -189,16 +146,15 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Mobile Right: Search & Shopping Bag */}
+          {/* Mobile Right: Search Icon & Shopping Bag */}
           <div className="flex lg:hidden items-center gap-3 sm:gap-4 z-10 ml-auto">
             <button
               type="button"
-              onClick={openSearch}
+              onClick={() => setIsSearchOpen(true)}
               aria-label="Search catalog"
-              className="flex items-center gap-1 text-[#0f172a] hover:text-primary transition-colors cursor-pointer select-none py-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]"
+              className="text-[#0f172a] hover:text-primary transition-colors cursor-pointer select-none p-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]"
             >
-              <Search size={17} strokeWidth={2} />
-              <span className="text-[12px] font-medium tracking-wide">Search</span>
+              <Search size={19} strokeWidth={2} />
             </button>
 
             <Link
@@ -226,13 +182,10 @@ const Navbar = () => {
                   <Link
                     key={label}
                     to={path}
-                    className={`text-[13.5px] xl:text-[14px] tracking-wide transition-all duration-200 py-1 relative select-none ${
-                      active
-                        ? 'text-[#0f172a] font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]'
-                        : isTransparent
-                          ? 'text-[#0f172a] font-semibold hover:text-primary drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]'
-                          : 'text-[#0f172a] font-semibold hover:text-primary'
-                    }`}
+                    className={`text-[13.5px] xl:text-[14px] tracking-wide transition-all duration-200 py-1 relative select-none ${getNavLinkClass(
+                      active,
+                      isTransparent
+                    )}`}
                   >
                     {label}
                     {active && (
@@ -243,53 +196,21 @@ const Navbar = () => {
               })}
             </nav>
 
-            {/* Expandable Search Pill Input (Desktop) */}
-            <div ref={searchContainerRef} className="relative flex items-center">
-              <div
-                className={`flex items-center transition-all duration-300 ease-out rounded-full bg-white/85 hover:bg-white border border-[#ded9ce] shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
-                  isSearchExpanded
-                    ? 'w-52 sm:w-64 md:w-72 h-10 px-3 ring-2 ring-primary/20 border-primary/50'
-                    : 'w-10 h-10 justify-center cursor-pointer'
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={handleSearchClick}
-                  aria-label="Search supplies"
-                  className="p-1 text-[#0f172a] hover:text-primary transition-colors cursor-pointer shrink-0"
-                >
-                  <Search size={18} strokeWidth={2.2} />
-                </button>
-
-                {isSearchExpanded && (
-                  <div className="flex items-center flex-1 ml-2 mr-0.5 overflow-hidden">
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      placeholder="Search supplies..."
-                      onKeyDown={handleSearchKeyDown}
-                      onClick={openSearch}
-                      readOnly
-                      className="w-full bg-transparent text-[13px] text-[#0f172a] font-medium placeholder-[#94a3b8] outline-none cursor-pointer"
-                    />
-                    <kbd className="hidden sm:inline-block text-[10px] bg-[#ece8df] text-[#64748b] px-1.5 py-0.5 rounded font-mono font-medium ml-1 shrink-0">
-                      ⌘K
-                    </kbd>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsSearchExpanded(false);
-                      }}
-                      className="ml-1 p-1 text-[#94a3b8] hover:text-[#334155] rounded-full cursor-pointer shrink-0"
-                      aria-label="Close search"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Luxury Search Pill Trigger Button (Desktop) */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Search supplies"
+              className="flex items-center gap-2 px-3 h-10 rounded-full bg-white/85 hover:bg-white border border-[#ded9ce] text-[#0f172a] hover:text-primary transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] cursor-pointer group"
+            >
+              <Search size={17} strokeWidth={2.2} className="group-hover:scale-105 transition-transform" />
+              <span className="hidden xl:inline text-[13px] text-[#64748b] group-hover:text-[#0f172a] font-normal pr-1">
+                Search...
+              </span>
+              <kbd className="hidden xl:inline text-[10px] bg-[#ece8df] text-[#64748b] px-1.5 py-0.5 rounded font-mono font-medium">
+                ⌘K
+              </kbd>
+            </button>
 
             {/* Cart Icon Button (Desktop) */}
             <Link
@@ -312,16 +233,10 @@ const Navbar = () => {
           </div>
 
         </div>
-
-        {searchMounted && (
-          <Suspense fallback={null}>
-            <SearchModal
-              isOpen={isSearchOpen}
-              onClose={() => setIsSearchOpen(false)}
-            />
-          </Suspense>
-        )}
       </header>
+
+      {/* ── Luxury Top-Down Animated Search Takeover (LV Style) ── */}
+      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
       {/* Mobile Menu Drawer (Louis Vuitton Luxury Style) */}
       {isMobileMenuOpen && (
@@ -336,8 +251,6 @@ const Navbar = () => {
           {/* Slide-in Drawer */}
           <aside
             className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-[340px] bg-[#faf8f5] shadow-2xl flex flex-col z-10 transition-transform duration-300 overflow-y-auto"
-            role="dialog"
-            aria-modal="true"
             aria-label="Navigation Menu"
           >
             {/* Header of Drawer */}
@@ -370,7 +283,7 @@ const Navbar = () => {
                 type="button"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
-                  openSearch();
+                  setIsSearchOpen(true);
                 }}
                 className="w-full py-2.5 px-3 rounded-[3px] bg-[#f5f3ee] border border-[#e5e1d7] flex items-center gap-2 text-[12.5px] text-[#64748b] hover:text-[#0f172a] transition-colors cursor-pointer"
               >
