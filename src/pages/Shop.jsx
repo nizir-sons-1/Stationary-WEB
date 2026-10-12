@@ -33,6 +33,14 @@ import gsap from 'gsap';
 const PAPER_DEPARTMENT_IMAGE =
   'https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=600&q=80';
 
+const DEPARTMENT_FALLBACK_IMAGES = {
+  [PAPER_AND_CANVAS]: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80',
+  'Fine Arts': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=600&q=80',
+  'Stationery': 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=600&q=80',
+  'Notebooks': 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80',
+  'Accessories': 'https://images.unsplash.com/photo-1585336261026-407421f661bb?auto=format&fit=crop&w=600&q=80',
+};
+
 
 const formatPrice = (priceStr) => {
   const num = Number(priceStr);
@@ -163,19 +171,18 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
   const inStock = Number(currentVariation.Stock) > 0;
 
   return (
-    <article className="product-card w-full h-full group bg-white border border-white/60 shadow-glass flex flex-col rounded-2xl hover:shadow-antigravity hover:-translate-y-2 transition-[transform,box-shadow] duration-500 overflow-hidden">
+    <article className="product-card w-full h-full group bg-white border border-[#e5e1d7] hover:border-[#112338]/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 flex flex-col rounded-[3px] overflow-hidden">
       {/* Product Image Link */}
-      <Link to={`/product/${encodeURIComponent(productName)}`} className="aspect-[5/4] bg-surface-variant overflow-hidden relative border-b border-gray-100 p-2 md:p-4 flex items-center justify-center cursor-pointer">
+      <Link to={`/product/${encodeURIComponent(productName)}`} className="aspect-[4/3] bg-[#fbfaf8] overflow-hidden relative border-b border-[#e5e1d7]/70 p-3 flex items-center justify-center cursor-pointer">
         {inStock ? (
-          <div className="absolute top-2 left-2 bg-white text-[#111111] text-[7px] md:text-[9px] uppercase font-bold px-1.5 py-0.5 md:px-2 md:py-1 tracking-wider border border-gray-200 rounded-sm md:rounded-md shadow-sm z-10">In Stock</div>
+          <div className="absolute top-2 left-2 bg-white/95 text-emerald-700 text-[8px] md:text-[9px] uppercase font-bold px-2 py-0.5 tracking-wider border border-emerald-200/60 rounded-[2px] shadow-sm z-10 backdrop-blur-xs">In Stock</div>
         ) : (
-          <div className="absolute top-2 left-2 bg-red-50 text-red-600 text-[7px] md:text-[9px] uppercase font-bold px-1.5 py-0.5 md:px-2 md:py-1 tracking-wider border border-red-100 rounded-sm md:rounded-md shadow-sm z-10">Out of Stock</div>
+          <div className="absolute top-2 left-2 bg-rose-50/95 text-rose-600 text-[8px] md:text-[9px] uppercase font-bold px-2 py-0.5 tracking-wider border border-rose-200/60 rounded-[2px] shadow-sm z-10 backdrop-blur-xs">Out of Stock</div>
         )}
         <img
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out absolute inset-0 mix-blend-multiply"
+          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out"
           src={thumb(currentVariation.IMAGE_URL, 400)}
           srcSet={thumbSrcSet(currentVariation.IMAGE_URL)}
-          // 2 across on a phone, up to 4 on a wide desktop.
           sizes="(min-width: 1536px) 300px, (min-width: 1024px) 340px, 50vw"
           alt={productName}
           loading="lazy"
@@ -184,20 +191,20 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
         />
       </Link>
 
-      <div className="p-3 md:p-4 flex flex-col flex-1 bg-white">
+      <div className="p-3 sm:p-3.5 flex flex-col flex-1 bg-white">
         <Link to={`/product/${encodeURIComponent(productName)}`} className="hover:text-primary transition-colors">
-          <h3 className="text-[13px] sm:text-[15px] md:text-[20px] text-[#111111] font-bold leading-tight line-clamp-1">{productName}</h3>
+          <h3 className="font-serif text-[13px] sm:text-[14.5px] md:text-[16px] font-medium text-[#112338] leading-snug line-clamp-1">{productName}</h3>
         </Link>
-        <p className="text-[9px] md:text-[13px] text-gray-500 mt-0.5 md:mt-1 mb-2 md:mb-4 line-clamp-1">{currentVariation?.Description || 'Premium High Quality Stock'}</p>
+        <p className="text-[10px] sm:text-[11.5px] text-[#64748b] mt-0.5 mb-2.5 line-clamp-1">{currentVariation?.Description || 'Premium High Quality Stock'}</p>
 
         {/* Dynamic Selectors */}
-        <div className={`grid ${departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS ? 'grid-cols-2' : 'grid-cols-1'} gap-2 mb-3`}>
-          <div className="flex flex-col bg-gray-50/80 rounded-lg p-1.5 border border-gray-100">
-            <span className="text-[8px] md:text-[9px] text-gray-400 font-bold uppercase tracking-widest px-1">Size</span>
+        <div className={`grid ${departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS ? 'grid-cols-2' : 'grid-cols-1'} gap-1.5 mb-2.5`}>
+          <div className="flex flex-col bg-[#faf8f5] rounded-[3px] p-1.5 border border-[#e5e1d7]">
+            <span className="text-[7.5px] md:text-[8.5px] text-[#8892a0] font-bold uppercase tracking-wider px-0.5">Size</span>
             <select
               value={selectedSize}
               onChange={(e) => setSelectedSize(e.target.value)}
-              className="w-full bg-transparent text-[#111111] text-[10px] md:text-[11px] font-bold px-1 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:12px]"
+              className="w-full bg-transparent text-[#112338] text-[10px] sm:text-[11px] font-semibold px-0.5 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:10px]"
             >
               {availableSizes.map(size => (
                 <option key={size} value={size}>{size}</option>
@@ -206,12 +213,12 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
           </div>
           
           {departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS && (
-            <div className="flex flex-col bg-gray-50/80 rounded-lg p-1.5 border border-gray-100">
-              <span className="text-[8px] md:text-[9px] text-gray-400 font-bold uppercase tracking-widest px-1">GSM</span>
+            <div className="flex flex-col bg-[#faf8f5] rounded-[3px] p-1.5 border border-[#e5e1d7]">
+              <span className="text-[7.5px] md:text-[8.5px] text-[#8892a0] font-bold uppercase tracking-wider px-0.5">GSM</span>
               <select
                 value={selectedGsm}
                 onChange={(e) => setSelectedGsm(e.target.value)}
-                className="w-full bg-transparent text-[#111111] text-[10px] md:text-[11px] font-bold px-1 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:12px]"
+                className="w-full bg-transparent text-[#112338] text-[10px] sm:text-[11px] font-semibold px-0.5 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:10px]"
               >
                 {availableGsms.map(gsm => (
                   <option key={gsm} value={gsm}>{gsm}g</option>
@@ -223,7 +230,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
 
         {/* Installment Toggle */}
         {!installmentHidden && !isCategoryInstallmentDisabled && PAPER_CATEGORY_NAMES.has((currentVariation?.Category || '').toLowerCase()) && (
-          <div className="flex items-center gap-1.5 mb-3 -mt-1 bg-indigo-50/50 p-1.5 rounded-lg border border-indigo-100">
+          <div className="flex items-center gap-1.5 mb-2.5 bg-indigo-50/60 p-1.5 rounded-[3px] border border-indigo-100">
             <input 
               type="checkbox" 
               checked={isInstallment}
@@ -231,7 +238,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
               className="w-3 h-3 text-indigo-600 bg-white border-indigo-300 rounded focus:ring-indigo-600 accent-indigo-600 cursor-pointer shadow-sm"
             />
             <span 
-              className="text-[8px] md:text-[9px] text-indigo-700 font-bold uppercase tracking-widest cursor-pointer"
+              className="text-[8px] md:text-[8.5px] text-indigo-700 font-bold uppercase tracking-wider cursor-pointer"
               onClick={() => setIsInstallment(!isInstallment)}
             >
               Request Installment (3M)
@@ -240,10 +247,10 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
         )}
 
         {/* Price & Action */}
-        <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center gap-2">
+        <div className="mt-auto pt-2.5 border-t border-[#e5e1d7]/70 flex justify-between items-center gap-2">
           <div className="flex flex-col">
-            <span className="text-[8px] md:text-[9px] font-bold tracking-widest text-gray-400 uppercase mb-0.5 line-clamp-1">Rs / {currentVariation?.PACKING_TYPE || 'ream'}</span>
-            <span className="font-price-display text-[#111111] font-black text-[15px] md:text-[18px] leading-none whitespace-nowrap">Rs. {formatPrice(currentVariation?.CALCULATED_PRICE_RS || 0)}</span>
+            <span className="text-[8px] md:text-[9px] font-semibold tracking-wider text-[#64748b] uppercase mb-0.5 line-clamp-1">Rs / {currentVariation?.PACKING_TYPE || 'ream'}</span>
+            <span className="font-serif font-bold text-[#112338] text-[15px] sm:text-[17px] leading-tight whitespace-nowrap">Rs. {formatPrice(currentVariation?.CALCULATED_PRICE_RS || 0)}</span>
           </div>
           <button
             type="button"
@@ -270,18 +277,24 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
             ref={btnRef}
             className={`${
               isAdded
-                ? 'bg-green-500 text-white shadow-[0_4px_14px_rgba(34,197,94,0.4)]'
+                ? 'bg-emerald-600 text-white'
                 : inStock
-                  ? 'bg-[#111111] text-white hover:bg-primary shadow-[0_4px_14px_rgba(17,17,17,0.2)] hover:shadow-[0_4px_14px_rgba(234,88,12,0.3)]'
+                  ? 'bg-[#112338] text-white hover:bg-[#1a3654] active:scale-95'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            } w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 hover:-translate-y-1`}
+            } h-8 md:h-9 px-2.5 sm:px-3 rounded-[3px] font-semibold text-[11px] sm:text-[12px] flex items-center justify-center gap-1.5 transition-all duration-200 shrink-0 shadow-sm`}
           >
             {isAdded ? (
-              <Check size={16} className="md:w-5 md:h-5 w-4 h-4 animate-[scale-in_0.2s_ease-out]" />
+              <>
+                <Check size={13} className="stroke-[2.5]" />
+                <span className="hidden sm:inline">Added</span>
+              </>
             ) : inStock ? (
-              <ShoppingBag size={16} className="md:w-5 md:h-5 w-4 h-4" />
+              <>
+                <ShoppingBag size={13} />
+                <span className="hidden sm:inline">Add</span>
+              </>
             ) : (
-              <span className="text-[8px] font-bold">OUT</span>
+              <span className="text-[9px] font-bold uppercase">Out</span>
             )}
           </button>
         </div>
@@ -428,8 +441,8 @@ const Shop = () => {
   useEffect(() => {
     if (!showingProducts && categoriesGridRef.current) {
       gsap.fromTo('.category-card',
-        { y: 50, opacity: 0, scale: 0.9, rotateX: 20 },
-        { y: 0, opacity: 1, scale: 1, rotateX: 0, duration: 0.8, stagger: 0.1, ease: 'back.out(1.5)', clearProps: 'all' }
+        { y: 25, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
       );
     }
   }, [selectedMainCategory, showingProducts]);
@@ -438,8 +451,8 @@ const Shop = () => {
   useEffect(() => {
     if (selectedSubCategory && productsGridRef.current) {
       gsap.fromTo('.product-card',
-        { y: 60, opacity: 0, scale: 0.95 },
-        { y: 0, opacity: 1, scale: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out', clearProps: 'all' }
+        { y: 25, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
       );
     }
   }, [selectedSubCategory]);
@@ -499,9 +512,11 @@ const Shop = () => {
           // setting one is that it is meant to replace the default.
           image:
             adminDepartmentImages[dept.name] ||
-            (dept.name === PAPER_AND_CANVAS
-              ? PAPER_DEPARTMENT_IMAGE
-              : cards.find((c) => c.image)?.image || PLACEHOLDER_IMAGE),
+            (dept.name === 'Notebooks'
+              ? DEPARTMENT_FALLBACK_IMAGES['Notebooks']
+              : dept.name === PAPER_AND_CANVAS
+                ? (DEPARTMENT_FALLBACK_IMAGES[PAPER_AND_CANVAS] || PAPER_DEPARTMENT_IMAGE)
+                : cards.find((c) => c.image)?.image || DEPARTMENT_FALLBACK_IMAGES[dept.name] || PLACEHOLDER_IMAGE),
         };
       }),
     [cardsByDepartment, adminDepartmentImages, hiddenDepartments, hiddenCategories]
@@ -606,30 +621,40 @@ const Shop = () => {
           </div>
         </div>
 
-        <div ref={categoriesGridRef} className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 lg:gap-6 auto-rows-[120px] sm:auto-rows-[140px] md:auto-rows-[200px]">
+        <div ref={categoriesGridRef} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 auto-rows-[170px] sm:auto-rows-[190px] md:auto-rows-[220px]">
           {departments.map((cat, idx) => {
             const isFeatured = cat.name === PAPER_AND_CANVAS;
             return (
-              // A real anchor rather than a div with a click handler: this is
-              // the only path a crawler has into the departments, and it is now
-              // one it can follow.
               <Link
                 key={cat.name}
                 to={categoryPath(cat.name)}
                 aria-label={`${cat.name} — ${cat.categoryCount} categories`}
-                className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[16px] md:rounded-[24px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-[transform,box-shadow] duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'}`}
+                className={`group cursor-pointer w-full h-full flex flex-col bg-white rounded-[4px] border border-[#e5e1d7] hover:border-[#112338]/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
+                  isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'
+                }`}
               >
-                <CardArt
-                  src={cat.image}
-                  alt={cat.name}
-                  eager={idx < 3}
-                  width={isFeatured ? 800 : 400}
-                  sizes={isFeatured ? DEPARTMENT_SIZES.featured : DEPARTMENT_SIZES.normal}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/40 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
-                <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-4 md:p-6' : 'p-2 sm:p-3 md:p-5'}`}>
-                  <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-xl text-[24px] sm:text-[28px] md:text-[36px]' : 'font-headline-md text-[13px] sm:text-[15px] md:text-[20px]'}`}>{cat.name}</span>
-                  <span className={`text-white/90 mt-1.5 md:mt-2 uppercase tracking-widest font-bold bg-white/25 rounded-full border border-white/20 ${isFeatured ? 'text-[10px] md:text-[12px] px-3 py-1 md:px-4 md:py-1.5' : 'text-[7px] sm:text-[8px] md:text-[10px] px-2 py-0.5 md:px-3 md:py-1'}`}>
+                {/* Clean Image Area without Dark Overlays */}
+                <div className="w-full flex-1 relative overflow-hidden bg-[#fbfaf8]">
+                  <CardArt
+                    src={cat.image}
+                    alt={cat.name}
+                    eager={idx < 3}
+                    width={isFeatured ? 800 : 400}
+                    sizes={isFeatured ? DEPARTMENT_SIZES.featured : DEPARTMENT_SIZES.normal}
+                  />
+                </div>
+
+                {/* Bottom Panel with Title & Next Arrow */}
+                <div className="w-full bg-white p-3 sm:p-3.5 border-t border-[#e5e1d7]/70 flex items-center justify-between gap-2 z-10 shrink-0">
+                  <h3 className={`font-serif font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1.5 ${
+                    isFeatured ? 'text-[16px] sm:text-[18px] md:text-[22px]' : 'text-[13px] sm:text-[14px] md:text-[15px]'
+                  }`}>
+                    <span>{cat.name}</span>
+                    <span className="text-[13px] md:text-[14px] text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all">
+                      &rarr;
+                    </span>
+                  </h3>
+                  <span className="text-[10px] sm:text-[11px] font-medium text-[#64748b] bg-[#f5f3ee] px-2.5 py-1 rounded-[3px] border border-[#e5e1d7]/60 whitespace-nowrap shrink-0 tracking-normal">
                     {countsLoading ? '...' : cat.categoryCount > 0 ? `${cat.categoryCount} Categories` : 'Coming Soon'}
                   </span>
                 </div>
@@ -644,43 +669,57 @@ const Shop = () => {
   if (!showingProducts) {
     return (
       <main className="flex-1 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full flex flex-col pt-16 md:pt-20 pb-stack-lg">
-        <div className="mb-stack-lg border-b border-outline-variant pb-stack-sm flex flex-col gap-4">
-          <Link to="/shop" className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm w-fit text-[10px] transition-colors">
-            <ArrowLeft size={14} /> Back to Departments
+        <div className="mb-stack-lg border-b border-[#e5e1d7]/80 pb-stack-sm flex flex-col gap-3">
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase bg-white px-3.5 py-1.5 rounded-[3px] border border-[#e5e1d7] shadow-sm w-fit text-[10px] transition-colors"
+          >
+            <ArrowLeft size={13} /> Back to Departments
           </Link>
           <div>
-            {/* Named after the department rather than "Shop by Category", so the
-                heading, the title tag and the URL all say the same thing. */}
-            <h1 className="font-headline-xl text-[28px] md:text-headline-xl text-on-surface">{selectedMainCategory}</h1>
-            <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">Select a category to view available stock and pricing.</p>
+            <h1 className="font-serif text-[28px] md:text-[36px] font-normal text-[#112338] tracking-tight">
+              {selectedMainCategory}
+            </h1>
+            <p className="text-[13px] md:text-[14px] text-[#64748b] mt-1">
+              Select a category to view available stock and live pricing.
+            </p>
           </div>
         </div>
 
-        <div ref={categoriesGridRef} className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 lg:gap-5 auto-rows-[100px] sm:auto-rows-[120px] md:auto-rows-[160px] grid-flow-dense">
+        <div
+          ref={categoriesGridRef}
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5"
+        >
           {dynamicCategories.map((cat, idx) => {
             const count = cat.count || 0;
-            // Feature some cards to create a bento box layout
-            const isFeatured = idx === 0 || idx === 5 || idx === 10 || idx === 14;
-            
             return (
               <Link
                 key={cat.name}
                 to={categoryPath(selectedMainCategory, cat.name)}
                 aria-label={`${cat.name} — ${count} items`}
-                className={`category-card cursor-pointer w-full h-full flex flex-col items-center justify-center p-0 glass-panel border border-white/60 rounded-[12px] md:rounded-[20px] shadow-glass hover:shadow-antigravity hover:-translate-y-2 transition-all duration-500 group relative overflow-hidden preserve-3d perspective-1000 ${isFeatured ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'}`}
+                className="category-card group cursor-pointer w-full flex flex-col bg-white rounded-[4px] border border-[#e5e1d7] hover:border-[#112338]/40 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
               >
-                <CardArt
-                  src={cat.image}
-                  alt={cat.name}
-                  eager={idx < 4}
-                  width={isFeatured ? 600 : 300}
-                  sizes={isFeatured ? CATEGORY_SIZES.featured : CATEGORY_SIZES.normal}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/50 to-transparent group-hover:from-primary/90 transition-colors duration-500"></div>
-                <div className={`relative z-10 flex flex-col items-center justify-end h-full w-full ${isFeatured ? 'p-3 md:p-6' : 'p-1.5 md:p-3'}`}>
-                  <span className={`font-bold text-center text-white drop-shadow-md leading-tight ${isFeatured ? 'font-headline-lg text-[18px] sm:text-[22px] md:text-[28px]' : 'font-headline-sm text-[10px] sm:text-[12px] md:text-[15px]'}`}>{cat.name}</span>
-                  <span className={`text-white/90 mt-1 md:mt-1.5 uppercase tracking-widest font-bold bg-white/25 rounded-full border border-white/20 ${isFeatured ? 'text-[9px] md:text-[11px] px-2 py-0.5 md:px-3 md:py-1' : 'text-[6px] sm:text-[7px] md:text-[9px] px-1.5 py-0.5'}`}>
-                    {countsLoading ? '...' : (count > 0 ? `${count} Items` : 'Soon')}
+                {/* Clean Image Area without Dark Overlays */}
+                <div className="w-full aspect-[4/3] bg-[#fbfaf8] relative overflow-hidden">
+                  <CardArt
+                    src={cat.image}
+                    alt={cat.name}
+                    eager={idx < 6}
+                    width={400}
+                    sizes={CATEGORY_SIZES.normal}
+                  />
+                </div>
+
+                {/* Bottom Panel with Title & Next Arrow matching Department Cards */}
+                <div className="w-full bg-white p-2.5 sm:p-3 border-t border-[#e5e1d7]/70 flex items-center justify-between gap-1.5 z-10 shrink-0 flex-1">
+                  <h3 className="font-serif text-[13px] sm:text-[14px] md:text-[15px] font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1 line-clamp-1">
+                    <span>{cat.name}</span>
+                    <span className="text-[12px] text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0">
+                      &rarr;
+                    </span>
+                  </h3>
+                  <span className="text-[9.5px] sm:text-[10.5px] font-medium text-[#64748b] bg-[#f5f3ee] px-2 py-0.5 rounded-[3px] border border-[#e5e1d7]/60 whitespace-nowrap shrink-0">
+                    {countsLoading ? '...' : (count > 0 ? `${count} Items` : 'Available')}
                   </span>
                 </div>
               </Link>
@@ -694,13 +733,13 @@ const Shop = () => {
   return (
     <div className="flex flex-1 w-full max-w-container-max mx-auto pt-8">
       {/* SideNavBar - Desktop Only */}
-      <aside className="hidden md:flex flex-col py-stack-md px-margin-mobile h-full w-[280px] border-r border-gray-100 bg-white shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto hide-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.01)]">
+      <aside className="hidden md:flex flex-col py-stack-md px-margin-mobile h-full w-[280px] border-r border-[#e5e1d7]/70 bg-white shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto hide-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.01)]">
         <div className="mb-stack-md pl-2">
-          <Link to={categoryPath(selectedMainCategory)} className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase mb-4 text-[11px] transition-colors">
-            <ArrowLeft size={16} /> All Categories
+          <Link to={categoryPath(selectedMainCategory)} className="flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase mb-4 text-[10px] transition-colors">
+            <ArrowLeft size={14} /> All Categories
           </Link>
-          <h2 className="font-headline-md text-[22px] font-bold text-[#111111] tracking-tight">{selectedMainCategory}</h2>
-          <p className="font-body-sm text-gray-500 mt-1">Premium Stock Catalog</p>
+          <h2 className="font-serif text-[22px] font-normal text-[#112338] tracking-tight">{selectedMainCategory}</h2>
+          <p className="text-[12px] text-[#64748b] mt-0.5">Premium Stock Catalog</p>
         </div>
         <nav className="flex flex-col gap-1.5 flex-1 pr-2">
           {dynamicCategories.map((cat) => {
@@ -710,12 +749,18 @@ const Shop = () => {
                 key={cat.name}
                 to={categoryPath(selectedMainCategory, cat.name)}
                 aria-current={isSelected ? 'page' : undefined}
-                className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-300 ease-in-out ${isSelected ? 'bg-gray-50 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100' : 'hover:bg-gray-50/50 border border-transparent'}`}
+                className={`flex items-center gap-3 p-2.5 rounded-[3px] text-left transition-all duration-200 ${
+                  isSelected
+                    ? 'bg-[#faf8f5] shadow-[0_1px_3px_rgba(0,0,0,0.02)] border border-[#e5e1d7]'
+                    : 'hover:bg-gray-50/70 border border-transparent'
+                }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-300 ${isSelected ? cat.bg + ' ' + cat.color : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}>
-                  <cat.icon size={18} strokeWidth={2.5} />
+                <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center transition-colors duration-200 ${
+                  isSelected ? 'bg-[#112338] text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                }`}>
+                  <cat.icon size={15} strokeWidth={2} />
                 </div>
-                <span className={`font-body-sm font-bold text-[14px] ${isSelected ? 'text-[#111111]' : 'text-gray-500'}`}>{cat.name}</span>
+                <span className={`text-[13px] font-medium ${isSelected ? 'text-[#112338] font-semibold' : 'text-[#64748b]'}`}>{cat.name}</span>
               </Link>
             );
           })}
@@ -723,45 +768,52 @@ const Shop = () => {
       </aside>
 
       {/* Canvas */}
-      <main className="flex-1 p-4 md:p-8 flex flex-col gap-6 md:gap-8 pb-stack-lg bg-[#fcfcfc]">
+      <main className="flex-1 p-4 md:p-8 flex flex-col gap-5 md:gap-6 pb-stack-lg bg-[#fbfaf8]">
         {/* Back Button (Mobile) */}
         <div className="md:hidden">
-          <Link to={categoryPath(selectedMainCategory)} className="flex items-center gap-2 text-gray-500 hover:text-[#111111] font-label-caps font-bold tracking-widest uppercase bg-white px-5 py-2.5 rounded-xl border border-gray-200 shadow-sm w-fit text-[11px] transition-colors">
-            <ArrowLeft size={16} /> Back to Categories
+          <Link to={categoryPath(selectedMainCategory)} className="inline-flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase bg-white px-4 py-2 rounded-[3px] border border-[#e5e1d7] shadow-sm w-fit text-[10.5px] transition-colors">
+            <ArrowLeft size={14} /> Back to Categories
           </Link>
         </div>
 
         {/* Header Bar */}
-        <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 pb-6">
-          <h1 className="font-headline-xl text-[28px] md:text-[36px] font-extrabold text-[#111111] flex items-center gap-3 tracking-tight">
-            {(() => {
-              const activeCat = dynamicCategories.find(c => c.name === selectedSubCategory);
-              return activeCat ? (
-                <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center ${activeCat.bg} ${activeCat.color} shadow-sm`}>
-                  <activeCat.icon size={24} strokeWidth={2.5} className="md:w-8 md:h-8 w-5 h-5" />
-                </div>
-              ) : null;
-            })()}
-            {categoryHeading}
-            <span className="text-[16px] md:text-[20px] text-gray-400 font-medium ml-2">({groupedProducts.length} Products)</span>
-          </h1>
+        <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#e5e1d7]/80 pb-5">
+          <div className="flex flex-col gap-0.5">
+            <h1 className="font-serif text-[26px] md:text-[32px] font-normal text-[#112338] flex items-center gap-2.5 tracking-tight">
+              {(() => {
+                const activeCat = dynamicCategories.find(c => c.name === selectedSubCategory);
+                return activeCat ? (
+                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-[3px] flex items-center justify-center bg-[#faf8f5] text-[#112338] border border-[#e5e1d7]">
+                    <activeCat.icon size={18} strokeWidth={2} />
+                  </div>
+                ) : null;
+              })()}
+              <span>{categoryHeading}</span>
+              <span className="font-sans text-[13px] md:text-[14px] text-[#64748b] font-normal">
+                ({groupedProducts.length} Products)
+              </span>
+            </h1>
+            <p className="text-[12px] sm:text-[13px] text-[#64748b]">
+              Live pricing & stock in PKR — wholesale and retail
+            </p>
+          </div>
         </section>
 
         {/* Product Grid */}
         {productsLoading || (!selectedSubCategory && countsLoading) ? (
-          <div className="flex flex-col items-center justify-center py-32 bg-white rounded-3xl border border-gray-100 shadow-sm animate-pulse">
-            <div className="w-16 h-16 bg-gray-200 rounded-full mb-4"></div>
-            <div className="h-6 bg-gray-200 rounded w-48 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-64"></div>
+          <div className="flex flex-col items-center justify-center py-28 bg-white rounded-[4px] border border-[#e5e1d7] shadow-sm animate-pulse">
+            <div className="w-12 h-12 bg-gray-200 rounded-full mb-3"></div>
+            <div className="h-5 bg-gray-200 rounded w-40 mb-2"></div>
+            <div className="h-3.5 bg-gray-200 rounded w-56"></div>
           </div>
         ) : groupedProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 bg-white rounded-3xl border border-dashed border-gray-300 shadow-sm">
-            <Package size={56} className="text-gray-300 mb-5" />
-            <h3 className="font-headline-md text-gray-800 font-bold text-[20px]">No products available</h3>
-            <p className="text-gray-500 font-body-sm mt-2 text-[14px]">This category is currently empty.</p>
+          <div className="flex flex-col items-center justify-center py-28 bg-white rounded-[4px] border border-dashed border-[#e5e1d7] shadow-sm">
+            <Package size={48} className="text-gray-300 mb-4" />
+            <h3 className="font-serif text-[#112338] font-medium text-[19px]">No products available</h3>
+            <p className="text-[#64748b] text-[13px] mt-1">This category is currently being updated with new stock.</p>
           </div>
         ) : (
-          <section ref={productsGridRef} className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-6 perspective-1000">
+          <section ref={productsGridRef} className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-5">
             {groupedProducts.map((group) => (
               <ProductGroupCard 
                 key={group.name} 

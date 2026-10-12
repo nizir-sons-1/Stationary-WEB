@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, MapPin, Phone, ArrowRight, Sparkles } from 'lucide-react';
+import { Mail, MapPin, Phone, ArrowRight, Sparkles, ChevronDown } from 'lucide-react';
 import { BUSINESS, DEPARTMENT_NAMES, categoryPath } from '../lib/site';
 
 const Footer = () => {
   const [subState, setSubState] = useState('idle'); // idle | loading | success | error
+  const [openSections, setOpenSections] = useState({});
+
+  const toggleSection = (key) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
@@ -29,7 +34,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="relative w-full overflow-hidden bg-[#0a0a0a] text-white pt-20 pb-[calc(30px+80px)] md:pb-8 font-sans border-t border-white/10">
+    <footer className="relative w-full overflow-hidden bg-[#0a0a0a] text-white pt-20 pb-12 md:pb-8 font-sans border-t border-white/10">
       
       {/* Background Ambient Glows */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
@@ -108,14 +113,11 @@ const Footer = () => {
 
         </div>
 
-        {/* Middle Section: Links */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16 pt-12 border-t border-white/10">
+        {/* Middle Section: Desktop Grid (md and up) */}
+        <div className="hidden md:grid md:grid-cols-4 gap-8 mb-16 pt-12 border-t border-white/10">
           
           <div className="flex flex-col gap-4">
             <h4 className="text-white font-bold tracking-wider uppercase text-[12px] mb-2 opacity-90">Shop Departments</h4>
-            {/* Real hrefs, not router state. These four links are the site's
-                main path into the catalogue, and a crawler can only follow
-                what is in the href. */}
             {DEPARTMENT_NAMES.map((name) => (
               <Link
                 key={name}
@@ -149,8 +151,6 @@ const Footer = () => {
             <div className="flex items-start gap-3 text-gray-400 text-[14px]">
               <MapPin size={16} className="text-primary shrink-0 mt-0.5" />
               <div className="flex flex-col gap-1.5">
-                {/* Same strings the LocalBusiness schema emits — local search
-                    ranks on the name, address and phone agreeing everywhere. */}
                 <span>Nazir &amp; Sons Paper, {BUSINESS.street}, {BUSINESS.city}</span>
                 <a href={BUSINESS.mapUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-white text-[12px] font-bold underline underline-offset-2 transition-colors">
                   View in Google Maps
@@ -173,6 +173,152 @@ const Footer = () => {
           </div>
 
         </div>
+
+        {/* Middle Section: Mobile Accordions (below md) */}
+        <div className="block md:hidden border-t border-white/10 mb-12">
+          
+          {/* 1. Shop Departments */}
+          <div className="border-b border-white/10">
+            <button
+              type="button"
+              onClick={() => toggleSection('departments')}
+              className="w-full py-4 flex items-center justify-between text-left text-white font-bold tracking-wider uppercase text-[12px] opacity-90 transition-colors hover:text-primary cursor-pointer"
+            >
+              <span>Shop Departments</span>
+              <ChevronDown
+                size={16}
+                className={`text-gray-400 transition-transform duration-300 ${
+                  openSections['departments'] ? 'rotate-180 text-primary' : ''
+                }`}
+              />
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                openSections['departments'] ? 'max-h-96 pb-4 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="flex flex-col gap-3 pl-1 pt-1">
+                {DEPARTMENT_NAMES.map((name) => (
+                  <Link
+                    key={name}
+                    to={categoryPath(name)}
+                    className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit"
+                  >
+                    {name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Customer Service */}
+          <div className="border-b border-white/10">
+            <button
+              type="button"
+              onClick={() => toggleSection('customerService')}
+              className="w-full py-4 flex items-center justify-between text-left text-white font-bold tracking-wider uppercase text-[12px] opacity-90 transition-colors hover:text-primary cursor-pointer"
+            >
+              <span>Customer Service</span>
+              <ChevronDown
+                size={16}
+                className={`text-gray-400 transition-transform duration-300 ${
+                  openSections['customerService'] ? 'rotate-180 text-primary' : ''
+                }`}
+              />
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                openSections['customerService'] ? 'max-h-96 pb-4 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="flex flex-col gap-3 pl-1 pt-1">
+                <Link to="/contact" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">Contact Us</Link>
+                <Link to="/faq" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">FAQ</Link>
+                <Link to="/track-order" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">Track Order</Link>
+                <Link to="/shipping" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">Shipping Policy</Link>
+                <Link to="/returns" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">Returns & Refunds</Link>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. About Us */}
+          <div className="border-b border-white/10">
+            <button
+              type="button"
+              onClick={() => toggleSection('about')}
+              className="w-full py-4 flex items-center justify-between text-left text-white font-bold tracking-wider uppercase text-[12px] opacity-90 transition-colors hover:text-primary cursor-pointer"
+            >
+              <span>About Us</span>
+              <ChevronDown
+                size={16}
+                className={`text-gray-400 transition-transform duration-300 ${
+                  openSections['about'] ? 'rotate-180 text-primary' : ''
+                }`}
+              />
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                openSections['about'] ? 'max-h-96 pb-4 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="flex flex-col gap-3 pl-1 pt-1">
+                <Link to="/about" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">Our Story</Link>
+                <Link to="/careers" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">Careers</Link>
+                <Link to="/privacy" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">Privacy Policy</Link>
+                <Link to="/terms" className="text-gray-400 hover:text-primary transition-colors text-[14px] w-fit">Terms of Service</Link>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Contact Info */}
+          <div className="border-b border-white/10">
+            <button
+              type="button"
+              onClick={() => toggleSection('contact')}
+              className="w-full py-4 flex items-center justify-between text-left text-white font-bold tracking-wider uppercase text-[12px] opacity-90 transition-colors hover:text-primary cursor-pointer"
+            >
+              <span>Contact Info</span>
+              <ChevronDown
+                size={16}
+                className={`text-gray-400 transition-transform duration-300 ${
+                  openSections['contact'] ? 'rotate-180 text-primary' : ''
+                }`}
+              />
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                openSections['contact'] ? 'max-h-96 pb-4 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="flex flex-col gap-3.5 pl-1 pt-1 text-gray-400 text-[13.5px]">
+                <div className="flex items-start gap-3">
+                  <MapPin size={16} className="text-primary shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-1">
+                    <span>Nazir &amp; Sons Paper, {BUSINESS.street}, {BUSINESS.city}</span>
+                    <a href={BUSINESS.mapUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-white text-[12px] font-bold underline underline-offset-2 transition-colors">
+                      View in Google Maps
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Phone size={16} className="text-primary shrink-0" />
+                  <div className="flex flex-wrap items-center gap-4">
+                    <a href={`tel:${BUSINESS.phoneE164}`} className="hover:text-primary transition-colors">{BUSINESS.phone}</a>
+                    <a href="https://wa.me/923202220001" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-green-500 transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg> WhatsApp
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Mail size={16} className="text-primary shrink-0" />
+                  <a href={`mailto:${BUSINESS.email}`} className="hover:text-primary transition-colors">{BUSINESS.email}</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
 
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t border-white/10 text-gray-500 text-[12px]">

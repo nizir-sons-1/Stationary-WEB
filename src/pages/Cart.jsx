@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Minus, Plus, Trash2, ArrowRight, MessageCircle, ArrowLeft, Truck, PackageCheck, CreditCard, Building2, MapPin } from 'lucide-react';
+import { Minus, Plus, Trash2, ArrowRight, MessageCircle, ArrowLeft, Truck, PackageCheck, CreditCard, Building2, MapPin, CheckCircle2, Check, Copy, ShieldCheck } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -13,13 +13,15 @@ const Cart = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   
   // Checkout States
-  const [checkoutPhase, setCheckoutPhase] = useState('cart'); // 'cart' | 'checkout'
+  const [checkoutPhase, setCheckoutPhase] = useState('cart'); // 'cart' | 'checkout' | 'success'
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [shippingMethod, setShippingMethod] = useState('self_pickup'); // 'self_pickup' | 'delivery_open' | 'delivery_bundle' | 'standard_delivery'
   const [paymentMethod, setPaymentMethod] = useState('shop'); // 'shop' | 'bank' | 'cod' | 'online'
+  const [placedOrder, setPlacedOrder] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   // Determine if it's a B2B (Paper) or B2C (Stationery/Arts/Misc) checkout
   // It is ONLY B2B if EVERY item in the cart is explicitly a Paper category.
@@ -115,10 +117,9 @@ const Cart = () => {
         console.error('Supabase order insert error:', insertError);
       }
 
-      // Send Order Confirmation Email via our new serverless function
+      // Send Order Confirmation Email via serverless function
       if (email) {
         try {
-          // Fire and forget, don't block the WhatsApp redirect
           fetch('/api/send-order-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -138,38 +139,50 @@ const Cart = () => {
         }
       }
 
-      // 2. Build WhatsApp message (always runs regardless of DB result)
-      let message = `*New Order Request (ID: ${orderId})*\n\n`;
-      message += `*Customer Details:*\n`;
-      message += `Name: ${fullName}\n`;
-      message += `Phone: ${phone}\n`;
-      if (email) message += `Email: ${email}\n`;
-      if (address) message += `Address: ${address}\n`;
-      message += `Shipping: ${shipMap[shippingMethod]}\n`;
-      message += `Payment: ${payMap[paymentMethod]}\n\n`;
+      // 2. Send automated WhatsApp notification in background to Customer & Admin
+      try {
+        fetch('/api/send-order-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderDetails: {
+              order_id: orderId,
+              customer_name: fullName,
+              customer_phone: phone,
+              customer_address: address || (shippingMethod === 'self_pickup' ? 'Self Pickup at Shop' : 'Not specified'),
+              shipping_method: shipMap[shippingMethod],
+              payment_method: payMap[paymentMethod],
+              total_amount: finalTotal,
+              items: cartItems.map(item => ({
+                name: item.name,
+                size: item.size,
+                gsm: item.gsm,
+                quantity: item.quantity,
+                packingType: item.packingType,
+                price: item.price
+              }))
+            }
+          })
+        }).catch(err => console.error('Error triggering WhatsApp notification API:', err));
+      } catch (waErr) {
+        console.error('Failed to trigger WhatsApp notification:', waErr);
+      }
 
-      message += `*Order Items:*\n`;
-      cartItems.forEach((item, index) => {
-        message += `${index + 1}. *${item.name}*\n`;
-        message += `   Size: ${item.size}${departmentOf(item.category) === PAPER_AND_CANVAS ? ` | GSM: ${item.gsm}g` : ''}\n`;
-        message += `   Qty: ${item.quantity} ${item.packingType}\n`;
-        if (item.isBulk) {
-          message += `   [Bulk Request]\n`;
-          if (item.bulkDetails) message += `   Note: ${item.bulkDetails}\n`;
-        }
-        if (item.isInstallment) {
-          message += `   [Installment Plan: ${item.installmentPlan}]\n`;
-          message += `   *Requires T&C confirmation and physical bank cheque*\n`;
-        }
-        message += `   Price: Rs. ${(item.price * item.quantity).toLocaleString()}\n\n`;
+      // Save confirmed order data for on-screen receipt before clearing cart
+      setPlacedOrder({
+        id: orderId,
+        customerName: fullName,
+        phone: phone,
+        email: email,
+        address: address,
+        shipping: shipMap[shippingMethod],
+        payment: payMap[paymentMethod],
+        total: finalTotal,
+        items: [...cartItems]
       });
-      
-      message += `*Total Order Value: Rs. ${finalTotal.toLocaleString()}*\n`;
-      message += `\nPlease confirm my order.`;
-      
-      const whatsappUrl = `https://wa.me/923202220001?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+
       clearCart();
+      setCheckoutPhase('success');
     } catch (err) {
       console.error('Checkout failed:', err);
       alert('Failed to place order. Please try again or contact us directly.');
@@ -177,6 +190,158 @@ const Cart = () => {
       setIsCheckingOut(false);
     }
   };
+
+  // Render Order Confirmation Receipt Screen
+  if (checkoutPhase === 'success' && placedOrder) {
+    return (
+      <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-4xl w-full mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          className="bg-white border border-gray-100 shadow-[0_12px_40px_rgba(0,0,0,0.06)] rounded-[32px] p-6 md:p-12 overflow-hidden"
+        >
+          {/* Header */}
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-5 border border-green-100 shadow-sm">
+              <CheckCircle2 size={44} className="text-[#25D366]" />
+            </div>
+            <span className="inline-block bg-green-100/80 text-green-800 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
+              Order Confirmed
+            </span>
+            <h1 className="font-headline-xl text-3xl md:text-4xl font-black text-secondary tracking-tight">
+              Order Placed Successfully!
+            </h1>
+            <p className="font-body-lg text-gray-500 mt-2 max-w-lg">
+              Thank you, <strong className="text-secondary">{placedOrder.customerName}</strong>! Your order has been registered in our system and is being processed.
+            </p>
+          </div>
+
+          {/* Notifications Status Box */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div className="bg-emerald-50/70 border border-emerald-100/90 rounded-2xl p-4 flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-[#25D366]/15 flex items-center justify-center shrink-0 mt-0.5">
+                <MessageCircle size={20} className="text-[#25D366]" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-emerald-950">WhatsApp Confirmation Sent</h4>
+                <p className="text-xs text-emerald-800/80 mt-0.5">
+                  Order details sent to your number: <span className="font-mono font-semibold">{placedOrder.phone}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50/70 border border-blue-100/90 rounded-2xl p-4 flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldCheck size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-blue-950">Store Alert Dispatched</h4>
+                <p className="text-xs text-blue-800/80 mt-0.5">
+                  Nazir & Sons team notified for packing & dispatch.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Details Grid */}
+          <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Order ID</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-base md:text-lg font-mono font-black text-secondary">#{placedOrder.id}</span>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard?.writeText(placedOrder.id);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors"
+                  title="Copy Order ID"
+                >
+                  {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Payment</span>
+              <span className="text-sm font-bold text-secondary mt-0.5 block truncate" title={placedOrder.payment}>{placedOrder.payment}</span>
+            </div>
+
+            <div>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Shipping</span>
+              <span className="text-sm font-bold text-secondary mt-0.5 block truncate" title={placedOrder.shipping}>{placedOrder.shipping}</span>
+            </div>
+
+            <div>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Total Amount</span>
+              <span className="text-base md:text-lg font-black text-primary mt-0.5 block">
+                Rs. {placedOrder.total.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Items Summary */}
+          <div className="mb-8">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 mb-3">Purchased Items ({placedOrder.items.length})</h3>
+            <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden bg-white max-h-60 overflow-y-auto custom-scrollbar">
+              {placedOrder.items.map((item, idx) => (
+                <div key={idx} className="p-3.5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    {item.image && (
+                      <div className="w-10 h-10 bg-gray-50 rounded-lg p-1 shrink-0 border border-gray-100 overflow-hidden">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover mix-blend-multiply" />
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-sm text-secondary">{item.name}</h4>
+                      <div className="flex flex-wrap gap-1.5 text-xs text-gray-500 mt-0.5">
+                        {item.size && <span>{item.size}</span>}
+                        {item.gsm && <span>• {item.gsm}g</span>}
+                        <span>• Qty: {item.quantity} {item.packingType}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="font-bold text-sm text-secondary shrink-0">
+                    Rs. {(item.price * item.quantity).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <Link 
+              to={`/track-order?id=${placedOrder.id}`} 
+              className="flex-1 bg-secondary text-white py-4 px-6 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-primary transition-all duration-300 shadow-md flex items-center justify-center gap-2"
+            >
+              Track Order Status <ArrowRight size={16} />
+            </Link>
+            <Link 
+              to="/shop" 
+              className="flex-1 bg-gray-100 text-gray-700 py-4 px-6 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-gray-200 transition-colors flex items-center justify-center"
+            >
+              Continue Shopping
+            </Link>
+          </div>
+
+          {/* Optional Support Link */}
+          <div className="mt-6 text-center">
+            <a 
+              href={`https://wa.me/923202220001?text=${encodeURIComponent(`Hi Nazir & Sons, I have a query about my order #${placedOrder.id}`)}`}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#25D366] transition-colors"
+            >
+              <MessageCircle size={14} /> Need support? Chat with Nazir & Sons on WhatsApp
+            </a>
+          </div>
+        </motion.div>
+      </main>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -204,7 +369,7 @@ const Cart = () => {
           <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">
             {checkoutPhase === 'cart' 
               ? 'Verify specifications before proceeding.' 
-              : 'Complete your details to request a final quote on WhatsApp.'}
+              : 'Complete your details to confirm your order.'}
           </p>
         </div>
         {checkoutPhase === 'checkout' && (
@@ -464,8 +629,8 @@ const Cart = () => {
               </button>
             ) : (
               <div className="flex flex-col gap-3">
-                <button type="submit" form="checkout-form" disabled={isCheckingOut} className={`w-full text-white py-5 font-bold text-sm uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 ${isCheckingOut ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#25D366] hover:bg-[#128C7E] hover:shadow-xl hover:shadow-[#25D366]/30 hover:-translate-y-1'}`}>
-                  <MessageCircle size={20} /> {isCheckingOut ? 'Processing...' : 'Place Order via WhatsApp'}
+                <button type="submit" form="checkout-form" disabled={isCheckingOut} className={`w-full text-white py-5 font-bold text-sm uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 ${isCheckingOut ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#111111] hover:bg-primary hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1'}`}>
+                  <PackageCheck size={20} /> {isCheckingOut ? 'Processing Order...' : 'Confirm & Place Order'}
                 </button>
                 <button onClick={() => setCheckoutPhase('cart')} className="w-full py-4 text-sm font-bold text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-colors">
                   Cancel Checkout

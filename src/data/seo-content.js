@@ -28,7 +28,7 @@ export const ROUTES = {
     title: 'Nazir & Sons — Premium Paper, Fine Arts & Stationery, Lahore',
     description:
       'Direct paper importers in Lahore since 1993. Art card, ivory card, offset, copy and matte paper, canvases, fine-art materials and stationery — wholesale and retail.',
-    h1: 'Your Ultimate Paper & Stationery Hub',
+    h1: 'Everything for paper, print & creativity.',
     summary:
       'Nazir & Sons is a paper importer and wholesaler in Lahore’s paper market, Anarkali Bazaar, trading since 1993. The catalogue runs to more than 500 products across five departments — Paper & Canvas, Fine Arts, Stationery, Notebooks and Accessories — sold both by the sheet and by the ream to printers, publishers, artists, schools and businesses across Pakistan.',
     bullets: [

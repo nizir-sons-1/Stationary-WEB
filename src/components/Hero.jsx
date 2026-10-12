@@ -1,301 +1,86 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight, Lock, Unlock, Award } from 'lucide-react';
-import { useInView } from '../hooks/useInView';
-
-// How long the intro overlay owns the screen (Preloader DURATION + EXIT).
-const INTRO_MS = 1550;
-
-// Auto-scroll speed in px per *second*, not per frame. The old per-frame step
-// ran at double speed on a 120 Hz phone and half speed on a throttled tab.
-const AUTOSCROLL_PX_PER_SEC = 48;
-
-const CAROUSEL = [
-  { src: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80', alt: 'Art Supplies Hub' },
-  { src: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80', alt: 'Premium Notebooks' },
-  { src: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=400&q=80', alt: 'Pens & Brushes' },
-];
-// Duplicated so the vertical marquee loops seamlessly.
-const CAROUSEL_LOOP = [...CAROUSEL, ...CAROUSEL];
+import { ArrowRight } from 'lucide-react';
 
 const Hero = () => {
-  const containerRef = useRef(null);
-  const eyebrowRef = useRef(null);
-  const ctaContainerRef = useRef(null);
-  const imageRef = useRef(null);
-  const badgeRef = useRef(null);
-  const descRef = useRef(null);
-  const scrollContainerRef = useRef(null);
-  const isInteracting = useRef(false);
-  const [isLocked, setIsLocked] = useState(true);
-  const inView = useInView(containerRef);
-
-  const headlineText = "Your Ultimate Paper & Stationery Hub".split(" ");
-
-  useEffect(() => {
-    // Three ways this loop used to waste the page's frame budget, all fixed
-    // here: it re-armed itself forever even when unlocked (a permanent tick
-    // doing nothing), it kept writing scrollTop while the hero was scrolled
-    // far off-screen, and it stepped a fixed number of pixels per frame so the
-    // speed tracked the display's refresh rate.
-    if (!isLocked || !inView) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-
-    let frame = 0;
-    let previous = 0;
-    // Kept here rather than read back off the element each frame: a sub-pixel
-    // step written to scrollTop can be rounded away on read, and 0.8px would
-    // then round to nothing and stall the carousel outright.
-    let offset = scrollContainerRef.current?.scrollTop ?? 0;
-
-    const step = (now) => {
-      const el = scrollContainerRef.current;
-      // A hidden tab freezes rAF; the clamp stops the first frame back from
-      // applying the whole elapsed gap as one jump.
-      const elapsed = previous ? Math.min(now - previous, 100) : 0;
-      previous = now;
-
-      if (el) {
-        if (isInteracting.current) {
-          // The user is dragging — pick up from wherever they leave it.
-          offset = el.scrollTop;
-        } else {
-          offset += (AUTOSCROLL_PX_PER_SEC * elapsed) / 1000;
-          if (offset + el.clientHeight >= el.scrollHeight - 5) offset = 0;
-          el.scrollTop = offset;
-        }
-      }
-      frame = requestAnimationFrame(step);
-    };
-
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [isLocked, inView]);
-
-  useEffect(() => {
-    // Wait for the intro only while the intro is actually on screen. This reads
-    // the flag the Preloader owns rather than a second "site_loaded" key: with
-    // two independent flags, landing on /shop first and then navigating home
-    // left the hero delayed and the page unscrollable for 1.5s with no overlay
-    // visible to explain it.
-    let introRunning = false;
-    try {
-      introRunning = sessionStorage.getItem('preloader_done') !== 'true';
-    } catch {
-      /* storage unavailable — assume no intro and animate immediately */
+  const handleExploreDepartments = (e) => {
+    e.preventDefault();
+    const target = document.getElementById('departments');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.location.href = '/shop';
     }
-
-    // The intro overlay covers the page, so hide the scrollbar while it does.
-    // The release is scheduled unconditionally, never gated on an animation
-    // callback — a gsap failure must not leave the page permanently unscrollable.
-    let releaseScroll;
-    if (introRunning) {
-      document.body.style.overflow = 'hidden';
-      releaseScroll = setTimeout(() => {
-        document.body.style.overflow = '';
-      }, INTRO_MS);
-    }
-
-    // gsap + ScrollTrigger is ~70 kB that the first paint does not need. The
-    // markup is styled to its final state and every tween is a `.from()`, so
-    // loading the library after paint costs nothing visually.
-    let ctx;
-    let cancelled = false;
-
-    Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(
-      ([{ default: gsap }, { ScrollTrigger }]) => {
-        if (cancelled) return;
-        gsap.registerPlugin(ScrollTrigger);
-
-        ctx = gsap.context(() => {
-          const headlineTargets = gsap.utils.toArray('.split-word');
-          const startTime = introRunning ? INTRO_MS / 1000 : 0;
-          const animSpeed = introRunning ? 1 : 0.6;
-
-          const tl = gsap.timeline();
-
-          if (ctaContainerRef.current) {
-            tl.from(ctaContainerRef.current.children, {
-              y: 26, opacity: 0, stagger: 0.05, ease: 'power3.out', duration: 0.6 * animSpeed
-            }, startTime);
-          }
-
-          if (headlineTargets.length) {
-            tl.from(headlineTargets, {
-              y: 24, opacity: 0, duration: 0.8 * animSpeed, stagger: 0.04, ease: 'power3.out'
-            }, startTime + 0.05);
-          }
-
-          tl.from([descRef.current, imageRef.current, badgeRef.current], {
-            y: 44, opacity: 0, stagger: 0.08, ease: 'power3.out', duration: 0.7 * animSpeed
-          }, startTime + 0.2);
-
-          if (eyebrowRef.current) {
-            tl.from(eyebrowRef.current, { opacity: 0, duration: 0.6 * animSpeed }, startTime + 0.25);
-          }
-
-          // Parallax only ticks while the user scrolls, unlike the old infinite
-          // float tween — that one is a pure CSS animation now.
-          gsap.to('.parallax-bg', {
-            yPercent: 30,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: containerRef.current,
-              start: 'top top',
-              end: 'bottom top',
-              scrub: true,
-            },
-          });
-        }, containerRef);
-      }
-    );
-
-    return () => {
-      cancelled = true;
-      ctx?.revert();
-      clearTimeout(releaseScroll);
-      document.body.style.overflow = '';
-    };
-  }, []);
+  };
 
   return (
-    <section ref={containerRef} className="relative w-full min-h-[85vh] flex items-center bg-[#fafaf9] pt-24 md:pt-16 pb-8 overflow-hidden font-sans">
+    <section className="relative w-full -mt-[64px] md:-mt-[68px] pt-[64px] md:pt-[68px] min-h-[500px] sm:min-h-[560px] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#f5f2eb]">
+      {/* 
+        Full Original Banner Image (No cut, no gradient mask)
+        Positioned to show the full paper reams, canvas book, and supplies on the right
+      */}
+      <img
+        src="/images/hero-banner.jpeg"
+        alt="Everything for paper, print & creativity - Nazir & Sons"
+        width={1600}
+        height={900}
+        fetchPriority="high"
+        loading="eager"
+        decoding="async"
+        className="absolute inset-0 w-full h-full object-cover object-[75%_center] sm:object-[70%_center] lg:object-center select-none pointer-events-none"
+      />
 
-      <div className="px-margin-mobile md:px-gutter max-w-container-max mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+      {/* Subtle readability gradient for mobile screens */}
+      <div
+        className="absolute inset-0 bg-gradient-to-r from-[#f5f2eb]/90 via-[#f5f2eb]/70 to-transparent lg:from-transparent lg:via-transparent lg:to-transparent pointer-events-none"
+        aria-hidden="true"
+      />
 
-        {/* Left Content */}
-        <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-          <div ref={eyebrowRef} className="inline-flex items-center gap-2 mb-6">
-            <Sparkles size={18} className="text-primary" />
-            <span className="text-[14px] md:text-[16px] font-bold text-gray-800">
-              Glow with Confidence, Shop with Trust
-            </span>
-          </div>
-
-          <h1 className="text-[42px] md:text-[64px] lg:text-[72px] font-bold text-secondary leading-[1.06] mb-6 block">
-            {headlineText.map((word, i) => (
-              <React.Fragment key={i}>
-                <span className={`split-word inline-block ${word === 'Paper' ? 'text-primary relative' : ''}`}>
-                  {word}
-                  {word === 'Paper' && (
-                    <svg className="absolute -bottom-2 md:-bottom-4 left-0 w-full h-auto text-orange-200 -z-10" viewBox="0 0 100 20" preserveAspectRatio="none">
-                      <path d="M0,15 Q50,0 100,15" fill="none" stroke="currentColor" strokeWidth="4" />
-                    </svg>
-                  )}
-                </span>
-                {i < headlineText.length - 1 && ' '}
-              </React.Fragment>
-            ))}
-          </h1>
-
-          <p ref={descRef} className="text-[16px] md:text-[18px] text-gray-500 mb-10 max-w-lg font-body-lg">
-            Discover premium fine arts materials, aesthetic stationery, and high-quality paper. Elevate your creative journey today.
+      {/* Text & Actions Layer */}
+      <div className="relative z-10 w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-8 sm:py-10 md:py-12">
+        <div className="max-w-[480px] lg:max-w-[520px] flex flex-col items-start text-left">
+          
+          {/* Eyebrow / Tagline */}
+          <p className="text-[11px] sm:text-[12px] font-bold text-[#334155] uppercase tracking-[0.2em] mb-3 font-sans">
+            PREMIUM PAPER &amp; CREATIVE SUPPLIES
           </p>
 
-          <div ref={ctaContainerRef} className="flex items-center gap-6">
+          {/* Editorial Serif Headline */}
+          <h1 className="font-serif text-[34px] sm:text-[40px] md:text-[46px] lg:text-[50px] font-normal text-[#112338] leading-[1.1] tracking-tight mb-3.5">
+            Everything for <br />
+            paper, print &amp; <br />
+            creativity.
+          </h1>
+
+          {/* Description (Prominent & Clear) */}
+          <p className="text-[15px] sm:text-[16px] md:text-[17px] text-[#0f172a] font-medium leading-[1.65] max-w-[460px] mb-8 sm:mb-10 font-sans drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)]">
+            Quality paper and creative supplies, selected for makers, studios,
+            schools and businesses across Pakistan.
+          </p>
+
+          {/* Dual CTAs (Shop Collection & Explore Departments) */}
+          <div className="flex items-center gap-3.5 w-full sm:w-auto pt-1">
             <Link
               to="/shop"
-              className="bg-secondary text-white px-8 py-4 rounded-full font-bold text-[15px] hover:bg-secondary/90 transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-1 transform duration-300"
+              className="inline-flex items-center justify-center gap-2 bg-[#112338] hover:bg-[#1a3654] text-white px-6 py-3 rounded-[4px] font-semibold text-[14px] transition-all duration-200 shadow-sm hover:shadow active:scale-[0.99] group font-sans cursor-pointer"
             >
-              Shop Now <ArrowRight size={18} />
+              <span>Shop Collection</span>
+              <ArrowRight
+                size={16}
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              />
             </Link>
-          </div>
-        </div>
 
-        {/* Right Content / Hero Image (Antigravity 3D Carousel) */}
-        <div className="relative flex justify-center items-center h-[400px] md:h-[550px] perspective-1000 preserve-3d w-full">
-
-          {/* Circular organic background shapes with parallax (optimized) */}
-          {/* These two do move on every scroll frame, so the layer promotion
-              `will-change` buys is worth its cost here — it keeps the large
-              radial gradients off the repaint path. */}
-          <div className="parallax-bg absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] md:w-[600px] md:h-[600px] rounded-full opacity-60 -z-10 will-change-transform" style={{ background: 'radial-gradient(circle, rgba(254,215,170,0.6) 0%, transparent 60%)' }}></div>
-          <div className="parallax-bg absolute top-1/2 left-1/2 -translate-x-1/4 -translate-y-3/4 w-[350px] h-[350px] md:w-[450px] md:h-[450px] rounded-full opacity-60 -z-10 will-change-transform" data-speed="0.8" style={{ background: 'radial-gradient(circle, rgba(191,219,254,0.6) 0%, transparent 60%)' }}></div>
-
-          {/* 3D Tilted Scrollable Carousel */}
-          <div ref={imageRef} className="relative z-10 w-full h-[500px] md:h-[700px] preserve-3d flex justify-center items-center overflow-hidden" style={{ WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)' }}>
-            
-            {/* Scroll Lock Toggle */}
-            <button 
-              onClick={() => setIsLocked(!isLocked)}
-              className="absolute top-6 right-6 md:top-10 md:right-10 z-50 bg-white/90 border border-white/50 p-3 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.1)] text-secondary hover:bg-white hover:scale-110 transition-all duration-300 pointer-events-auto flex items-center justify-center"
-              title={isLocked ? "Unlock to scroll manually" : "Lock to auto-scroll"}
+            <button
+              type="button"
+              onClick={handleExploreDepartments}
+              className="inline-flex items-center justify-center px-6 py-3 rounded-[4px] font-semibold text-[14px] text-[#112338] border-[1.5px] border-[#112338]/70 hover:border-[#112338] bg-transparent hover:bg-black/[0.04] transition-all duration-200 active:scale-[0.99] font-sans cursor-pointer"
             >
-              {isLocked ? <Lock size={20} className="text-gray-500" /> : <Unlock size={20} className="text-primary" />}
+              Explore Departments
             </button>
-
-            <div className={`w-full h-full flex justify-center preserve-3d transition-all duration-500 ${isLocked ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ transform: 'rotateX(15deg) rotateY(-20deg) rotateZ(5deg)' }}>
-              
-              {/*
-                `scrollBehavior: auto` matters: the property inherits from
-                <html>, which is now `smooth`, and this element's scrollTop is
-                written every frame — under `smooth` each write would start its
-                own eased scroll and the carousel would fight itself.
-
-                `hide-scrollbar` replaces an inline `div::-webkit-scrollbar`
-                rule that lived here. That selector was not scoped to this
-                component: it stripped the scrollbar off every div on the site,
-                the Shop sidebar included.
-              */}
-              <div
-                ref={scrollContainerRef}
-                onMouseEnter={() => { if(!isLocked) isInteracting.current = true; }}
-                onMouseLeave={() => { if(!isLocked) isInteracting.current = false; }}
-                onTouchStart={() => { if(!isLocked) isInteracting.current = true; }}
-                onTouchEnd={() => { if(!isLocked) isInteracting.current = false; }}
-                className={`flex flex-col items-center gap-6 md:gap-8 preserve-3d py-[20%] overflow-y-auto h-[150%] w-full hide-scrollbar ${isLocked ? '' : 'cursor-grab active:cursor-grabbing'}`}
-                style={{ overscrollBehavior: 'contain', scrollBehavior: 'auto' }}
-              >
-                {CAROUSEL_LOOP.map((img, i) => (
-                  <div
-                    key={i}
-                    className={`shrink-0 animate-float motion-reduce:animate-none w-[240px] md:w-[320px] rounded-2xl overflow-hidden glass-panel shadow-[0_30px_60px_rgba(0,0,0,0.15)] border-[2px] border-white/80 p-2 md:p-3 preserve-3d ${inView ? '' : '[animation-play-state:paused]'}`}
-                    style={{
-                      '--float-z': '40px',
-                      '--float-tilt': `${(i % 2 === 0 ? 1 : -1) * 1.5}deg`,
-                      animationDelay: `${(i % 3) * 0.6}s`,
-                    }}
-                  >
-                    <div className="relative w-full h-full rounded-xl overflow-hidden shadow-inner">
-                      <img
-                        src={img.src}
-                        alt={img.alt}
-                        width={320}
-                        height={400}
-                        loading="eager"
-                        fetchPriority="high"
-                        className="w-full h-auto object-cover aspect-[4/5] hover:scale-110 transition-transform duration-700 ease-in-out"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-            </div>
-          </div>
-
-          {/*
-            Two layers on purpose: gsap animates the outer element on entrance,
-            the CSS float owns the inner one. Sharing a single element would let
-            the CSS animation clobber gsap's inline transform.
-          */}
-          <div ref={badgeRef} className="absolute z-40 top-[12%] left-[5%] md:-left-[2%]">
-            <div
-              className={`animate-float motion-reduce:animate-none bg-white/95 backdrop-blur-sm px-5 py-2.5 md:py-3 rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] flex items-center gap-3 border border-gray-100/80 ${inView ? '' : '[animation-play-state:paused]'}`}
-              style={{ '--float-z': '160px', '--float-tilt': '-1deg' }}
-            >
-              <div className="flex items-center justify-center bg-orange-50 text-orange-500 w-8 h-8 rounded-full">
-                <Award size={16} strokeWidth={2.5} />
-              </div>
-              <p className="text-[12px] md:text-[13px] font-extrabold text-gray-800 uppercase tracking-widest whitespace-nowrap">
-                Premium Quality
-              </p>
-            </div>
           </div>
 
         </div>
-
       </div>
     </section>
   );

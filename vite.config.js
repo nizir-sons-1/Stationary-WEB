@@ -3,22 +3,31 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'serve-public-alias',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url && req.url.startsWith('/public/')) {
+            req.url = req.url.replace('/public/', '/');
+          }
+          next();
+        });
+      },
+    },
+  ],
   build: {
     target: 'es2020',
     cssCodeSplit: true,
-    // Inline nothing as base64 — small files still benefit from the CDN's
-    // immutable cache, and inlining bloats the render-blocking CSS.
     assetsInlineLimit: 0,
     sourcemap: false,
     reportCompressedSize: false,
-    // Deliberately no `manualChunks`. Hand-grouping the vendors here made the
-    // first load *worse*: react/jsx-runtime ended up sharing a chunk with
-    // framer-motion, and because every component needs the JSX runtime, the
-    // entry then had to preload all of framer-motion — ~40 kB gzip that only
-    // three lazy routes actually use. Rolldown's default splitting isolates the
-    // JSX runtime correctly and leaves framer-motion, gsap and supabase behind
-    // their dynamic imports, which is exactly what we want.
+  },
+  server: {
+    watch: {
+      ignored: ['**/*.mp4', '**/*.webm', '**/*.mkv', '**/*.avi', '**/*.mov', '**/videos/**', '**/node_modules/**'],
+    },
   },
   // Pre-bundle the deps the first paint needs so cold `npm run dev` isn't slow.
   optimizeDeps: {

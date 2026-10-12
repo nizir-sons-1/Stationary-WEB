@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import BottomNav from './components/BottomNav';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import Home from './pages/Home';
 import ScrollToTop from './components/ScrollToTop';
@@ -26,7 +25,6 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import NotFound from './pages/NotFound';
 
-import SalesPopup from './components/SalesPopup';
 import PageTransition from './components/PageTransition';
 
 function App() {
@@ -36,7 +34,7 @@ function App() {
         <ScrollToTop />
         <div className="flex flex-col min-h-screen bg-background">
           <Navbar />
-          <main className="flex-grow pt-[120px] md:pt-[160px]">
+          <main className="flex-grow pt-[64px] md:pt-[68px]">
             <RouteErrorBoundary>
               <PageTransition>
                 <Routes>
@@ -64,8 +62,6 @@ function App() {
           </main>
           <Footer />
           <FloatingWhatsApp />
-          <SalesPopup />
-          <BottomNav />
         </div>
       </Router>
     </ErrorBoundary>

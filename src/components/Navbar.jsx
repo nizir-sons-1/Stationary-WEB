@@ -1,172 +1,454 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
-import { Search, ShoppingCart, User, Phone, Palette, BookOpen, Layers, PenTool } from 'lucide-react';
+import React, { Suspense, lazy, useState, useRef, useEffect } from 'react';
+import { Search, ShoppingBag, ShoppingCart, Menu, X, ChevronRight, Phone } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { categoryPath } from '../lib/site';
 
-// The search modal pulls in framer-motion and the full product catalog. Neither
-// belongs in the first paint, so the chunk is fetched the moment it's opened.
+// The search modal pulls in framer-motion and the full product catalog.
+// Splitting keeps it off the critical first paint.
 const SearchModal = lazy(() => import('./SearchModal'));
 
-const CATEGORY_LINKS = [
-  { label: 'Fine Arts', icon: Palette },
-  { label: 'Stationery', icon: BookOpen },
-  { label: 'Paper & Canvas', icon: Layers },
-  { label: 'Accessories', icon: PenTool },
+const LEFT_LINKS = [
+  { label: 'Shop', path: '/shop' },
+  { label: 'Paper & Canvas', path: categoryPath('Paper & Canvas') },
+  { label: 'Fine Arts', path: categoryPath('Fine Arts') },
 ];
 
-// The marquee translates by -50%, so the list is rendered twice over to make the
-// wrap seamless; two more passes keep it wide enough for large viewports.
-const MARQUEE_PASSES = [0, 1, 2, 3];
+const RIGHT_LINKS = [
+  { label: 'Calculator', path: '/calculator' },
+  { label: 'Track Order', path: '/track-order' },
+];
+
+const DEPARTMENTS = [
+  { label: 'Shop All Departments', path: '/shop' },
+  { label: 'Paper & Canvas', path: categoryPath('Paper & Canvas') },
+  { label: 'Fine Arts', path: categoryPath('Fine Arts') },
+  { label: 'Stationery', path: categoryPath('Stationery') },
+  { label: 'Notebooks', path: categoryPath('Notebooks') },
+  { label: 'Accessories', path: categoryPath('Accessories') },
+];
 
 const Navbar = () => {
   const location = useLocation();
   const { cartCount } = useCart();
   const isActive = (path) => location.pathname === path;
 
-  const [scrolled, setScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  // Stays true after the first open so closing doesn't unmount (and re-fetch) it.
   const [searchMounted, setSearchMounted] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    let frame = 0;
-    const handleScroll = () => {
-      // Coalesce bursts of scroll events into one state update per frame.
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        // Hysteresis: expand at 20px, collapse back at 8px. With a single
-        // threshold, hovering around y=20 restarted a 700ms width animation on
-        // a fixed element over and over — the jank you felt the instant you
-        // started scrolling.
-        setScrolled((was) => (was ? window.scrollY > 8 : window.scrollY > 20));
-      });
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      cancelAnimationFrame(frame);
-    };
-  }, []);
+  const searchContainerRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   const openSearch = () => {
     setSearchMounted(true);
     setIsSearchOpen(true);
   };
 
+  const handleSearchClick = () => {
+    if (!isSearchExpanded) {
+      setIsSearchExpanded(true);
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 150);
+    } else {
+      openSearch();
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setIsSearchExpanded(false);
+    } else if (e.key === 'Enter') {
+      openSearch();
+    }
+  };
+
+  const [isScrolled, setIsScrolled] = useState(false);
+  const isHomePage = location.pathname === '/';
+
+  // Track scroll position for transparent -> white glass transition
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 25);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Close mobile drawer when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Lock scroll when mobile drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Escape key closes mobile menu
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Collapse expanded search on outside click (desktop)
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target)
+      ) {
+        setIsSearchExpanded(false);
+      }
+    };
+
+    if (isSearchExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSearchExpanded]);
+
+  const isTransparent = isHomePage && !isScrolled;
+
   return (
-    <header
-      className={`w-full z-50 fixed top-0 left-0 flex justify-center pointer-events-none font-sans animate-slide-down transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${scrolled ? 'pt-4 px-4 md:pt-6 md:px-6' : 'pt-0 px-0'}`}
-    >
-      {/* Transitioning *all* properties here also animated the pill's backdrop
-          filter and every colour on the subtree for 700ms after each scroll.
-          Naming the four that actually change keeps the same motion for a
-          fraction of the cost. */}
-      <div className={`w-full pointer-events-auto transition-[max-width,border-radius,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col ${scrolled ? 'max-w-6xl rounded-[32px] glass-pill overflow-hidden border border-white/40 shadow-glass' : 'bg-white shadow-sm'}`}>
-      
-      {/* Top Banner (Info) */}
-      <div className="bg-secondary text-white text-[12px] font-medium py-2 px-margin-mobile md:px-gutter flex justify-between items-center hidden md:flex">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4">
-            <a href="tel:+923202220001" className="flex items-center gap-2 hover:text-primary transition-colors">
-              <Phone size={14} className="text-orange-400" /> Call: +92 320 2220001
-            </a>
-            <a href="https://wa.me/923202220001" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-green-400 transition-colors">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg> WhatsApp
-            </a>
-          </div>
-          <span className="flex items-center gap-2 text-white/90">
-            Free Delivery on Orders Over <span className="text-primary font-bold">Rs 5,000</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-6">
-          <Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link>
-          <Link to="/track-order" className="hover:text-primary transition-colors">Track Order</Link>
-        </div>
-      </div>
-
-      {/* Main Navbar */}
-      <div className={`w-full px-margin-mobile md:px-gutter flex justify-between items-center transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${scrolled ? 'py-3 bg-transparent' : 'py-5 border-b border-gray-100 bg-white/95'}`}>
-        
-        {/* Left Links */}
-        <div className="hidden md:flex gap-8 flex-1">
-          <Link to="/" className={`text-[14px] font-bold relative group ${isActive('/') ? 'text-primary' : 'text-gray-600 hover:text-secondary transition-colors'}`}>
-            Home
-            {isActive('/') && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
-          </Link>
-          <Link to="/shop" className={`text-[14px] font-bold relative group ${isActive('/shop') ? 'text-primary' : 'text-gray-600 hover:text-secondary transition-colors'}`}>
-            Shop with Trust
-            {isActive('/shop') && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
-          </Link>
-          <Link to="/calculator" className={`text-[14px] font-bold relative group ${isActive('/calculator') ? 'text-primary' : 'text-gray-600 hover:text-secondary transition-colors'}`}>
-            Calculator
-            {isActive('/calculator') && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-primary rounded-t-md" />}
-          </Link>
-        </div>
-
-        {/* Center Logo */}
-        <div className="flex-1 text-left md:text-center flex items-center justify-start md:justify-center">
-          <Link className="flex items-baseline gap-1.5 group" to="/">
-            <span className="font-serif text-[26px] md:text-[32px] font-bold text-secondary tracking-widest leading-none group-hover:text-primary transition-colors duration-500">
-              NAZIR
-            </span>
-            <span className="font-serif text-[24px] md:text-[30px] font-medium text-primary italic leading-none">
-              & SONS
-            </span>
-          </Link>
-        </div>
-
-        {/* Right Icons */}
-        <div className="flex items-center gap-4 md:gap-6 flex-1 justify-end text-secondary">
-          <button onClick={openSearch} aria-label="search" className="hover:text-primary transition-colors p-2 hover:bg-orange-50 rounded-full">
-            <Search size={22} strokeWidth={2} />
-          </button>
-          <Link to="/contact" aria-label="contact" className="hover:text-primary transition-colors hidden sm:block p-2 hover:bg-orange-50 rounded-full">
-            <User size={22} strokeWidth={2} />
-          </Link>
-          <Link to="/cart" aria-label="shopping_cart" className="hover:text-primary transition-colors relative p-2 hover:bg-orange-50 rounded-full hidden sm:block">
-            <ShoppingCart size={22} strokeWidth={2} />
-            {cartCount > 0 && <span className="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">{cartCount}</span>}
-          </Link>
-        </div>
-      </div>
-
-      {/*
-        Collapses via a grid-row transition — the browser animates it off the
-        main thread, where the old height:auto tween forced a layout every frame.
-      */}
-      <div
-        className={`grid transition-[grid-template-rows,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${scrolled ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'}`}
+    <>
+      <header
+        className={`fixed top-0 left-0 w-full z-50 h-[64px] md:h-[68px] flex items-center font-sans transition-all duration-300 antialiased ${
+          isTransparent
+            ? 'bg-gradient-to-b from-[#faf9f6]/50 via-[#faf9f6]/20 to-transparent border-b border-transparent shadow-none'
+            : 'bg-[#faf9f6]/95 backdrop-blur-md border-b border-[#e5e1d7]/70 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
+        }`}
       >
-        <div className="overflow-hidden">
-          <div className="bg-secondary text-white py-3 border-b border-white/10 overflow-hidden w-full flex">
-            <div className="flex items-center gap-10 md:gap-16 w-max px-4 animate-marquee-slow motion-reduce:animate-none">
-              {MARQUEE_PASSES.map((pass) => (
-                <React.Fragment key={pass}>
-                  {CATEGORY_LINKS.map(({ label, icon: Icon }) => (
-                    <Link
-                      key={`${pass}-${label}`}
-                      to={categoryPath(label)}
-                      className="flex items-center gap-2 text-[12px] font-bold text-white/80 hover:text-white transition-colors whitespace-nowrap uppercase tracking-[0.1em]"
+        <div className="relative w-full max-w-container-max mx-auto px-4 md:px-gutter flex items-center justify-between">
+          
+          {/* Left Links (Desktop) */}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
+            {LEFT_LINKS.map(({ label, path }) => {
+              const active = isActive(path);
+              return (
+                <Link
+                  key={label}
+                  to={path}
+                  className={`text-[13.5px] xl:text-[14px] tracking-wide transition-all duration-200 py-1 relative select-none ${
+                    active
+                      ? 'text-[#0f172a] font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]'
+                      : isTransparent
+                        ? 'text-[#0f172a] font-semibold hover:text-primary drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]'
+                        : 'text-[#0f172a] font-semibold hover:text-primary'
+                  }`}
+                >
+                  {label}
+                  {active && (
+                    <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-primary rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Mobile Left: Menu Button */}
+          <div className="flex lg:hidden items-center z-10">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Open navigation menu"
+              className="flex items-center gap-1.5 text-[#0f172a] hover:text-primary transition-colors cursor-pointer select-none py-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]"
+            >
+              <Menu size={18} strokeWidth={2} />
+              <span className="text-[12px] font-medium tracking-wide">Menu</span>
+            </button>
+          </div>
+
+          {/* Absolute Dead-Center Brand Logo */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-auto">
+            <Link className="flex items-baseline gap-1 sm:gap-1.5 group select-none" to="/">
+              <span className="font-serif text-[19px] xs:text-[21px] sm:text-[25px] md:text-[27px] font-bold text-[#0f172a] tracking-[0.16em] leading-none group-hover:text-primary transition-colors duration-300 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
+                NAZIR
+              </span>
+              <span className="font-serif text-[17px] xs:text-[19px] sm:text-[23px] md:text-[25px] font-bold text-[#e65100] italic leading-none drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
+                &amp; SONS
+              </span>
+            </Link>
+          </div>
+
+          {/* Mobile Right: Search & Shopping Bag */}
+          <div className="flex lg:hidden items-center gap-3 sm:gap-4 z-10 ml-auto">
+            <button
+              type="button"
+              onClick={openSearch}
+              aria-label="Search catalog"
+              className="flex items-center gap-1 text-[#0f172a] hover:text-primary transition-colors cursor-pointer select-none py-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]"
+            >
+              <Search size={17} strokeWidth={2} />
+              <span className="text-[12px] font-medium tracking-wide">Search</span>
+            </button>
+
+            <Link
+              to="/cart"
+              aria-label="Shopping Cart"
+              className="relative text-[#0f172a] hover:text-primary transition-colors p-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]"
+            >
+              <ShoppingBag size={19} strokeWidth={2} />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1.5 bg-primary text-white text-[9px] font-bold min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full border border-white shadow-sm leading-none">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          </div>
+
+          {/* Right Navigation & Action Area (Desktop) */}
+          <div className="hidden lg:flex items-center gap-2 sm:gap-3.5 ml-auto">
+            
+            {/* Right Links (Desktop) */}
+            <nav className="flex items-center gap-6 xl:gap-8 mr-2">
+              {RIGHT_LINKS.map(({ label, path }) => {
+                const active = isActive(path);
+                return (
+                  <Link
+                    key={label}
+                    to={path}
+                    className={`text-[13.5px] xl:text-[14px] tracking-wide transition-all duration-200 py-1 relative select-none ${
+                      active
+                        ? 'text-[#0f172a] font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]'
+                        : isTransparent
+                          ? 'text-[#0f172a] font-semibold hover:text-primary drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]'
+                          : 'text-[#0f172a] font-semibold hover:text-primary'
+                    }`}
+                  >
+                    {label}
+                    {active && (
+                      <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-primary rounded-full" />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Expandable Search Pill Input (Desktop) */}
+            <div ref={searchContainerRef} className="relative flex items-center">
+              <div
+                className={`flex items-center transition-all duration-300 ease-out rounded-full bg-white/85 hover:bg-white border border-[#ded9ce] shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
+                  isSearchExpanded
+                    ? 'w-52 sm:w-64 md:w-72 h-10 px-3 ring-2 ring-primary/20 border-primary/50'
+                    : 'w-10 h-10 justify-center cursor-pointer'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={handleSearchClick}
+                  aria-label="Search supplies"
+                  className="p-1 text-[#0f172a] hover:text-primary transition-colors cursor-pointer shrink-0"
+                >
+                  <Search size={18} strokeWidth={2.2} />
+                </button>
+
+                {isSearchExpanded && (
+                  <div className="flex items-center flex-1 ml-2 mr-0.5 overflow-hidden">
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder="Search supplies..."
+                      onKeyDown={handleSearchKeyDown}
+                      onClick={openSearch}
+                      readOnly
+                      className="w-full bg-transparent text-[13px] text-[#0f172a] font-medium placeholder-[#94a3b8] outline-none cursor-pointer"
+                    />
+                    <kbd className="hidden sm:inline-block text-[10px] bg-[#ece8df] text-[#64748b] px-1.5 py-0.5 rounded font-mono font-medium ml-1 shrink-0">
+                      ⌘K
+                    </kbd>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsSearchExpanded(false);
+                      }}
+                      className="ml-1 p-1 text-[#94a3b8] hover:text-[#334155] rounded-full cursor-pointer shrink-0"
+                      aria-label="Close search"
                     >
-                      <Icon size={14} className="text-orange-400" /> {label}
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Cart Icon Button (Desktop) */}
+            <Link
+              to="/cart"
+              aria-label="Shopping Cart"
+              className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/85 hover:bg-white border border-[#ded9ce] text-[#0f172a] hover:text-primary transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] group"
+            >
+              <ShoppingCart
+                size={18}
+                strokeWidth={2.2}
+                className="group-hover:scale-105 transition-transform"
+              />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+
+          </div>
+
+        </div>
+
+        {searchMounted && (
+          <Suspense fallback={null}>
+            <SearchModal
+              isOpen={isSearchOpen}
+              onClose={() => setIsSearchOpen(false)}
+            />
+          </Suspense>
+        )}
+      </header>
+
+      {/* Mobile Menu Drawer (Louis Vuitton Luxury Style) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[100] lg:hidden">
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
+            aria-hidden="true"
+          />
+
+          {/* Slide-in Drawer */}
+          <aside
+            className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-[340px] bg-[#faf8f5] shadow-2xl flex flex-col z-10 transition-transform duration-300 overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation Menu"
+          >
+            {/* Header of Drawer */}
+            <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[#e5e1d7]/70 bg-white sticky top-0 z-10">
+              <Link
+                to="/"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-baseline gap-1"
+              >
+                <span className="font-serif text-[19px] font-bold text-[#0f172a] tracking-[0.16em]">
+                  NAZIR
+                </span>
+                <span className="font-serif text-[17px] font-bold text-[#e65100] italic">
+                  &amp; SONS
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Close menu"
+                className="p-1.5 text-[#0f172a] hover:text-primary transition-colors cursor-pointer rounded-full hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Quick Search inside Drawer */}
+            <div className="p-4 border-b border-[#e5e1d7]/50 bg-white">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  openSearch();
+                }}
+                className="w-full py-2.5 px-3 rounded-[3px] bg-[#f5f3ee] border border-[#e5e1d7] flex items-center gap-2 text-[12.5px] text-[#64748b] hover:text-[#0f172a] transition-colors cursor-pointer"
+              >
+                <Search size={15} />
+                <span>Search 500+ paper &amp; art supplies...</span>
+              </button>
+            </div>
+
+            {/* Navigation Links */}
+            <div className="flex-1 px-4 py-4 space-y-5">
+              <div>
+                <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#8892a0] mb-2 px-1">
+                  DEPARTMENTS
+                </p>
+                <div className="space-y-1">
+                  {DEPARTMENTS.map((dept) => (
+                    <Link
+                      key={dept.label}
+                      to={dept.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-between p-2.5 rounded-[3px] font-serif text-[14.5px] font-medium text-[#0f172a] hover:bg-white hover:text-primary transition-all"
+                    >
+                      <span>{dept.label}</span>
+                      <ChevronRight size={15} className="text-gray-400" />
                     </Link>
                   ))}
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
+                </div>
+              </div>
 
-      {searchMounted && (
-        <Suspense fallback={null}>
-          <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-        </Suspense>
+              <div>
+                <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#8892a0] mb-2 px-1">
+                  SERVICES &amp; TOOLS
+                </p>
+                <div className="space-y-1">
+                  <Link
+                    to="/calculator"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-between p-2.5 rounded-[3px] text-[13.5px] font-medium text-[#0f172a] hover:bg-white hover:text-primary transition-all"
+                  >
+                    <span>Custom Paper Calculator</span>
+                    <ChevronRight size={15} className="text-gray-400" />
+                  </Link>
+                  <Link
+                    to="/track-order"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-between p-2.5 rounded-[3px] text-[13.5px] font-medium text-[#0f172a] hover:bg-white hover:text-primary transition-all"
+                  >
+                    <span>Track Your Order</span>
+                    <ChevronRight size={15} className="text-gray-400" />
+                  </Link>
+                  <Link
+                    to="/contact"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-between p-2.5 rounded-[3px] text-[13.5px] font-medium text-[#0f172a] hover:bg-white hover:text-primary transition-all"
+                  >
+                    <span>Wholesale &amp; Bulk Orders</span>
+                    <ChevronRight size={15} className="text-gray-400" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Drawer Footer with Quick WhatsApp Contact */}
+            <div className="p-4 bg-white border-t border-[#e5e1d7]/70 mt-auto">
+              <a
+                href="https://wa.me/923202220001"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-[3px] bg-[#112338] text-white text-[12.5px] font-semibold hover:bg-[#1a3654] transition-colors shadow-sm"
+              >
+                <Phone size={14} />
+                <span>WhatsApp: 0320 2220001</span>
+              </a>
+            </div>
+          </aside>
+        </div>
       )}
-    </header>
+    </>
   );
 };
 

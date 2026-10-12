@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Package, ArrowRight, CheckCircle2, MessageCircle, Clock, Truck, XCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { usePageSeo } from '../lib/seo';
 
@@ -15,22 +15,22 @@ const STATUS_MAP = {
 
 const TrackOrder = () => {
   usePageSeo('/track-order');
-  const [trackingId, setTrackingId] = useState('');
+  const [searchParams] = useSearchParams();
+  const initialId = searchParams.get('id') || '';
+  const [trackingId, setTrackingId] = useState(initialId);
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
 
-  const handleTrack = async (e) => {
-    e.preventDefault();
-    if (!trackingId.trim()) return;
-    
+  const searchOrder = async (idToSearch) => {
+    const needle = (idToSearch || '').trim();
+    if (!needle) return;
+
     setIsSearching(true);
     setResult(null);
     setNotFound(false);
 
     try {
-      const needle = trackingId.trim();
-
       // Try matching by: order ID prefix (first 8 chars uppercase), phone number, or full UUID
       const { data, error } = await supabase
         .from('orders')
@@ -53,6 +53,17 @@ const TrackOrder = () => {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  React.useEffect(() => {
+    if (initialId) {
+      searchOrder(initialId);
+    }
+  }, [initialId]);
+
+  const handleTrack = async (e) => {
+    e.preventDefault();
+    await searchOrder(trackingId);
   };
 
   const statusInfo = result ? (STATUS_MAP[result.status] || STATUS_MAP.pending) : null;

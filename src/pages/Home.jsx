@@ -1,6 +1,5 @@
 import React, { Suspense, lazy } from 'react';
 import Hero from '../components/Hero';
-import TrustStats from '../components/TrustStats';
 import { usePageSeo } from '../lib/seo';
 import { itemListSchema } from '../lib/schema';
 import { DEPARTMENT_NAMES, categoryPath } from '../lib/site';
@@ -24,7 +23,6 @@ const Home = () => {
     <>
       <Hero />
       <main className="w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-stack-lg">
-        <TrustStats />
         {/* min-height matches the loaded section so the page doesn't jump. */}
         <Suspense fallback={<div className="min-h-[420px]" aria-hidden="true" />}>
           <CategoryCards />
