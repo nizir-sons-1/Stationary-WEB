@@ -47,16 +47,29 @@ const Navbar = () => {
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isScrolled;
 
-  // Track scroll position for transparent -> white glass transition
+  // Track scroll position: keep transparent until hero banner ends and white section meets the navbar
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 25);
+      const hero = document.getElementById('hero-section');
+      if (hero) {
+        const navbarHeight = window.innerWidth >= 768 ? 68 : 64;
+        setIsScrolled(hero.getBoundingClientRect().bottom <= navbarHeight);
+      } else {
+        setIsScrolled(window.scrollY > 25);
+      }
     };
 
     handleScroll();
+    const rafId = requestAnimationFrame(handleScroll);
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    window.addEventListener('resize', handleScroll, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [location.pathname]);
 
   // Close search and mobile drawer when route changes
   useEffect(() => {

@@ -14,7 +14,7 @@ const Hero = () => {
   };
 
   return (
-    <section className="relative w-full -mt-[64px] md:-mt-[68px] pt-[64px] md:pt-[68px] min-h-[500px] sm:min-h-[560px] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#f5f2eb]">
+    <section id="hero-section" className="relative w-full -mt-[64px] md:-mt-[68px] pt-[64px] md:pt-[68px] min-h-[500px] sm:min-h-[560px] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#f5f2eb]">
       {/* 
         Full Original Banner Image (No cut, no gradient mask)
         Positioned to show the full paper reams, canvas book, and supplies on the right
