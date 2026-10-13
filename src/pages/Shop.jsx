@@ -756,24 +756,18 @@ const Shop = () => {
         </div>
 
         {/* Header Bar */}
-        <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#e5e1d7]/80 pb-5">
-          <div className="flex flex-col gap-0.5">
-            <h1 className="font-serif text-[26px] md:text-[32px] font-normal text-[#112338] flex items-center gap-2.5 tracking-tight">
-              {(() => {
-                const activeCat = dynamicCategories.find(c => c.name === selectedSubCategory);
-                return activeCat ? (
-                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-[3px] flex items-center justify-center bg-[#faf8f5] text-[#112338] border border-[#e5e1d7]">
-                    <activeCat.icon size={18} strokeWidth={2} />
-                  </div>
-                ) : null;
-              })()}
-              <span>{categoryHeading}</span>
-              <span className="font-sans text-[13px] md:text-[14px] text-[#64748b] font-normal">
-                ({groupedProducts.length} Products)
+        <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#e5e1d7]/80 pb-4">
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="font-serif text-[28px] sm:text-[34px] md:text-[38px] font-semibold text-[#112338] leading-tight tracking-tight">
+                {categoryHeading}
+              </h1>
+              <span className="font-sans text-[11.5px] sm:text-[13px] font-semibold text-[#64748b] bg-[#f0ede6] px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                {groupedProducts.length} Products
               </span>
-            </h1>
-            <p className="text-[12px] sm:text-[13px] text-[#64748b]">
-              Live pricing & stock in PKR — wholesale and retail
+            </div>
+            <p className="text-[12px] sm:text-[13.5px] text-[#64748b]">
+              Live pricing &amp; stock in PKR — wholesale and retail
             </p>
           </div>
         </section>

@@ -321,10 +321,8 @@ const Footer = () => {
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t border-white/10 text-gray-500 text-[12px]">
           <p>&copy; {new Date().getFullYear()} NAZIR & SONS. All rights reserved.</p>
-          <div className="flex items-center gap-2">
-            <span>Crafted with</span>
-            <Sparkles size={12} className="text-primary" />
-            <span>by Nexsol</span>
+          <div className="flex items-center gap-1.5">
+            <span>Crafted with care by Nexsol</span>
           </div>
         </div>
 
