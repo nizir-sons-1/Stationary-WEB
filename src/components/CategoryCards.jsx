@@ -4,6 +4,7 @@ import { ArrowRight, ShoppingCart, Heart, Check, Truck, ShieldCheck, Headphones 
 import { useCart } from '../context/CartContext';
 import { categoryPath } from '../lib/site';
 import { useTaxonomyImages } from '../hooks/useSupabase';
+import { flyToCart } from '../lib/cartAnimation';
 
 const DEPARTMENTS = [
   {
@@ -163,7 +164,10 @@ const CategoryCards = () => {
     setWishlist((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleAddToCart = (product) => {
+  const handleAddToCart = (product, event) => {
+    if (event?.currentTarget) {
+      flyToCart(event.currentTarget);
+    }
     addToCart(
       {
         id: product.id,
@@ -302,7 +306,7 @@ const CategoryCards = () => {
                 {/* Add to Cart Button */}
                 <button
                   type="button"
-                  onClick={() => handleAddToCart(product)}
+                  onClick={(e) => handleAddToCart(product, e)}
                   className={`w-full py-1.5 sm:py-2 px-2.5 rounded-[3px] font-semibold text-[11.5px] sm:text-[12px] flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer ${
                     isAdded
                       ? 'bg-emerald-600 text-white'

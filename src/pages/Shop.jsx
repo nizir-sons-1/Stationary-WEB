@@ -21,6 +21,7 @@ import { itemListSchema } from '../lib/schema';
 import { categoryPath, productPath, slugify, titleFromSlug } from '../lib/site';
 import { ROUTES } from '../data/seo-content';
 import gsap from 'gsap';
+import { flyToCart } from '../lib/cartAnimation';
 
 /*
  * Department artwork.
@@ -95,30 +96,8 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
 
   const triggerAddAnimation = () => {
     setIsAdded(true);
-    // Flying dot animation toward the cart tab
     if (btnRef.current) {
-      const dot = document.createElement('span');
-      const btnRect = btnRef.current.getBoundingClientRect();
-      const cartEl = document.querySelector('[data-cart-tab]');
-      const targetX = cartEl ? cartEl.getBoundingClientRect().left + cartEl.offsetWidth / 2 - btnRect.left - btnRect.width / 2 : 0;
-      const targetY = cartEl ? cartEl.getBoundingClientRect().top - btnRect.top : -80;
-      dot.style.cssText = `
-        position:fixed;
-        left:${btnRect.left + btnRect.width / 2}px;
-        top:${btnRect.top + btnRect.height / 2}px;
-        width:10px;height:10px;
-        border-radius:50%;
-        background:rgb(234 88 12);
-        pointer-events:none;
-        z-index:9999;
-        transform:translate(-50%,-50%);
-      `;
-      document.body.appendChild(dot);
-      dot.animate([
-        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
-        { transform: `translate(calc(-50% + ${targetX}px), calc(-50% + ${targetY}px)) scale(0.3)`, opacity: 0 }
-      ], { duration: 600, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', fill: 'forwards' })
-        .onfinish = () => dot.remove();
+      flyToCart(btnRef.current);
     }
     setTimeout(() => setIsAdded(false), 1500);
   };

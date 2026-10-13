@@ -43,6 +43,16 @@ const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isCartBumping, setIsCartBumping] = useState(false);
+
+  useEffect(() => {
+    const onCartArrive = () => {
+      setIsCartBumping(true);
+      setTimeout(() => setIsCartBumping(false), 900);
+    };
+    window.addEventListener('cart-item-arrived', onCartArrive);
+    return () => window.removeEventListener('cart-item-arrived', onCartArrive);
+  }, []);
 
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isScrolled;
@@ -172,12 +182,21 @@ const Navbar = () => {
 
             <Link
               to="/cart"
+              id="navbar-cart-mobile"
+              data-cart-tab
               aria-label="Shopping Cart"
-              className="relative text-[#0f172a] hover:text-primary transition-colors p-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]"
+              className={`relative text-[#0f172a] hover:text-primary transition-all duration-300 p-1 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] ${
+                isCartBumping ? 'scale-125 !text-primary' : ''
+              }`}
             >
-              <ShoppingBag size={19} strokeWidth={2} />
+              {isCartBumping && (
+                <span className="absolute inset-0 rounded-full bg-primary/35 animate-ping pointer-events-none" />
+              )}
+              <ShoppingBag size={19} strokeWidth={2} className={isCartBumping ? 'animate-bounce text-primary' : ''} />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1.5 bg-primary text-white text-[9px] font-bold min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full border border-white shadow-sm leading-none">
+                <span className={`absolute -top-1 -right-1.5 bg-primary text-white text-[9px] font-bold min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full border border-white shadow-sm leading-none transition-transform duration-300 ${
+                  isCartBumping ? 'scale-125 !bg-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.8)]' : ''
+                }`}>
                   {cartCount}
                 </span>
               )}
@@ -228,16 +247,29 @@ const Navbar = () => {
             {/* Cart Icon Button (Desktop) */}
             <Link
               to="/cart"
+              id="navbar-cart-desktop"
+              data-cart-tab
               aria-label="Shopping Cart"
-              className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/85 hover:bg-white border border-[#ded9ce] text-[#0f172a] hover:text-primary transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] group"
+              className={`relative flex items-center justify-center w-10 h-10 rounded-full bg-white/85 hover:bg-white border text-[#0f172a] hover:text-primary transition-all duration-300 shadow-[0_1px_3px_rgba(0,0,0,0.04)] group ${
+                isCartBumping
+                  ? 'scale-115 !border-primary/60 shadow-[0_0_20px_rgba(234,88,12,0.45)] !text-primary'
+                  : 'border-[#ded9ce]'
+              }`}
             >
+              {isCartBumping && (
+                <span className="absolute inset-0 rounded-full bg-primary/25 animate-ping pointer-events-none" />
+              )}
               <ShoppingCart
                 size={18}
                 strokeWidth={2.2}
-                className="group-hover:scale-105 transition-transform"
+                className={`transition-transform duration-300 ${
+                  isCartBumping ? 'scale-110 rotate-[-8deg] text-primary' : 'group-hover:scale-105'
+                }`}
               />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                <span className={`absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white shadow-sm transition-transform duration-300 ${
+                  isCartBumping ? 'scale-125 !bg-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.8)]' : ''
+                }`}>
                   {cartCount}
                 </span>
               )}
