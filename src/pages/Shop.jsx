@@ -22,6 +22,12 @@ import { categoryPath, productPath, slugify, titleFromSlug } from '../lib/site';
 import { ROUTES } from '../data/seo-content';
 import gsap from 'gsap';
 import { flyToCart } from '../lib/cartAnimation';
+import {
+  getColorHex,
+  determineVariationType,
+  getVariationLabels,
+  hasMeaningfulVariations,
+} from '../lib/variations';
 
 /*
  * Department artwork.
@@ -138,6 +144,20 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
     }
   }, [availableGsms, selectedGsm]);
 
+  const variationType = useMemo(() => {
+    const cat = variations[0]?.Category || '';
+    const dept = departmentOf(cat);
+    return determineVariationType(availableSizes, cat, dept);
+  }, [availableSizes, variations]);
+
+  const variationLabels = useMemo(() => {
+    return getVariationLabels(variationType);
+  }, [variationType]);
+
+  const hasMultipleVariations = useMemo(() => {
+    return hasMeaningfulVariations(availableSizes);
+  }, [availableSizes]);
+
   // Get the precise product variation based on selections
   const currentVariation = useMemo(() => {
     if (!selectedGsm || !selectedSize) return variations[0];
@@ -201,35 +221,49 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
         <p className="text-[10px] sm:text-[11.5px] text-[#64748b] mt-0.5 mb-2.5 line-clamp-1">{currentVariation?.Description || 'Premium High Quality Stock'}</p>
 
         {/* Dynamic Selectors */}
-        <div className={`grid ${departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS ? 'grid-cols-2' : 'grid-cols-1'} gap-1.5 mb-2.5`}>
-          <div className="flex flex-col bg-[#faf8f5] rounded-[3px] p-1.5 border border-[#e5e1d7]">
-            <span className="text-[7.5px] md:text-[8.5px] text-[#8892a0] font-bold uppercase tracking-wider px-0.5">Size</span>
-            <select
-              value={selectedSize}
-              onChange={(e) => setSelectedSize(e.target.value)}
-              className="w-full bg-transparent text-[#112338] text-[10px] sm:text-[11px] font-semibold px-0.5 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:10px]"
-            >
-              {availableSizes.map(size => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
+        {(hasMultipleVariations || departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS) && (
+          <div className={`grid ${departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS ? 'grid-cols-2' : 'grid-cols-1'} gap-1.5 mb-2.5`}>
+            {hasMultipleVariations && (
+              <div className="flex flex-col bg-[#faf8f5] rounded-[3px] p-1.5 border border-[#e5e1d7]">
+                <div className="flex items-center justify-between px-0.5 mb-0.5">
+                  <span className="text-[7.5px] md:text-[8.5px] text-[#8892a0] font-bold uppercase tracking-wider">
+                    {variationLabels.shortLabel}
+                  </span>
+                  {variationType === 'color' && getColorHex(selectedSize) && (
+                    <span
+                      className="w-2 h-2 rounded-full border border-black/15 shrink-0"
+                      style={{ background: getColorHex(selectedSize) }}
+                    />
+                  )}
+                </div>
+                <select
+                  value={selectedSize}
+                  onChange={(e) => setSelectedSize(e.target.value)}
+                  className="w-full bg-transparent text-[#112338] text-[10px] sm:text-[11px] font-semibold px-0.5 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:10px]"
+                >
+                  {availableSizes.map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS && (
+              <div className="flex flex-col bg-[#faf8f5] rounded-[3px] p-1.5 border border-[#e5e1d7]">
+                <span className="text-[7.5px] md:text-[8.5px] text-[#8892a0] font-bold uppercase tracking-wider px-0.5">GSM</span>
+                <select
+                  value={selectedGsm}
+                  onChange={(e) => setSelectedGsm(e.target.value)}
+                  className="w-full bg-transparent text-[#112338] text-[10px] sm:text-[11px] font-semibold px-0.5 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:10px]"
+                >
+                  {availableGsms.map(gsm => (
+                    <option key={gsm} value={gsm}>{gsm}g</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
-          
-          {departmentOf(currentVariation?.Category) === PAPER_AND_CANVAS && (
-            <div className="flex flex-col bg-[#faf8f5] rounded-[3px] p-1.5 border border-[#e5e1d7]">
-              <span className="text-[7.5px] md:text-[8.5px] text-[#8892a0] font-bold uppercase tracking-wider px-0.5">GSM</span>
-              <select
-                value={selectedGsm}
-                onChange={(e) => setSelectedGsm(e.target.value)}
-                className="w-full bg-transparent text-[#112338] text-[10px] sm:text-[11px] font-semibold px-0.5 py-0.5 outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_center] bg-[length:10px]"
-              >
-                {availableGsms.map(gsm => (
-                  <option key={gsm} value={gsm}>{gsm}g</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Installment Toggle */}
         {!installmentHidden && !isCategoryInstallmentDisabled && PAPER_CATEGORY_NAMES.has((currentVariation?.Category || '').toLowerCase()) && (

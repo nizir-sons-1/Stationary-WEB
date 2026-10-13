@@ -18,6 +18,17 @@ export function formatPhoneNumber(phone) {
   return digits;
 }
 
+// Helper to format item variation spec (omits meaningless 'Standard' / 'N/A')
+export function formatItemSpec(size, gsm) {
+  const norm = String(size || '').trim();
+  const isMeaningless =
+    !norm ||
+    ['standard', 'n/a', 'na', 'default', 'default title', 'none', '1pc'].includes(norm.toLowerCase());
+  const cleanSize = isMeaningless ? null : norm;
+  const cleanGsm = gsm && String(gsm).trim() !== 'N/A' && String(gsm).trim() !== 'null' ? `${gsm}g` : null;
+  return [cleanSize, cleanGsm].filter(Boolean).join(' | ');
+}
+
 // Generate customer confirmation message text
 export function buildCustomerMessage(orderDetails) {
   const {
@@ -31,8 +42,11 @@ export function buildCustomerMessage(orderDetails) {
   } = orderDetails;
 
   const itemsList = items.map((item, idx) => {
-    const spec = [item.size, item.gsm ? `${item.gsm}g` : ''].filter(Boolean).join(' | ');
-    return `${idx + 1}. *${item.name}* ${spec ? `(${spec})` : ''}\n   Qty: ${item.quantity} ${item.packingType || ''} — Rs. ${Number(item.price * item.quantity).toLocaleString()}`;
+    const spec = formatItemSpec(item.size, item.gsm);
+    const specStr = spec ? `(${spec})` : '';
+    const packingStr = item.packingType ? ` ${item.packingType}` : '';
+    const formattedPrice = Number(item.price * item.quantity).toLocaleString();
+    return `${idx + 1}. *${item.name}* ${specStr}\n   Qty: ${item.quantity}${packingStr} — Rs. ${formattedPrice}`;
   }).join('\n');
 
   return `📄 *NAZIR & SONS — ORDER CONFIRMATION*
@@ -68,10 +82,30 @@ export function buildAdminMessage(orderDetails) {
     items = []
   } = orderDetails;
 
+  const hasBulk = items.some((item) => item.isBulk);
+  const bulkItems = items.filter((item) => item.isBulk);
+
   const itemsList = items.map((item, idx) => {
-    const spec = [item.size, item.gsm ? `${item.gsm}g` : ''].filter(Boolean).join(' | ');
-    return `${idx + 1}. ${item.name} ${spec ? `(${spec})` : ''} × ${item.quantity} = Rs. ${Number(item.price * item.quantity).toLocaleString()}`;
+    const spec = formatItemSpec(item.size, item.gsm);
+    const specStr = spec ? `(${spec})` : '';
+    const bulkTag = item.isBulk ? ' [BULK REQUEST]' : '';
+    const formattedPrice = Number(item.price * item.quantity).toLocaleString();
+    return `${idx + 1}. ${item.name} ${specStr}${bulkTag} × ${item.quantity} = Rs. ${formattedPrice}`;
   }).join('\n');
+
+  let bulkSection = '';
+  if (hasBulk) {
+    const bulkNotesList = bulkItems
+      .filter((i) => i.bulkDetails)
+      .map((i) => `• *${i.name}*: "${i.bulkDetails}"`)
+      .join('\n');
+
+    const notesContent = bulkNotesList
+      ? `📝 *Customer Notes:*\n${bulkNotesList}`
+      : '📝 Direct rate finalization required.';
+
+    bulkSection = `\n\n📦 *BULK ORDER REQUEST (B2B/WHOLESALE):*\n⚠️ Customer requested bulk pricing / special B2B rates!\n${notesContent}`;
+  }
 
   return `🚨 *NEW ORDER ALERT — NAZIR & SONS*
 
@@ -81,7 +115,7 @@ export function buildAdminMessage(orderDetails) {
 📍 *Address:* ${customer_address || 'Self Pickup / Shop'}
 🚚 *Shipping:* ${shipping_method}
 💳 *Payment:* ${payment_method}
-💰 *Total:* Rs. ${Number(total_amount).toLocaleString()}
+💰 *Total:* Rs. ${Number(total_amount).toLocaleString()}${bulkSection}
 
 🛒 *Items:*
 ${itemsList || 'Items recorded'}
@@ -181,7 +215,7 @@ export default async function handler(req, res) {
   try {
     const { orderDetails } = req.body || {};
 
-    if (!orderDetails || !orderDetails.customer_phone) {
+    if (!orderDetails?.customer_phone) {
       return res.status(400).json({ error: 'Missing customer phone or order details' });
     }
 

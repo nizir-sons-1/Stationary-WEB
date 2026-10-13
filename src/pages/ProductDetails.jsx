@@ -22,6 +22,12 @@ import { usePageSeo } from '../lib/seo';
 import { productSchema } from '../lib/schema';
 import { categoryPath, productPath } from '../lib/site';
 import { flyToCart } from '../lib/cartAnimation';
+import {
+  getColorHex,
+  determineVariationType,
+  getVariationLabels,
+  hasMeaningfulVariations,
+} from '../lib/variations';
 
 /*
  * Compact Product Card for Related / Relevant Products
@@ -194,6 +200,31 @@ const ProductDetails = () => {
   }, [currentProduct]);
 
   const [selectedSize, setSelectedSize] = useState('');
+
+  // Extract all distinct available options/sizes for this product
+  const availableSizes = useMemo(() => {
+    return [
+      ...new Set(
+        productVariations.map((p) =>
+          p.LENGTH_INCH && p.WIDTH_INCH ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}` : p.Display_Size || 'N/A'
+        )
+      ),
+    ].filter(Boolean);
+  }, [productVariations]);
+
+  const variationType = useMemo(() => {
+    const cat = currentProduct?.category || productVariations[0]?.Category || '';
+    const dept = departmentOf(cat);
+    return determineVariationType(availableSizes, cat, dept);
+  }, [availableSizes, currentProduct, productVariations]);
+
+  const variationLabels = useMemo(() => {
+    return getVariationLabels(variationType);
+  }, [variationType]);
+
+  const hasMultipleVariations = useMemo(() => {
+    return hasMeaningfulVariations(availableSizes);
+  }, [availableSizes]);
 
   // Initialize Size when product loads
   React.useEffect(() => {
@@ -490,82 +521,142 @@ const ProductDetails = () => {
           </p>
 
           {/* Compact Configuration Box */}
-          <div className="bg-[#faf9f6] border border-[#e8e4dc] rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+          <div className="bg-white border border-[#e2ddd3] rounded-2xl p-4 sm:p-5 mb-3.5 sm:mb-4 shadow-[0_4px_20px_rgba(17,35,56,0.04)]">
             {/* Dynamic Selectors Grid */}
-            <div
-              className={`grid ${
-                departmentOf(currentVariation.Category) === PAPER_AND_CANVAS ? 'grid-cols-2' : 'grid-cols-1'
-              } gap-2 sm:gap-3 mb-2.5 sm:mb-3`}
-            >
-              <div className="flex flex-col">
-                <label htmlFor="pdp-size" className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                  Select Size
-                </label>
-                <select
-                  id="pdp-size"
-                  value={selectedSize}
-                  onChange={(e) => setSelectedSize(e.target.value)}
-                  className="w-full bg-white border border-[#dcd7cb] text-[#112338] text-[11.5px] sm:text-[13px] font-semibold h-8.5 sm:h-9 px-2.5 rounded-lg outline-none focus:border-primary shadow-2xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center] bg-[length:12px] cursor-pointer hover:border-gray-400 transition-colors"
-                >
-                  {[
-                    ...new Set(
-                      productVariations.map((p) =>
-                        p.LENGTH_INCH && p.WIDTH_INCH ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}` : p.Display_Size || 'N/A'
-                      )
-                    ),
-                  ]
-                    .filter(Boolean)
-                    .map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                </select>
+            {hasMultipleVariations || departmentOf(currentVariation.Category) === PAPER_AND_CANVAS ? (
+              <div
+                className={`grid ${
+                  departmentOf(currentVariation.Category) === PAPER_AND_CANVAS ? 'grid-cols-2' : 'grid-cols-1'
+                } gap-2.5 sm:gap-3 mb-3 sm:mb-3.5`}
+              >
+                {/* When variationType is 'color': Show visual color swatches */}
+                {variationType === 'color' ? (
+                  <div className="flex flex-col">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-[#112338] uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="text-gray-400 font-semibold">{variationLabels.shortLabel}:</span>
+                        <span className="text-[#112338] font-black">{selectedSize}</span>
+                      </span>
+                      <span className="text-[10px] text-gray-500 font-medium bg-[#f8fafc] px-2 py-0.5 rounded-full border border-gray-200">
+                        {availableSizes.length} {availableSizes.length === 1 ? 'shade' : 'shades'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {availableSizes.map((opt) => {
+                        const hex = getColorHex(opt);
+                        const isSelected = selectedSize === opt;
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setSelectedSize(opt)}
+                            className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[12px] font-bold transition-all duration-150 cursor-pointer ${
+                              isSelected
+                                ? 'border-[#112338] bg-[#112338] text-white shadow-xs'
+                                : 'border-[#e2ddd3] bg-white text-[#112338] hover:border-[#112338]/40 hover:bg-[#faf9f6]'
+                            }`}
+                            title={opt}
+                          >
+                            {hex && (
+                              <span
+                                className={`w-3.5 h-3.5 rounded-full shrink-0 transition-transform ${
+                                  isSelected ? 'border border-white/60 ring-1 ring-white/30' : 'border border-black/15'
+                                }`}
+                                style={{ background: hex }}
+                              />
+                            )}
+                            <span>{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* Standard / dimensional selector */
+                  hasMultipleVariations && (
+                    <div className="flex flex-col">
+                      <label htmlFor="pdp-size" className="text-[10px] sm:text-[10.5px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        {variationLabels.selectLabel}
+                      </label>
+                      <select
+                        id="pdp-size"
+                        value={selectedSize}
+                        onChange={(e) => setSelectedSize(e.target.value)}
+                        className="w-full bg-white border border-[#dcd7cb] text-[#112338] text-[12px] sm:text-[13px] font-semibold h-9 sm:h-9.5 px-3 rounded-lg outline-none focus:border-[#112338] shadow-2xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center] bg-[length:12px] cursor-pointer hover:border-gray-400 transition-colors"
+                      >
+                        {availableSizes.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )
+                )}
+
+                {departmentOf(currentVariation.Category) === PAPER_AND_CANVAS && (
+                  <div className="flex flex-col">
+                    <label htmlFor="pdp-gsm" className="text-[10px] sm:text-[10.5px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Select GSM
+                    </label>
+                    <select
+                      id="pdp-gsm"
+                      value={selectedGsm}
+                      onChange={(e) => setSelectedGsm(e.target.value)}
+                      className="w-full bg-white border border-[#dcd7cb] text-[#112338] text-[12px] sm:text-[13px] font-semibold h-9 sm:h-9.5 px-3 rounded-lg outline-none focus:border-[#112338] shadow-2xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center] bg-[length:12px] cursor-pointer hover:border-gray-400 transition-colors"
+                    >
+                      {availableGsms.map((g) => (
+                        <option key={g} value={g}>
+                          {g}g
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
+            ) : null}
 
-              {departmentOf(currentVariation.Category) === PAPER_AND_CANVAS && (
-                <div className="flex flex-col">
-                  <label htmlFor="pdp-gsm" className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                    Select GSM
+            {/* Bulk Order Card */}
+            <div className={`p-3.5 sm:p-4 rounded-xl border transition-all duration-200 mb-3 ${
+              isBulk 
+                ? 'bg-[#fcfbf9] border-[#112338]/30 shadow-xs ring-1 ring-[#112338]/10' 
+                : 'bg-[#faf9f6] border-[#e8e4dc] hover:border-[#dcd7cb]'
+            }`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5 flex-1">
+                  <input
+                    type="checkbox"
+                    id="bulk-toggle"
+                    checked={isBulk}
+                    onChange={(e) => setIsBulk(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 text-[#112338] bg-white border-gray-300 rounded focus:ring-[#112338] accent-[#112338] cursor-pointer shrink-0"
+                  />
+                  <label htmlFor="bulk-toggle" className="cursor-pointer select-none">
+                    <span className="text-xs sm:text-[13px] font-bold text-[#112338] block leading-snug">
+                      Place Bulk Order Request
+                    </span>
+                    <span className="text-[10.5px] sm:text-[11px] text-[#64748b] leading-tight block mt-0.5">
+                      Check for B2B quantities or special pricing. Rates finalized on WhatsApp.
+                    </span>
                   </label>
-                  <select
-                    id="pdp-gsm"
-                    value={selectedGsm}
-                    onChange={(e) => setSelectedGsm(e.target.value)}
-                    className="w-full bg-white border border-[#dcd7cb] text-[#112338] text-[11.5px] sm:text-[13px] font-semibold h-8.5 sm:h-9 px-2.5 rounded-lg outline-none focus:border-primary shadow-2xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center] bg-[length:12px] cursor-pointer hover:border-gray-400 transition-colors"
-                  >
-                    {availableGsms.map((g) => (
-                      <option key={g} value={g}>
-                        {g}g
-                      </option>
-                    ))}
-                  </select>
                 </div>
-              )}
-            </div>
-
-            {/* Bulk Order Toggle */}
-            <div className="p-2.5 bg-[#fbf7f0] rounded-xl border border-[#ebdcc9] mb-2.5">
-              <label htmlFor="bulk-toggle" className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  id="bulk-toggle"
-                  checked={isBulk}
-                  onChange={(e) => setIsBulk(e.target.checked)}
-                  className="w-3.5 h-3.5 text-primary bg-white border-amber-300 rounded focus:ring-primary accent-primary cursor-pointer shrink-0"
-                />
-                <span className="text-xs sm:text-[12.5px] font-bold text-[#112338]">Place Bulk Order Request</span>
-              </label>
-              <p className="text-[10px] sm:text-[11px] text-[#78614c] mt-0.5 pl-5.5">
-                Check for B2B quantities or special pricing. Rates finalized on WhatsApp.
-              </p>
+                <span className="shrink-0 text-[9px] sm:text-[9.5px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                  B2B Rates
+                </span>
+              </div>
               {isBulk && (
-                <textarea
-                  placeholder="E.g., I need 500 reams for my printing press..."
-                  value={bulkNote}
-                  onChange={(e) => setBulkNote(e.target.value)}
-                  className="mt-2 w-full bg-white border border-amber-200 rounded-md p-2 text-xs outline-none focus:border-primary shadow-2xs h-16 resize-none"
-                />
+                <div className="mt-3 pt-2.5 border-t border-[#e8e4dc]">
+                  <label htmlFor="bulk-note-input" className="block text-[10px] font-bold text-[#475569] uppercase tracking-wider mb-1">
+                    Bulk Requirements / Notes:
+                  </label>
+                  <textarea
+                    id="bulk-note-input"
+                    placeholder="E.g., I need 500 reams for my printing press or 50 sets..."
+                    value={bulkNote}
+                    onChange={(e) => setBulkNote(e.target.value)}
+                    className="w-full bg-white border border-[#cbd5e1] focus:border-[#112338] focus:ring-1 focus:ring-[#112338]/20 rounded-lg p-2.5 text-xs text-[#112338] placeholder:text-gray-400 outline-none shadow-2xs h-16 resize-none transition-all"
+                  />
+                </div>
               )}
             </div>
 

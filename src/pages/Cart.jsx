@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageSeo } from '../lib/seo';
 import { departmentOf, PAPER_AND_CANVAS } from '../data/categories';
+import { getColorHex, isColorVariation, isMeaninglessVariation } from '../lib/variations';
 
 const Cart = () => {
   usePageSeo('/cart');
@@ -82,31 +83,63 @@ const Cart = () => {
       let finalTotal = cartTotal;
       if (shippingMethod === 'standard_delivery') finalTotal += 200;
 
+      // Check if order contains bulk requests
+      const hasBulk = cartItems.some(item => item.isBulk);
+      const bulkNotesList = cartItems
+        .filter(item => item.isBulk && item.bulkDetails)
+        .map(item => `${item.name}: ${item.bulkDetails}`);
+      const bulkNotesText = bulkNotesList.join(' | ');
+
+      // Order type: clearly categorized as 'Bulk Order' so admin panel can filter and create a dedicated Bulk Orders section
+      let calculatedOrderType = isB2B ? 'B2B' : 'B2C';
+      if (hasBulk) {
+        calculatedOrderType = isB2B ? 'Bulk Order (B2B)' : 'Bulk Order';
+      }
+
+      // Customer address: if bulk request notes exist, append an explicit formatted label so any admin panel view surfaces it directly
+      let formattedAddress = address || null;
+      if (bulkNotesText) {
+        formattedAddress = address
+          ? `${address}\n\n📌 [BULK ORDER NOTE]: ${bulkNotesText}`
+          : `[BULK ORDER NOTE]: ${bulkNotesText}`;
+      }
+
       // 1. Insert order into Supabase so admin panel can see it
       const orderPayload = {
         customer_name: fullName,
         customer_phone: phone,
         customer_email: email || null,
-        customer_address: address || null,
+        customer_address: formattedAddress,
         whatsapp_number: phone,
         shipping_method: shipMap[shippingMethod],
         payment_method: payMap[paymentMethod],
         total_amount: finalTotal,
         total_price: finalTotal,
         status: 'pending',
-        order_type: isB2B ? 'B2B' : 'B2C',
-        items: cartItems.map(item => ({
-          name: item.name,
-          size: item.size,
-          gsm: item.gsm,
-          quantity: item.quantity,
-          packingType: item.packingType,
-          price: item.price,
-          isBulk: item.isBulk || false,
-          bulkDetails: item.bulkDetails || null,
-          isInstallment: item.isInstallment || false,
-          installmentPlan: item.installmentPlan || null,
-        }))
+        order_type: calculatedOrderType,
+        items: cartItems.map(item => {
+          let adminMsg = null;
+          if (item.bulkDetails) {
+            adminMsg = `[BULK ORDER NOTE]: ${item.bulkDetails}`;
+          } else if (item.isBulk) {
+            adminMsg = '[BULK ORDER REQUEST]';
+          }
+
+          return {
+            name: item.name,
+            size: item.size,
+            gsm: item.gsm,
+            quantity: item.quantity,
+            packingType: item.packingType,
+            price: item.price,
+            isBulk: item.isBulk || false,
+            bulkDetails: item.bulkDetails || null,
+            admin_label: item.isBulk ? 'BULK_ORDER_REQUEST' : null,
+            admin_message: adminMsg,
+            isInstallment: item.isInstallment || false,
+            installmentPlan: item.installmentPlan || null,
+          };
+        })
       };
 
       const { data: insertedOrder, error: insertError } = await supabase
@@ -168,7 +201,9 @@ const Cart = () => {
                 gsm: item.gsm,
                 quantity: item.quantity,
                 packingType: item.packingType,
-                price: item.price
+                price: item.price,
+                isBulk: item.isBulk || false,
+                bulkDetails: item.bulkDetails || null,
               }))
             }
           })
@@ -183,10 +218,14 @@ const Cart = () => {
         customerName: fullName,
         phone: phone,
         email: email,
-        address: address,
+        address: formattedAddress,
+        rawAddress: address,
         shipping: shipMap[shippingMethod],
         payment: payMap[paymentMethod],
         total: finalTotal,
+        orderType: calculatedOrderType,
+        hasBulk: hasBulk,
+        bulkNotes: bulkNotesText,
         items: [...cartItems]
       });
 
@@ -237,7 +276,7 @@ const Cart = () => {
           </div>
 
           {/* Verification Status Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-7">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-5">
             <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-4 flex items-start gap-3.5">
               <div className="w-10 h-10 rounded-lg bg-emerald-600/10 flex items-center justify-center shrink-0 mt-0.5 text-emerald-700">
                 <CheckCircle2 size={20} />
@@ -263,8 +302,35 @@ const Cart = () => {
             </div>
           </div>
 
+          {/* Bulk Order Status Banner (if order contains bulk requests) */}
+          {placedOrder.hasBulk && (
+            <div className="mb-6 bg-[#fcfbf9] border border-amber-300 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 text-amber-800 mt-0.5">
+                <PackageCheck size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-bold text-sm text-[#112338]">Bulk Order Request Registered</h4>
+                  <span className="text-[9.5px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
+                    B2B Wholesale
+                  </span>
+                </div>
+                <p className="text-xs text-[#64748b] leading-relaxed">
+                  Your bulk inquiry is recorded in database under <strong className="text-[#112338]">{placedOrder.orderType}</strong>. Our wholesale desk will coordinate custom B2B rates directly with you on WhatsApp.
+                </p>
+                {placedOrder.items
+                  .filter((i) => i.isBulk && i.bulkDetails)
+                  .map((i) => (
+                    <div key={`${i.name}-${i.size || 'std'}-${i.gsm || '0'}`} className="mt-2 text-xs bg-white border border-[#e2ddd3] rounded-lg p-2.5 text-[#112338]">
+                      <span className="font-bold text-amber-800">Note for {i.name}:</span> {i.bulkDetails}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {/* Order Details Grid */}
-          <div className="bg-[#fbfaf8] rounded-2xl p-4 sm:p-5 mb-7 border border-[#e5e1d7] grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 mb-6 border border-[#e2ddd3] shadow-xs grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Order ID</span>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -304,12 +370,12 @@ const Cart = () => {
           </div>
 
           {/* Customer Address Summary (if provided) */}
-          {placedOrder.address && (
-            <div className="mb-7 bg-white border border-[#e5e1d7] rounded-xl p-3.5 flex items-start gap-3">
+          {(placedOrder.rawAddress || placedOrder.address) && (
+            <div className="mb-6 bg-white border border-[#e2ddd3] rounded-xl p-3.5 flex items-start gap-3 shadow-xs">
               <MapPin size={18} className="text-gray-400 shrink-0 mt-0.5" />
               <div>
                 <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Delivery Destination</span>
-                <p className="text-xs sm:text-sm text-gray-700 font-medium mt-0.5">{placedOrder.address}</p>
+                <p className="text-xs sm:text-sm text-gray-700 font-medium mt-0.5">{placedOrder.rawAddress || placedOrder.address}</p>
               </div>
             </div>
           )}
@@ -329,7 +395,9 @@ const Cart = () => {
                     <div>
                       <h4 className="font-bold text-sm text-[#112338]">{item.name}</h4>
                       <div className="flex flex-wrap gap-1.5 text-xs text-gray-500 mt-0.5">
-                        {item.size && <span>{item.size}</span>}
+                        {!isMeaninglessVariation(item.size) && (
+                          <span>{isColorVariation(item.size) ? `Color: ${item.size}` : item.size}</span>
+                        )}
                         {item.gsm && <span>• {item.gsm}g</span>}
                         <span>• Qty: {item.quantity} {item.packingType}</span>
                       </div>
@@ -460,7 +528,19 @@ const Cart = () => {
                         <h3 className="font-headline-md text-base md:text-lg font-bold text-on-surface">{item.name}</h3>
                         <div className="flex flex-wrap gap-2 mt-2">
                           {departmentOf(item.category) === PAPER_AND_CANVAS && <span className="bg-orange-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-primary border border-orange-100 rounded-md">{item.gsm}g</span>}
-                          <span className="bg-gray-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-gray-500 border border-gray-200 rounded-md">{item.size}</span>
+                          {!isMeaninglessVariation(item.size) && (
+                            isColorVariation(item.size) ? (
+                              <span className="inline-flex items-center gap-1.5 bg-gray-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-gray-700 border border-gray-200 rounded-md">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full border border-black/15 shrink-0"
+                                  style={{ background: getColorHex(item.size) || '#94a3b8' }}
+                                />
+                                Color: {item.size}
+                              </span>
+                            ) : (
+                              <span className="bg-gray-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-gray-600 border border-gray-200 rounded-md">{item.size}</span>
+                            )
+                          )}
                           {item.isBulk && <span className="bg-blue-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-blue-600 border border-blue-100 rounded-md uppercase tracking-widest">Bulk Req</span>}
                           {item.isInstallment && <span className="bg-indigo-50 px-2 py-1 text-[10px] md:text-[11px] font-bold text-indigo-600 border border-indigo-100 rounded-md uppercase tracking-widest">Installment: {item.installmentPlan}</span>}
                         </div>

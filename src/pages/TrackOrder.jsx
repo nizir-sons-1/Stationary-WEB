@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Package, ArrowRight, CheckCircle2, Clock, Truck, XCircle, ArrowLeft, MapPin, Copy, Check, ShoppingBag } from 'lucide-react';
+import { Search, Package, ArrowRight, CheckCircle2, Clock, Truck, XCircle, ArrowLeft, MapPin, Copy, Check, ShoppingBag, PackageCheck } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { usePageSeo } from '../lib/seo';
+import { isColorVariation, isMeaninglessVariation } from '../lib/variations';
 
 const STATUS_MAP = {
   pending: { label: 'Order Received', step: 1, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
@@ -13,6 +14,82 @@ const STATUS_MAP = {
   completed: { label: 'Completed', step: 4, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
   cancelled: { label: 'Cancelled', step: 0, icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
 };
+
+const STEP_PROGRESS_WIDTH = {
+  1: '15%',
+  2: '50%',
+  3: '80%',
+  4: '100%',
+};
+
+const ORDER_SELECT_FIELDS = 'id, status, created_at, total_amount, total_price, customer_name, customer_phone, customer_email, customer_address, payment_method, shipping_method, items';
+
+async function fetchOrderByHex8(hex) {
+  const { data } = await supabase
+    .from('orders')
+    .select(ORDER_SELECT_FIELDS)
+    .gte('id', `${hex}-0000-0000-0000-000000000000`)
+    .lte('id', `${hex}-ffff-ffff-ffff-ffffffffffff`)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
+async function fetchOrderByUuid(uuid) {
+  const { data } = await supabase
+    .from('orders')
+    .select(ORDER_SELECT_FIELDS)
+    .eq('id', uuid)
+    .maybeSingle();
+  return data;
+}
+
+async function fetchOrderByPhone(digits) {
+  const { data } = await supabase
+    .from('orders')
+    .select(ORDER_SELECT_FIELDS)
+    .or(`customer_phone.ilike.%${digits}%,whatsapp_number.ilike.%${digits}%`)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
+async function fetchOrderByFallback(text) {
+  const { data } = await supabase
+    .from('orders')
+    .select(ORDER_SELECT_FIELDS)
+    .or(`customer_name.ilike.%${text}%,customer_email.ilike.%${text}%`)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
+async function fetchOrderRecord(clean) {
+  if (/^[0-9a-f]{8}$/i.test(clean)) {
+    const res = await fetchOrderByHex8(clean.toLowerCase());
+    if (res) return res;
+  }
+
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean)) {
+    const res = await fetchOrderByUuid(clean.toLowerCase());
+    if (res) return res;
+  }
+
+  const digits = clean.replace(/\D/g, '');
+  if (digits.length >= 7) {
+    const res = await fetchOrderByPhone(digits);
+    if (res) return res;
+  }
+
+  if (clean.length >= 3 && !/^[0-9a-f]{8}$/i.test(clean)) {
+    return await fetchOrderByFallback(clean);
+  }
+
+  return null;
+}
 
 const TrackOrder = () => {
   usePageSeo('/track-order');
@@ -34,71 +111,7 @@ const TrackOrder = () => {
     setNotFound(false);
 
     try {
-      let matchedOrder = null;
-
-      // Strategy 1: Hex 8-character prefix match (e.g., 6B7BD55B)
-      if (/^[0-9a-f]{8}$/i.test(clean)) {
-        const hex = clean.toLowerCase();
-        const { data, error } = await supabase
-          .from('orders')
-          .select('id, status, created_at, total_amount, total_price, customer_name, customer_phone, customer_email, customer_address, payment_method, shipping_method, items')
-          .gte('id', `${hex}-0000-0000-0000-000000000000`)
-          .lte('id', `${hex}-ffff-ffff-ffff-ffffffffffff`)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!error && data) {
-          matchedOrder = data;
-        }
-      }
-
-      // Strategy 2: Full UUID match
-      if (!matchedOrder && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean)) {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('id, status, created_at, total_amount, total_price, customer_name, customer_phone, customer_email, customer_address, payment_method, shipping_method, items')
-          .eq('id', clean.toLowerCase())
-          .maybeSingle();
-
-        if (!error && data) {
-          matchedOrder = data;
-        }
-      }
-
-      // Strategy 3: Phone number match (digits only)
-      if (!matchedOrder) {
-        const digits = clean.replace(/[^0-9]/g, '');
-        if (digits.length >= 7) {
-          const { data, error } = await supabase
-            .from('orders')
-            .select('id, status, created_at, total_amount, total_price, customer_name, customer_phone, customer_email, customer_address, payment_method, shipping_method, items')
-            .or(`customer_phone.ilike.%${digits}%,whatsapp_number.ilike.%${digits}%`)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (!error && data) {
-            matchedOrder = data;
-          }
-        }
-      }
-
-      // Strategy 4: Fallback partial name or email
-      if (!matchedOrder && clean.length >= 3 && !/^[0-9a-f]{8}$/i.test(clean)) {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('id, status, created_at, total_amount, total_price, customer_name, customer_phone, customer_email, customer_address, payment_method, shipping_method, items')
-          .or(`customer_name.ilike.%${clean}%,customer_email.ilike.%${clean}%`)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!error && data) {
-          matchedOrder = data;
-        }
-      }
-
+      const matchedOrder = await fetchOrderRecord(clean);
       if (matchedOrder) {
         setResult(matchedOrder);
       } else {
@@ -114,7 +127,7 @@ const TrackOrder = () => {
 
   React.useEffect(() => {
     if (initialId) {
-      searchOrder(initialId);
+      void searchOrder(initialId);
     }
   }, [initialId]);
 
@@ -126,6 +139,7 @@ const TrackOrder = () => {
   const statusInfo = result ? (STATUS_MAP[result.status] || STATUS_MAP.pending) : null;
   const StatusIcon = statusInfo?.icon || Clock;
   const currentStep = statusInfo?.step || 1;
+  const progressWidth = STEP_PROGRESS_WIDTH[currentStep] || '15%';
 
   const totalAmount = Number(result?.total_price || result?.total_amount || 0);
 
@@ -242,7 +256,7 @@ const TrackOrder = () => {
                 <div className="absolute top-4 left-6 right-6 h-0.5 bg-gray-200 -z-0">
                   <div 
                     className="h-full bg-emerald-600 transition-all duration-500" 
-                    style={{ width: currentStep === 1 ? '15%' : currentStep === 2 ? '50%' : currentStep === 3 ? '80%' : '100%' }}
+                    style={{ width: progressWidth }}
                   />
                 </div>
 
@@ -307,6 +321,33 @@ const TrackOrder = () => {
             )}
           </div>
 
+          {/* Bulk Order Banner (if applicable) */}
+          {(result.order_type?.includes('Bulk') || (Array.isArray(result.items) && result.items.some(i => i.isBulk))) && (
+            <div className="mx-5 sm:mx-7 mt-4 p-4 rounded-xl bg-[#fcfbf9] border border-amber-300 shadow-2xs flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0 text-amber-800 mt-0.5">
+                <PackageCheck size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-bold text-xs sm:text-sm text-[#112338]">Bulk Order Request</h4>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                    B2B Special Rates
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-[#64748b] leading-relaxed">
+                  This order includes wholesale / bulk request items. Special pricing & quantities are verified with our sales desk on WhatsApp.
+                </p>
+                {Array.isArray(result.items) && result.items
+                  .filter((i) => i.isBulk && (i.bulkDetails || i.admin_message))
+                  .map((i) => (
+                    <div key={`${i.name}-${i.size || 'std'}-${i.gsm || '0'}`} className="mt-2 text-xs bg-white border border-[#e2ddd3] rounded-lg p-2 text-[#112338]">
+                      <span className="font-bold text-amber-800">{i.name}:</span> {i.bulkDetails || i.admin_message}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {/* Purchased Items List */}
           <div className="p-5 sm:p-7">
             <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 mb-3.5 flex items-center gap-1.5">
@@ -319,7 +360,9 @@ const TrackOrder = () => {
                   <div className="min-w-0">
                     <h4 className="font-bold text-sm text-[#112338] truncate">{item.name}</h4>
                     <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-0.5">
-                      {item.size && <span>Size: {item.size}</span>}
+                      {!isMeaninglessVariation(item.size) && (
+                        <span>{isColorVariation(item.size) ? `Color: ${item.size}` : `Size: ${item.size}`}</span>
+                      )}
                       {item.gsm && <span>• {item.gsm}g</span>}
                       <span>• Qty: {item.quantity} {item.packingType || ''}</span>
                     </div>
