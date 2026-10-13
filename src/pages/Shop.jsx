@@ -45,7 +45,7 @@ const DEPARTMENT_FALLBACK_IMAGES = {
 
 const formatPrice = (priceStr) => {
   const num = Number(priceStr);
-  return isNaN(num) ? priceStr : num.toLocaleString();
+  return Number.isNaN(num) ? priceStr : num.toLocaleString();
 };
 
 /*
@@ -149,6 +149,30 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
 
   const inStock = Number(currentVariation.Stock) > 0;
 
+  let buttonStyle = 'bg-gray-100 text-gray-400 cursor-not-allowed';
+  if (isAdded) {
+    buttonStyle = 'bg-emerald-600 text-white';
+  } else if (inStock) {
+    buttonStyle = 'bg-[#112338] text-white hover:bg-[#1a3654] active:scale-95';
+  }
+
+  let buttonContent = <span className="text-[9px] font-bold uppercase">Out</span>;
+  if (isAdded) {
+    buttonContent = (
+      <>
+        <Check size={13} className="stroke-[2.5]" />
+        <span className="hidden sm:inline">Added</span>
+      </>
+    );
+  } else if (inStock) {
+    buttonContent = (
+      <>
+        <ShoppingBag size={13} />
+        <span className="hidden sm:inline">Add</span>
+      </>
+    );
+  }
+
   return (
     <article className="product-card w-full h-full group bg-white border border-[#e5e1d7] hover:border-[#112338]/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 flex flex-col rounded-[3px] overflow-hidden">
       {/* Product Image Link */}
@@ -210,18 +234,17 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
         {/* Installment Toggle */}
         {!installmentHidden && !isCategoryInstallmentDisabled && PAPER_CATEGORY_NAMES.has((currentVariation?.Category || '').toLowerCase()) && (
           <div className="flex items-center gap-1.5 mb-2.5 bg-indigo-50/60 p-1.5 rounded-[3px] border border-indigo-100">
-            <input 
-              type="checkbox" 
-              checked={isInstallment}
-              onChange={(e) => setIsInstallment(e.target.checked)}
-              className="w-3 h-3 text-indigo-600 bg-white border-indigo-300 rounded focus:ring-indigo-600 accent-indigo-600 cursor-pointer shadow-sm"
-            />
-            <span 
-              className="text-[8px] md:text-[8.5px] text-indigo-700 font-bold uppercase tracking-wider cursor-pointer"
-              onClick={() => setIsInstallment(!isInstallment)}
-            >
-              Request Installment (3M)
-            </span>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={isInstallment}
+                onChange={(e) => setIsInstallment(e.target.checked)}
+                className="w-3 h-3 text-indigo-600 bg-white border-indigo-300 rounded focus:ring-indigo-600 accent-indigo-600 cursor-pointer shadow-sm"
+              />
+              <span className="text-[8px] md:text-[8.5px] text-indigo-700 font-bold uppercase tracking-wider">
+                Request Installment (3M)
+              </span>
+            </label>
           </div>
         )}
 
@@ -254,27 +277,9 @@ const ProductGroupCard = React.memo(function ProductGroupCard({ productName, ins
               }
             }}
             ref={btnRef}
-            className={`${
-              isAdded
-                ? 'bg-emerald-600 text-white'
-                : inStock
-                  ? 'bg-[#112338] text-white hover:bg-[#1a3654] active:scale-95'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            } h-8 md:h-9 px-2.5 sm:px-3 rounded-[3px] font-semibold text-[11px] sm:text-[12px] flex items-center justify-center gap-1.5 transition-all duration-200 shrink-0 shadow-sm`}
+            className={`${buttonStyle} h-8 md:h-9 px-2.5 sm:px-3 rounded-[3px] font-semibold text-[11px] sm:text-[12px] flex items-center justify-center gap-1.5 transition-all duration-200 shrink-0 shadow-sm`}
           >
-            {isAdded ? (
-              <>
-                <Check size={13} className="stroke-[2.5]" />
-                <span className="hidden sm:inline">Added</span>
-              </>
-            ) : inStock ? (
-              <>
-                <ShoppingBag size={13} />
-                <span className="hidden sm:inline">Add</span>
-              </>
-            ) : (
-              <span className="text-[9px] font-bold uppercase">Out</span>
-            )}
+            {buttonContent}
           </button>
         </div>
       </div>
@@ -337,7 +342,7 @@ const Shop = () => {
     if (!sub && !main) return;
 
     const dept = main || departmentOf(sub);
-    navigate(categoryPath(dept, sub ? displayNameOf(sub) : null), { replace: true });
+    void navigate(categoryPath(dept, sub ? displayNameOf(sub) : null), { replace: true });
   }, [location.state, navigate]);
 
   const { counts: categoryCounts, images: categoryImages, loading: countsLoading } = useCategoryCounts();
@@ -350,7 +355,6 @@ const Shop = () => {
     categoryImages: adminCategoryImages,
     hiddenDepartments,
     hiddenCategories,
-    hiddenInstallmentDepartments,
     hiddenInstallmentCategories,
     loading: taxonomyLoading,
   } = useTaxonomyImages();
@@ -475,6 +479,15 @@ const Shop = () => {
     }).filter(group => group.variations.length > 0);
   }, [dbProducts]);
 
+  const resolveDepartmentImage = (deptName, adminImages, cards) => {
+    if (adminImages[deptName]) return adminImages[deptName];
+    if (deptName === 'Notebooks') return DEPARTMENT_FALLBACK_IMAGES['Notebooks'];
+    if (deptName === PAPER_AND_CANVAS) {
+      return DEPARTMENT_FALLBACK_IMAGES[PAPER_AND_CANVAS] || PAPER_DEPARTMENT_IMAGE;
+    }
+    return cards.find((c) => c.image)?.image || DEPARTMENT_FALLBACK_IMAGES[deptName] || PLACEHOLDER_IMAGE;
+  };
+
   // Department tiles: how many categories each holds, and the artwork to use.
   // A department an admin has hidden is dropped here, which is what takes it off
   // the index; its own hidden categories are dropped from the tally too, so the
@@ -482,20 +495,11 @@ const Shop = () => {
   const departments = useMemo(
     () =>
       DEPARTMENTS.filter((dept) => !hiddenDepartments[dept.name]).map((dept) => {
-        const cards = (cardsByDepartment[dept.name] || []).filter((c) => !hiddenCategories[c.name])
+        const cards = (cardsByDepartment[dept.name] || []).filter((c) => !hiddenCategories[c.name]);
         return {
           ...dept,
           categoryCount: cards.length,
-          // A picture chosen in the admin panel wins over everything else,
-          // including the flagship's pinned photograph — the whole point of
-          // setting one is that it is meant to replace the default.
-          image:
-            adminDepartmentImages[dept.name] ||
-            (dept.name === 'Notebooks'
-              ? DEPARTMENT_FALLBACK_IMAGES['Notebooks']
-              : dept.name === PAPER_AND_CANVAS
-                ? (DEPARTMENT_FALLBACK_IMAGES[PAPER_AND_CANVAS] || PAPER_DEPARTMENT_IMAGE)
-                : cards.find((c) => c.image)?.image || DEPARTMENT_FALLBACK_IMAGES[dept.name] || PLACEHOLDER_IMAGE),
+          image: resolveDepartmentImage(dept.name, adminDepartmentImages, cards),
         };
       }),
     [cardsByDepartment, adminDepartmentImages, hiddenDepartments, hiddenCategories]
@@ -509,11 +513,12 @@ const Shop = () => {
    *
    * Computed before the early returns below because it feeds a hook.
    */
-  const canonicalPath = showingProducts
-    ? `/shop/${deptSlug}/${categorySlug}`
-    : selectedMainCategory
-      ? categoryPath(selectedMainCategory)
-      : '/shop';
+  let canonicalPath = '/shop';
+  if (showingProducts) {
+    canonicalPath = `/shop/${deptSlug}/${categorySlug}`;
+  } else if (selectedMainCategory) {
+    canonicalPath = categoryPath(selectedMainCategory);
+  }
 
   const seo = useMemo(() => {
     if (showingProducts) {
@@ -593,16 +598,31 @@ const Shop = () => {
   if (!selectedMainCategory && !showingProducts) {
     return (
       <main className="flex-1 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full flex flex-col pt-16 md:pt-20 pb-stack-lg">
-        <div className="mb-stack-lg border-b border-outline-variant pb-stack-sm flex justify-between items-end">
-          <div>
-            <h1 className="font-headline-xl text-[28px] md:text-headline-xl text-on-surface">Shop Departments</h1>
-            <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">Select a department to view available categories.</p>
+        <div className="mb-stack-lg border-b border-outline-variant pb-stack-sm flex flex-col gap-3">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase bg-white px-3.5 py-1.5 rounded-[3px] border border-[#e5e1d7] shadow-sm w-fit text-[10px] transition-colors"
+          >
+            <ArrowLeft size={13} /> Back to Home
+          </Link>
+          <div className="flex justify-between items-end">
+            <div>
+              <h1 className="font-headline-xl text-[28px] md:text-headline-xl text-on-surface">Shop Departments</h1>
+              <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">Select a department to view available categories.</p>
+            </div>
           </div>
         </div>
 
         <div ref={categoriesGridRef} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 auto-rows-[170px] sm:auto-rows-[190px] md:auto-rows-[220px]">
           {departments.map((cat, idx) => {
             const isFeatured = cat.name === PAPER_AND_CANVAS;
+            let countBadgeText = 'Coming Soon';
+            if (countsLoading) {
+              countBadgeText = '...';
+            } else if (cat.categoryCount > 0) {
+              countBadgeText = `${cat.categoryCount} Categories`;
+            }
+
             return (
               <Link
                 key={cat.name}
@@ -634,7 +654,7 @@ const Shop = () => {
                     </span>
                   </h3>
                   <span className="text-[10px] sm:text-[11px] font-medium text-[#64748b] bg-[#f5f3ee] px-2.5 py-1 rounded-[3px] border border-[#e5e1d7]/60 whitespace-nowrap shrink-0 tracking-normal">
-                    {countsLoading ? '...' : cat.categoryCount > 0 ? `${cat.categoryCount} Categories` : 'Coming Soon'}
+                    {countBadgeText}
                   </span>
                 </div>
               </Link>
@@ -671,6 +691,13 @@ const Shop = () => {
         >
           {dynamicCategories.map((cat, idx) => {
             const count = cat.count || 0;
+            let countBadge = 'Available';
+            if (countsLoading) {
+              countBadge = '...';
+            } else if (count > 0) {
+              countBadge = `${count} Items`;
+            }
+
             return (
               <Link
                 key={cat.name}
@@ -698,7 +725,7 @@ const Shop = () => {
                     </span>
                   </h3>
                   <span className="text-[9.5px] sm:text-[10.5px] font-medium text-[#64748b] bg-[#f5f3ee] px-2 py-0.5 rounded-[3px] border border-[#e5e1d7]/60 whitespace-nowrap shrink-0">
-                    {countsLoading ? '...' : (count > 0 ? `${count} Items` : 'Available')}
+                    {countBadge}
                   </span>
                 </div>
               </Link>
@@ -706,6 +733,39 @@ const Shop = () => {
           })}
         </div>
       </main>
+    );
+  }
+
+  let productGridContent;
+  if (productsLoading || (!selectedSubCategory && countsLoading)) {
+    productGridContent = (
+      <div className="flex flex-col items-center justify-center py-28 bg-white rounded-[4px] border border-[#e5e1d7] shadow-sm animate-pulse">
+        <div className="w-12 h-12 bg-gray-200 rounded-full mb-3"></div>
+        <div className="h-5 bg-gray-200 rounded w-40 mb-2"></div>
+        <div className="h-3.5 bg-gray-200 rounded w-56"></div>
+      </div>
+    );
+  } else if (groupedProducts.length === 0) {
+    productGridContent = (
+      <div className="flex flex-col items-center justify-center py-28 bg-white rounded-[4px] border border-dashed border-[#e5e1d7] shadow-sm">
+        <Package size={48} className="text-gray-300 mb-4" />
+        <h3 className="font-serif text-[#112338] font-medium text-[19px]">No products available</h3>
+        <p className="text-[#64748b] text-[13px] mt-1">This category is currently being updated with new stock.</p>
+      </div>
+    );
+  } else {
+    productGridContent = (
+      <section ref={productsGridRef} className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-5">
+        {groupedProducts.map((group) => (
+          <ProductGroupCard 
+            key={group.name} 
+            productName={group.name} 
+            installmentHidden={group.installmentHidden}
+            isCategoryInstallmentDisabled={hiddenInstallmentCategories[selectedSubCategory]}
+            variations={group.variations} 
+          />
+        ))}
+      </section>
     );
   }
 
@@ -773,31 +833,7 @@ const Shop = () => {
         </section>
 
         {/* Product Grid */}
-        {productsLoading || (!selectedSubCategory && countsLoading) ? (
-          <div className="flex flex-col items-center justify-center py-28 bg-white rounded-[4px] border border-[#e5e1d7] shadow-sm animate-pulse">
-            <div className="w-12 h-12 bg-gray-200 rounded-full mb-3"></div>
-            <div className="h-5 bg-gray-200 rounded w-40 mb-2"></div>
-            <div className="h-3.5 bg-gray-200 rounded w-56"></div>
-          </div>
-        ) : groupedProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-28 bg-white rounded-[4px] border border-dashed border-[#e5e1d7] shadow-sm">
-            <Package size={48} className="text-gray-300 mb-4" />
-            <h3 className="font-serif text-[#112338] font-medium text-[19px]">No products available</h3>
-            <p className="text-[#64748b] text-[13px] mt-1">This category is currently being updated with new stock.</p>
-          </div>
-        ) : (
-          <section ref={productsGridRef} className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-5">
-            {groupedProducts.map((group) => (
-              <ProductGroupCard 
-                key={group.name} 
-                productName={group.name} 
-                installmentHidden={group.installmentHidden}
-                isCategoryInstallmentDisabled={hiddenInstallmentCategories[selectedSubCategory]}
-                variations={group.variations} 
-              />
-            ))}
-          </section>
-        )}
+        {productGridContent}
       </main>
     </div>
   );

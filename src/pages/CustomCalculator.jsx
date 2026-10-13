@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Calculator, Maximize, Layers, Copy, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Maximize, Layers, Copy, HelpCircle, ArrowLeft } from 'lucide-react';
 // Pre-digested at build time from products.json by scripts/build-calculator-data.cjs.
-// Importing the raw catalogue here put 428 kB of product rows in the bundle.
 import categories from '../data/calculator-rates.json';
 import { usePageSeo } from '../lib/seo';
 import { howToSchema, faqSchema } from '../lib/schema';
@@ -11,12 +11,7 @@ const EMPTY_OPTIONS = { gsms: [], lengths: [], widths: [] };
 
 /*
  * The arithmetic this page performs, written out as data.
- *
- * `weight = (l * w * g * s) / 1550000` a few lines below is the whole product;
- * 1,550,000 is 1,000 (grams to kilograms) × 1,550 (square inches in a square
- * metre). Stating it here means the formula is machine-readable, so "how do you
- * calculate paper weight from GSM" can be answered with this page as the source
- * rather than with the page merely being a calculator nobody can quote.
+ * weight = (l * w * g * s) / 1550000
  */
 const CALCULATOR_HOWTO = howToSchema({
   name: 'How to calculate the weight and price of a custom paper size',
@@ -45,12 +40,8 @@ const CALCULATOR_HOWTO = howToSchema({
   ],
 });
 
-// The two questions this page exists to answer, drawn from the shared list so
-// the wording never drifts from /faq.
 const CALCULATOR_FAQS = FAQS.filter((f) =>
-  ['How do I calculate the weight of a custom paper size?', 'What GSM should I choose?'].includes(
-    f.question
-  )
+  ['How do I calculate the weight of a custom paper size?', 'What GSM should I choose?'].includes(f.question)
 );
 
 const CustomCalculator = () => {
@@ -65,13 +56,10 @@ const CustomCalculator = () => {
   const [gsm, setGsm] = useState('');
   const [sheets, setSheets] = useState('100');
 
-  const selectedCatObj = useMemo(
-    () => categories.find((c) => c.name === category),
-    [category]
-  );
+  const selectedCatObj = useMemo(() => categories.find((c) => c.name === category), [category]);
 
   React.useEffect(() => {
-    if (selectedCatObj && selectedCatObj.brands && selectedCatObj.brands.length > 0) {
+    if (selectedCatObj?.brands?.length > 0) {
       setBrand(selectedCatObj.brands[0].name);
     } else {
       setBrand('');
@@ -79,137 +67,222 @@ const CustomCalculator = () => {
   }, [category, selectedCatObj]);
 
   const selectedBrandObj = useMemo(() => {
-    if (!selectedCatObj || !selectedCatObj.brands) return null;
-    return selectedCatObj.brands.find(b => b.name === brand) || selectedCatObj.brands[0];
+    if (!selectedCatObj?.brands) return null;
+    return selectedCatObj.brands.find((b) => b.name === brand) || selectedCatObj.brands[0];
   }, [selectedCatObj, brand]);
 
   const selectedRate = selectedBrandObj ? selectedBrandObj.rate : 0;
   const categoryData = selectedBrandObj || EMPTY_OPTIONS;
 
   const results = useMemo(() => {
-    const l = parseFloat(length) || 0;
-    const w = parseFloat(width) || 0;
-    const g = parseFloat(gsm) || 0;
-    const s = parseFloat(sheets) || 0;
-    
+    const l = Number.parseFloat(length) || 0;
+    const w = Number.parseFloat(width) || 0;
+    const g = Number.parseFloat(gsm) || 0;
+    const s = Number.parseFloat(sheets) || 0;
+
     if (l > 0 && w > 0 && g > 0 && s > 0) {
       const weight = (l * w * g * s) / 1550000;
       const price = weight * selectedRate;
-      return { 
-        weight: weight.toFixed(4), 
+      return {
+        weight: weight.toFixed(4),
         price: Math.round(price).toLocaleString(),
-        rawPrice: price
+        rawPrice: price,
       };
     }
     return { weight: '0.0000', price: '0', rawPrice: 0 };
   }, [length, width, gsm, sheets, selectedRate]);
 
   return (
-    <div className="flex-1 w-full max-w-4xl mx-auto pt-8 px-4 md:px-8 pb-32">
-      {/* Header */}
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-orange-50 text-primary mb-4 shadow-sm border border-orange-100">
-          <Calculator size={32} strokeWidth={2} />
-        </div>
-        <h1 className="font-headline-xl text-[32px] md:text-[42px] font-extrabold text-[#111111] tracking-tight leading-tight">Custom Size Calculator</h1>
-        <p className="text-gray-500 mt-3 text-[14px] md:text-[16px] max-w-xl mx-auto">Need a non-standard size? Enter your dimensions below to instantly calculate the weight and price using live market rates.</p>
+    <div className="flex-1 w-full max-w-4xl mx-auto pt-3 sm:pt-5 px-3.5 sm:px-6 pb-20 font-sans">
+      {/* Back Button */}
+      <div className="mb-3 sm:mb-4">
+        <Link
+          to="/shop"
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase bg-white px-3.5 py-1.5 rounded-[3px] border border-[#e5e1d7] shadow-sm w-fit text-[10px] transition-colors"
+        >
+          <ArrowLeft size={13} /> Back to Shop
+        </Link>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Input Section */}
-        <div className="lg:col-span-7 bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-[0_10px_40px_rgb(0,0,0,0.03)] relative overflow-hidden">
-          {/* Subtle background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -z-10 -mr-20 -mt-20 opacity-50"></div>
-          
-          <h2 className="text-[18px] font-bold text-[#111111] mb-6 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-[14px]">1</span>
-            Enter Specifications
-          </h2>
+      {/* Full Width Top Banner */}
+      <div className="w-full rounded-xl sm:rounded-2xl overflow-hidden border border-[#e5e1d7] shadow-xs mb-3.5 sm:mb-5 bg-[#fcfbfa] relative">
+        <div className="w-full aspect-[2.3/1] sm:aspect-[2.8/1] max-h-[190px] sm:max-h-[230px] overflow-hidden">
+          <picture className="w-full h-full">
+            <source srcSet="/images/calculator-banner-hd.webp" type="image/webp" />
+            <img
+              src="/images/calculator-banner-hd.jpg"
+              alt="Custom Size Paper Calculator Banner"
+              className="w-full h-full object-cover object-[65%_center] sm:object-center"
+              fetchPriority="high"
+            />
+          </picture>
+        </div>
+      </div>
 
-          <div className="flex flex-col gap-6">
-            {/* Category Select */}
-            <div className="flex flex-col gap-2">
-              <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase">Paper Category</label>
+      {/* Header Title & Subtitle */}
+      <div className="text-center mb-4 sm:mb-6">
+        <h1 className="font-serif text-[22px] sm:text-[28px] md:text-[32px] font-bold text-[#112338] tracking-tight leading-tight">
+          Custom Size Calculator
+        </h1>
+        <p className="text-[#64748b] mt-1 text-[12px] sm:text-[13.5px] max-w-md mx-auto leading-relaxed">
+          Need a non-standard size? Enter dimensions below to instantly calculate weight and price using live market rates.
+        </p>
+      </div>
+
+      {/* Main Grid: Compact 2-Column Side-by-Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-5 items-start">
+        {/* Input Section (Light Crisp Surface) */}
+        <div className="lg:col-span-7 bg-white p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-[#e5e1d7] shadow-xs relative overflow-hidden">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 pb-2.5 border-b border-[#f0ede6]">
+            <span className="w-5.5 h-5.5 rounded-full bg-[#112338] text-white flex items-center justify-center text-[10.5px] font-bold shrink-0">
+              1
+            </span>
+            <h2 className="text-[14px] sm:text-[15px] font-bold text-[#112338]">Enter Specifications</h2>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:gap-3.5">
+            {/* Paper Category Select */}
+            <div className="flex flex-col">
+              <label htmlFor="calc-category" className="text-[9.5px] sm:text-[10px] text-gray-500 font-bold tracking-wider uppercase mb-1">
+                Paper Category
+              </label>
               <div className="relative">
-                <select 
+                <select
+                  id="calc-category"
                   value={category}
                   onChange={(e) => {
                     setCategory(e.target.value);
-                    setLength(''); setWidth(''); setGsm('');
+                    setLength('');
+                    setWidth('');
+                    setGsm('');
                   }}
-                  className="w-full bg-gray-50 border border-gray-200 text-[#111111] font-bold text-[14px] p-4 rounded-xl outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none transition-all cursor-pointer shadow-sm"
+                  className="w-full bg-[#faf8f5] border border-[#dcd7cb] text-[#112338] font-bold text-[12.5px] sm:text-[13px] h-9 sm:h-9.5 px-3 rounded-lg outline-none focus:border-primary appearance-none cursor-pointer shadow-2xs hover:border-gray-400 transition-colors"
                 >
-                  {categories.map((c, idx) => (
-                    <option key={idx} value={c.name}>{c.name}</option>
+                  {categories.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      {c.name}
+                    </option>
                   ))}
                 </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                 </div>
               </div>
             </div>
 
             {/* Brand Select */}
-            {selectedCatObj && selectedCatObj.brands && selectedCatObj.brands.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase">Select Brand (Determines Rate)</label>
+            {Boolean(selectedCatObj?.brands?.length) && (
+              <div className="flex flex-col">
+                <label htmlFor="calc-brand" className="text-[9.5px] sm:text-[10px] text-gray-500 font-bold tracking-wider uppercase mb-1">
+                  Select Brand (Determines Rate)
+                </label>
                 <div className="relative">
-                  <select 
+                  <select
+                    id="calc-brand"
                     value={brand}
                     onChange={(e) => {
                       setBrand(e.target.value);
-                      setLength(''); setWidth(''); setGsm('');
+                      setLength('');
+                      setWidth('');
+                      setGsm('');
                     }}
-                    className="w-full bg-gray-50 border border-gray-200 text-[#111111] font-bold text-[14px] p-4 rounded-xl outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 appearance-none transition-all cursor-pointer shadow-sm"
+                    className="w-full bg-[#faf8f5] border border-[#dcd7cb] text-[#112338] font-bold text-[12.5px] sm:text-[13px] h-9 sm:h-9.5 px-3 rounded-lg outline-none focus:border-primary appearance-none cursor-pointer shadow-2xs hover:border-gray-400 transition-colors"
                   >
-                    {selectedCatObj.brands.map((b, idx) => (
-                      <option key={idx} value={b.name}>{b.name}</option>
+                    {selectedCatObj.brands.map((b) => (
+                      <option key={b.name} value={b.name}>
+                        {b.name}
+                      </option>
                     ))}
                   </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Size Inputs */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase flex items-center gap-1.5"><Maximize size={14}/> Length (inch)</label>
-                <input 
-                  type="number" 
+            {/* Size Inputs (Length & Width) */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              <div className="flex flex-col">
+                <label htmlFor="calc-length" className="text-[9.5px] sm:text-[10px] text-gray-500 font-bold tracking-wider uppercase mb-1 flex items-center gap-1">
+                  <Maximize size={11} /> Length (inch)
+                </label>
+                <input
+                  id="calc-length"
+                  type="number"
                   value={length}
                   onChange={(e) => setLength(e.target.value)}
                   placeholder="e.g. 25"
-                  className="w-full bg-gray-50 border border-gray-200 text-[#111111] font-bold text-[14px] p-4 rounded-xl outline-none focus:border-primary focus:bg-white transition-all shadow-sm"
+                  className="w-full bg-[#faf8f5] border border-[#dcd7cb] text-[#112338] font-bold text-[12.5px] sm:text-[13px] h-8.5 sm:h-9 px-2.5 rounded-lg outline-none focus:border-primary focus:bg-white shadow-2xs transition-all"
                 />
                 {categoryData.lengths.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {categoryData.lengths.slice(0, 6).map(l => (
-                      <button key={l} onClick={() => setLength(l)} className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${length === l ? 'bg-primary text-white border-primary' : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-primary/40 hover:text-primary'}`}>
-                        {l}"
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {categoryData.lengths.slice(0, 5).map((l) => (
+                      <button
+                        key={l}
+                        type="button"
+                        onClick={() => setLength(l)}
+                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${
+                          length === l
+                            ? 'bg-[#112338] text-white border-[#112338]'
+                            : 'bg-[#f5f3ee] text-gray-600 border-[#e0dbcf] hover:border-gray-400'
+                        }`}
+                      >
+                        {l}&quot;
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase flex items-center gap-1.5"><Maximize size={14} className="rotate-90"/> Width (inch)</label>
-                <input 
-                  type="number" 
+
+              <div className="flex flex-col">
+                <label htmlFor="calc-width" className="text-[9.5px] sm:text-[10px] text-gray-500 font-bold tracking-wider uppercase mb-1 flex items-center gap-1">
+                  <Maximize size={11} className="rotate-90" /> Width (inch)
+                </label>
+                <input
+                  id="calc-width"
+                  type="number"
                   value={width}
                   onChange={(e) => setWidth(e.target.value)}
                   placeholder="e.g. 36"
-                  className="w-full bg-gray-50 border border-gray-200 text-[#111111] font-bold text-[14px] p-4 rounded-xl outline-none focus:border-primary focus:bg-white transition-all shadow-sm"
+                  className="w-full bg-[#faf8f5] border border-[#dcd7cb] text-[#112338] font-bold text-[12.5px] sm:text-[13px] h-8.5 sm:h-9 px-2.5 rounded-lg outline-none focus:border-primary focus:bg-white shadow-2xs transition-all"
                 />
                 {categoryData.widths.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {categoryData.widths.slice(0, 6).map(w => (
-                      <button key={w} onClick={() => setWidth(w)} className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${width === w ? 'bg-primary text-white border-primary' : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-primary/40 hover:text-primary'}`}>
-                        {w}"
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {categoryData.widths.slice(0, 5).map((w) => (
+                      <button
+                        key={w}
+                        type="button"
+                        onClick={() => setWidth(w)}
+                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${
+                          width === w
+                            ? 'bg-[#112338] text-white border-[#112338]'
+                            : 'bg-[#f5f3ee] text-gray-600 border-[#e0dbcf] hover:border-gray-400'
+                        }`}
+                      >
+                        {w}&quot;
                       </button>
                     ))}
                   </div>
@@ -217,116 +290,139 @@ const CustomCalculator = () => {
               </div>
             </div>
 
-            {/* GSM & Sheets */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase flex items-center gap-1.5"><Layers size={14}/> GSM</label>
-                <input 
-                  type="number" 
+            {/* GSM & Sheets Per Pack Inputs */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              <div className="flex flex-col">
+                <label htmlFor="calc-gsm" className="text-[9.5px] sm:text-[10px] text-gray-500 font-bold tracking-wider uppercase mb-1 flex items-center gap-1">
+                  <Layers size={11} /> GSM
+                </label>
+                <input
+                  id="calc-gsm"
+                  type="number"
                   value={gsm}
                   onChange={(e) => setGsm(e.target.value)}
                   placeholder="e.g. 300"
-                  className="w-full bg-gray-50 border border-gray-200 text-[#111111] font-bold text-[14px] p-4 rounded-xl outline-none focus:border-primary focus:bg-white transition-all shadow-sm"
+                  className="w-full bg-[#faf8f5] border border-[#dcd7cb] text-[#112338] font-bold text-[12.5px] sm:text-[13px] h-8.5 sm:h-9 px-2.5 rounded-lg outline-none focus:border-primary focus:bg-white shadow-2xs transition-all"
                 />
                 {categoryData.gsms.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {categoryData.gsms.slice(0, 6).map(g => (
-                      <button key={g} onClick={() => setGsm(g)} className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${gsm === g ? 'bg-primary text-white border-primary' : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-primary/40 hover:text-primary'}`}>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {categoryData.gsms.slice(0, 5).map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setGsm(g)}
+                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${
+                          gsm === g
+                            ? 'bg-[#112338] text-white border-[#112338]'
+                            : 'bg-[#f5f3ee] text-gray-600 border-[#e0dbcf] hover:border-gray-400'
+                        }`}
+                      >
                         {g}g
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="font-label-caps text-[10px] md:text-[11px] text-gray-500 font-bold tracking-widest uppercase flex items-center gap-1.5"><Copy size={14}/> Sheets Per Pack</label>
-                <input 
-                  type="number" 
+
+              <div className="flex flex-col">
+                <label htmlFor="calc-sheets" className="text-[9.5px] sm:text-[10px] text-gray-500 font-bold tracking-wider uppercase mb-1 flex items-center gap-1">
+                  <Copy size={11} /> Sheets / Pack
+                </label>
+                <input
+                  id="calc-sheets"
+                  type="number"
                   value={sheets}
                   onChange={(e) => setSheets(e.target.value)}
                   placeholder="100"
-                  className="w-full bg-gray-50 border border-gray-200 text-[#111111] font-bold text-[14px] p-4 rounded-xl outline-none focus:border-primary focus:bg-white transition-all shadow-sm"
+                  className="w-full bg-[#faf8f5] border border-[#dcd7cb] text-[#112338] font-bold text-[12.5px] sm:text-[13px] h-8.5 sm:h-9 px-2.5 rounded-lg outline-none focus:border-primary focus:bg-white shadow-2xs transition-all"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Results Section */}
-        <div className="lg:col-span-5 bg-[#111111] text-white p-6 md:p-8 rounded-3xl relative overflow-hidden shadow-2xl flex flex-col justify-center">
-          {/* Animated background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50"></div>
-          
+        {/* Results Section (Deep Dark Black with Crisp Pure White Text) */}
+        <div className="lg:col-span-5 bg-[#0a0c10] text-white p-4 sm:p-5.5 rounded-xl sm:rounded-2xl border border-white/15 shadow-[0_12px_36px_rgba(0,0,0,0.4)] relative overflow-hidden flex flex-col justify-between">
+          {/* Subtle warm ambient highlight */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-primary/15 rounded-full blur-3xl pointer-events-none"></div>
+
           <div className="relative z-10">
-            <h2 className="text-[18px] font-bold text-white mb-8 flex items-center gap-2">
-              <span className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[14px]">2</span>
-              Calculation Result
-            </h2>
+            {/* Header: Badge + Title */}
+            <div className="flex items-center gap-2 mb-3.5 pb-2.5 border-b border-white/15">
+              <span className="w-5.5 h-5.5 rounded-full bg-primary text-white flex items-center justify-center text-[11px] font-extrabold shrink-0 shadow-xs">
+                2
+              </span>
+              <h2 className="text-[14.5px] sm:text-[15.5px] font-bold text-white tracking-tight">Calculation Result</h2>
+            </div>
 
-            <div className="flex flex-col gap-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <span className="text-white/60 font-medium text-[14px]">Current Live Rate</span>
-                <span className="font-bold text-[16px]">Rs. {selectedRate} <span className="text-white/40 font-normal text-[12px]">/ kg</span></span>
-              </div>
-              
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <span className="text-white/60 font-medium text-[14px]">Calculated Weight</span>
-                <span className="font-bold text-[20px] text-orange-400">{results.weight} <span className="text-white/40 font-normal text-[14px]">kg</span></span>
+            <div className="flex flex-col gap-3">
+              {/* Current Live Rate: Crisp White Text */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-2.5 text-[12.5px] sm:text-[13px]">
+                <span className="text-white/90 font-medium">Current Live Rate</span>
+                <span className="font-bold text-white tracking-tight">
+                  Rs. {selectedRate} <span className="text-white/65 font-normal text-[11px]">/ kg</span>
+                </span>
               </div>
 
-              <div className="flex flex-col pt-2">
-                <span className="text-white/60 font-medium text-[14px] mb-1">Total Estimated Price</span>
-                <span className="font-price-display font-extrabold text-[42px] leading-none tracking-tight text-white">Rs. {results.price}</span>
+              {/* Calculated Weight: Crisp Highlighted Text */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-2.5 text-[12.5px] sm:text-[13px]">
+                <span className="text-white/90 font-medium">Calculated Weight</span>
+                <span className="font-mono font-bold text-amber-300 text-[15px] sm:text-[16px] tracking-tight">
+                  {results.weight} <span className="text-white/75 font-sans font-normal text-[12px]">kg</span>
+                </span>
+              </div>
+
+              {/* Total Estimated Price: Bold White Display */}
+              <div className="flex flex-col pt-1 pb-0.5">
+                <span className="text-white/80 font-bold text-[10px] sm:text-[10.5px] uppercase tracking-wider mb-1">
+                  Total Estimated Price
+                </span>
+                <div className="font-serif font-black text-[30px] sm:text-[36px] leading-tight text-white tracking-tight flex items-baseline gap-1.5">
+                  <span className="text-primary text-[20px] sm:text-[23px] font-bold">Rs.</span>
+                  <span className="text-white">{results.price}</span>
+                </div>
               </div>
             </div>
 
-            <div className="mt-10 bg-white/5 border border-white/10 p-4 rounded-2xl flex items-start gap-3">
-              <HelpCircle size={18} className="text-white/40 shrink-0 mt-0.5" />
-              <p className="text-[12px] text-white/60 leading-relaxed">
-                This price is an estimate based on standard paper formulas. Custom orders are subject to mill availability. Contact us for bulk booking.
+            {/* Disclaimer Box with Clean High-Contrast White Text */}
+            <div className="mt-3.5 bg-white/[0.08] border border-white/15 p-2.5 sm:p-3 rounded-xl flex items-start gap-2.5 text-[11px] sm:text-[11.5px] text-white/90 leading-relaxed">
+              <HelpCircle size={14} className="text-white/75 shrink-0 mt-0.5" />
+              <p>
+                Price is an estimate based on standard paper formulas. Custom orders are subject to mill availability.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/*
-        The formula the calculator runs, spelled out, plus the two questions
-        people ask on the way to using it. This is the visible counterpart of
-        the HowTo and FAQPage structured data above — the markup describes this
-        section, and nothing in it that a machine can read is hidden from a
-        reader.
-      */}
-      <section className="mt-16 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-5 bg-gray-50 border border-gray-100 rounded-3xl p-6 md:p-8">
-          <h2 className="text-[18px] font-bold text-[#111111] mb-4">How the figure is worked out</h2>
-          <p className="text-[13px] text-gray-500 leading-relaxed mb-4">
-            Paper is sold by weight, not by the sheet, so the price of a ream follows from its
-            dimensions and its GSM:
+      {/* Minimal How-It-Works & FAQ Section */}
+      <section className="mt-6 sm:mt-10 pt-5 sm:pt-6 border-t border-[#e5e1d7]">
+        {/* Compact Formula Banner */}
+        <div className="bg-[#faf8f5] border border-[#e5e1d7] rounded-xl p-3 sm:p-4 mb-3.5 sm:mb-4">
+          <h2 className="text-[13px] sm:text-[14px] font-bold text-[#112338] mb-1.5">
+            How the figure is worked out
+          </h2>
+          <p className="text-[11.5px] sm:text-[12px] text-gray-500 mb-2 leading-relaxed">
+            Paper is priced by weight. The price of a ream follows from dimensions and GSM:
           </p>
-          <p className="font-mono text-[12px] md:text-[13px] bg-white border border-gray-200 rounded-xl p-4 text-[#111111] leading-relaxed">
-            weight&nbsp;in&nbsp;kg = (length&nbsp;×&nbsp;width&nbsp;×&nbsp;GSM&nbsp;×&nbsp;sheets) ÷
-            1,550,000
+          <div className="font-mono text-[11px] sm:text-[12px] bg-white border border-[#e2ddd3] rounded-lg p-2.5 text-[#112338] leading-relaxed">
+            weight in kg = (length × width × GSM × sheets) ÷ 1,550,000
             <br />
-            price = weight&nbsp;in&nbsp;kg × rate&nbsp;per&nbsp;kg
-          </p>
-          <p className="text-[12px] text-gray-400 leading-relaxed mt-4">
-            Length and width in inches. The constant 1,550,000 is 1,550 square inches per square
-            metre multiplied by 1,000 grams per kilogram, which is what converts the result to
-            kilograms.
-          </p>
+            price = weight in kg × rate per kg
+          </div>
         </div>
 
-        <div className="lg:col-span-7 flex flex-col gap-4">
+        {/* Concise FAQ Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
           {CALCULATOR_FAQS.map((faq) => (
             <div
               key={faq.question}
-              className="bg-white border border-gray-100 rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)]"
+              className="bg-white border border-[#e5e1d7] rounded-xl p-3 sm:p-3.5 shadow-2xs"
             >
-              <h2 className="text-[16px] md:text-[17px] font-bold text-[#111111] mb-2 leading-snug">
+              <h3 className="text-[12.5px] sm:text-[13.5px] font-bold text-[#112338] mb-1 leading-snug">
                 {faq.question}
-              </h2>
-              <p className="text-[13px] md:text-[14px] text-gray-500 leading-relaxed">{faq.answer}</p>
+              </h3>
+              <p className="text-[11.5px] sm:text-[12px] text-gray-500 leading-relaxed">{faq.answer}</p>
             </div>
           ))}
         </div>

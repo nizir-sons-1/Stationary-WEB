@@ -1,182 +1,262 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Mail, MapPin, Phone, MessageCircle, Clock, Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Mail, MapPin, Phone, MessageCircle, Clock, ExternalLink, ArrowLeft } from 'lucide-react';
 import { usePageSeo } from '../lib/seo';
 
 const ContactUs = () => {
-  // ContactPage rather than plain WebPage: the store node with the address,
-  // phone number and opening hours is already in the graph on every route, and
-  // this type is what marks this URL as the page it belongs to.
   usePageSeo('/contact', { pageType: 'ContactPage' });
 
   return (
-    <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="mb-12"
-      >
-        <div className="inline-block px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-4">
-          <p className="text-primary text-[12px] font-bold uppercase tracking-widest">Get In Touch</p>
-        </div>
-        <h1 className="font-headline-xl text-[36px] md:text-[56px] text-secondary font-black tracking-tight leading-none mb-4">
-          Contact <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 font-serif italic font-medium">Nazir & Sons</span>
-        </h1>
-        <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
-          We're here to assist you with premium paper stocks, stationery, and fine arts inquiries. Reach out to our dedicated support team today.
-        </p>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left: Contact Info */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="lg:col-span-5 flex flex-col gap-6"
+    <main className="flex-grow pt-4 sm:pt-6 md:pt-8 pb-16 px-4 sm:px-6 md:px-gutter max-w-container-max w-full mx-auto font-sans">
+      {/* Back Button */}
+      <div className="mb-4 sm:mb-5">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase bg-white px-3.5 py-1.5 rounded-[3px] border border-[#e5e1d7] shadow-sm w-fit text-[10px] transition-colors"
         >
-          <div className="glass-panel bg-white p-8 rounded-[32px] border border-white/60 shadow-glass">
-            <h3 className="text-2xl font-bold text-secondary mb-8 font-serif italic">Contact Details</h3>
-            
-            <div className="flex flex-col gap-8">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-primary shrink-0">
-                  <MapPin size={24} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-secondary text-[16px] mb-1">Head Office & Store</h4>
-                  <p className="text-gray-500 text-[14px] leading-relaxed">
-                    Nazir & Sons Paper<br />
-                    Lahore Paper Market, Abkari Road<br />
-                    Anarkali Bazaar, Lahore, Pakistan
-                  </p>
-                </div>
-              </div>
+          <ArrowLeft size={13} /> Back to Home
+        </Link>
+      </div>
 
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                  <Phone size={24} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-secondary text-[16px] mb-1">Phone & WhatsApp</h4>
-                  <p className="text-gray-500 text-[14px] leading-relaxed flex flex-col gap-1">
-                    <a href="tel:+923202220001" className="hover:text-primary transition-colors">+92 320 2220001</a>
-                    <a href="https://wa.me/923202220001" className="hover:text-green-500 transition-colors flex items-center gap-1"><MessageCircle size={14} /> WhatsApp Us</a>
-                  </p>
-                </div>
-              </div>
+      {/* Editorial Header matching Hero page aesthetic */}
+      <div className="mb-6 sm:mb-10 max-w-2xl">
+        <span className="text-[10.5px] sm:text-[11.5px] font-bold text-[#64748b] uppercase tracking-[0.2em] font-sans block mb-2">
+          Direct Assistance &amp; Inquiries
+        </span>
+        <h1 className="font-serif text-[30px] sm:text-[40px] md:text-[46px] font-normal text-[#112338] leading-[1.12] tracking-tight mb-2.5">
+          Get in Touch with Nazir &amp; Sons
+        </h1>
+        <p className="text-[#64748b] text-[13.5px] sm:text-[15px] leading-relaxed">
+          Whether you need custom ream orders, wholesale paper rates, fine art supplies, or delivery details across Pakistan — our team is here to assist.
+        </p>
+      </div>
 
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                  <Mail size={24} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-secondary text-[16px] mb-1">Email Address</h4>
-                  <a href="mailto:support@nazirandsons.shop" className="text-gray-500 text-[14px] hover:text-primary transition-colors">
-                    support@nazirandsons.shop
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-7 items-start">
+        {/* Left: Contact Info Card */}
+        <div className="lg:col-span-5 bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-[#e5e1d7] shadow-xs">
+          <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#f0ede6]">
+            <h2 className="font-serif text-[18px] sm:text-[20px] font-bold text-[#112338] tracking-tight">
+              Store &amp; Contact Info
+            </h2>
+            <span className="text-[9.5px] sm:text-[10px] font-sans font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-[3px] border border-emerald-200/60">
+              Est. 1993
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:gap-5">
+            {/* Location */}
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#faf8f5] border border-[#e5e1d7] text-[#112338] flex items-center justify-center shrink-0">
+                <MapPin size={17} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-[#112338] text-[13.5px] sm:text-[14px] leading-tight mb-0.5">
+                  Head Office &amp; Store
+                </h3>
+                <p className="text-[#64748b] text-[12.5px] sm:text-[13px] leading-relaxed">
+                  Nazir &amp; Sons Paper<br />
+                  Lahore Paper Market, Abkari Road<br />
+                  Anarkali Bazaar, Lahore, Pakistan
+                </p>
+                <a
+                  href="https://maps.google.com?q=Nazir%20and%20Sons%20Paper,%20Lahore%20paper%20market,%20Abkari%20Road,%20Anarkali%20Bazaar%20Lahore"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11.5px] font-bold text-primary hover:underline mt-1"
+                >
+                  <span>Get Directions</span>
+                  <ExternalLink size={11} />
+                </a>
+              </div>
+            </div>
+
+            {/* Phone & WhatsApp */}
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#faf8f5] border border-[#e5e1d7] text-[#112338] flex items-center justify-center shrink-0">
+                <Phone size={17} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-[#112338] text-[13.5px] sm:text-[14px] leading-tight mb-0.5">
+                  Phone &amp; WhatsApp
+                </h3>
+                <p className="text-[#64748b] text-[12.5px] sm:text-[13px] leading-relaxed flex flex-col gap-0.5">
+                  <a href="tel:+923202220001" className="font-semibold text-[#112338] hover:text-primary transition-colors">
+                    +92 320 2220001
                   </a>
-                </div>
+                  <a
+                    href="https://wa.me/923202220001"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11.5px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
+                  >
+                    <MessageCircle size={13} /> Chat on WhatsApp
+                  </a>
+                </p>
               </div>
+            </div>
 
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
-                  <Clock size={24} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-secondary text-[16px] mb-1">Business Hours</h4>
-                  <p className="text-gray-500 text-[14px] leading-relaxed">
-                    Monday - Saturday: 10:00 AM - 7:00 PM<br />
-                    Sunday: Closed
-                  </p>
-                </div>
+            {/* Email Address */}
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#faf8f5] border border-[#e5e1d7] text-[#112338] flex items-center justify-center shrink-0">
+                <Mail size={17} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-[#112338] text-[13.5px] sm:text-[14px] leading-tight mb-0.5">
+                  Email Address
+                </h3>
+                <a
+                  href="mailto:support@nazirandsons.shop"
+                  className="text-[#64748b] text-[12.5px] sm:text-[13px] hover:text-primary transition-colors font-medium"
+                >
+                  support@nazirandsons.shop
+                </a>
+              </div>
+            </div>
+
+            {/* Business Hours */}
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#faf8f5] border border-[#e5e1d7] text-[#112338] flex items-center justify-center shrink-0">
+                <Clock size={17} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-[#112338] text-[13.5px] sm:text-[14px] leading-tight mb-0.5">
+                  Business Hours
+                </h3>
+                <p className="text-[#64748b] text-[12.5px] sm:text-[13px] leading-relaxed">
+                  Monday – Saturday: 10:00 AM – 7:00 PM<br />
+                  <span className="text-gray-400">Sunday: Closed</span>
+                </p>
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Right: Contact Form */}
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="lg:col-span-7"
-        >
-          <div className="glass-panel bg-white p-8 md:p-10 rounded-[32px] border border-white/60 shadow-glass">
-            <h3 className="text-2xl font-bold text-secondary mb-2 font-serif italic">Send us a Message</h3>
-            <p className="text-gray-500 text-[14px] mb-8">Fill out the form below and our team will get back to you within 24 hours.</p>
-            
-            <form className="flex flex-col gap-6" onSubmit={(e) => {
+        <div className="lg:col-span-7 bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-[#e5e1d7] shadow-xs">
+          <div className="pb-3.5 mb-4 border-b border-[#f0ede6]">
+            <h2 className="font-serif text-[18px] sm:text-[20px] font-bold text-[#112338] tracking-tight">
+              Send us a Message
+            </h2>
+            <p className="text-[#64748b] text-[12px] sm:text-[13px] mt-0.5">
+              Fill out the form below to initiate a direct order inquiry via WhatsApp.
+            </p>
+          </div>
+
+          <form
+            className="flex flex-col gap-3.5 sm:gap-4"
+            onSubmit={(e) => {
               e.preventDefault();
-              const formData = new FormData(e.target);
-              const name = formData.get('name') || '';
-              const email = formData.get('email') || '';
-              const subject = formData.get('subject') || '';
-              const message = formData.get('message') || '';
+              const form = e.currentTarget;
+              const name = form.elements.name?.value || '';
+              const email = form.elements.email?.value || '';
+              const subject = form.elements.subject?.value || '';
+              const message = form.elements.message?.value || '';
               const text = `*New Contact Form Message*\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}`;
               window.open(`https://wa.me/923202220001?text=${encodeURIComponent(text)}`, '_blank');
-            }}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Full Name</label>
-                  <input name="name" type="text" required placeholder="Your name" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Email Address</label>
-                  <input name="email" type="email" placeholder="john@example.com" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Subject</label>
-                <input name="subject" type="text" required placeholder="How can we help you?" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm" />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Message</label>
-                <textarea name="message" rows="5" required placeholder="Write your message here..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-sm resize-none"></textarea>
+            }}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="flex flex-col">
+                <label htmlFor="contact-name" className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  Full Name
+                </label>
+                <input
+                  id="contact-name"
+                  name="name"
+                  type="text"
+                  required
+                  placeholder="e.g. Muhammad Ali"
+                  className="w-full bg-[#faf8f5] border border-[#dcd7cb] rounded-lg px-3 py-2 text-[13px] font-medium text-[#112338] outline-none focus:border-primary focus:bg-white transition-colors"
+                />
               </div>
 
-              <button type="submit" className="bg-[#111111] text-white px-8 py-4 rounded-xl font-bold text-sm tracking-widest uppercase hover:bg-primary transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 self-start mt-2 flex items-center gap-2">
-                <MessageCircle size={18} /> Send via WhatsApp
-              </button>
-            </form>
-          </div>
-        </motion.div>
-        
-        {/* Map */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="lg:col-span-12 mt-4"
-        >
-          <div className="rounded-[32px] overflow-hidden shadow-glass border border-white/60 h-[400px] relative hover:scale-[1.02] transition-transform duration-300">
-            <a 
-              href="https://maps.google.com?q=Nazir%20and%20Sons%20Paper,%20Lahore%20paper%20market,%20Abkari%20Road,%20Anarkali%20Bazaar%20Lahore" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="absolute inset-0 z-10 cursor-pointer"
+              <div className="flex flex-col">
+                <label htmlFor="contact-email" className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  Email Address
+                </label>
+                <input
+                  id="contact-email"
+                  name="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  className="w-full bg-[#faf8f5] border border-[#dcd7cb] rounded-lg px-3 py-2 text-[13px] font-medium text-[#112338] outline-none focus:border-primary focus:bg-white transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              <label htmlFor="contact-subject" className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                Subject / Paper Inquiry
+              </label>
+              <input
+                id="contact-subject"
+                name="subject"
+                type="text"
+                required
+                placeholder="e.g. Bulk A4 Copy Paper / Art Supplies inquiry"
+                className="w-full bg-[#faf8f5] border border-[#dcd7cb] rounded-lg px-3 py-2 text-[13px] font-medium text-[#112338] outline-none focus:border-primary focus:bg-white transition-colors"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label htmlFor="contact-message" className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                Your Message
+              </label>
+              <textarea
+                id="contact-message"
+                name="message"
+                rows="4"
+                required
+                placeholder="Details of quantity, sizes, GSM, or any specific questions..."
+                className="w-full bg-[#faf8f5] border border-[#dcd7cb] rounded-lg p-3 text-[13px] font-medium text-[#112338] outline-none focus:border-primary focus:bg-white transition-colors resize-none"
+              ></textarea>
+            </div>
+
+            <button
+              type="submit"
+              className="h-10.5 px-6 rounded-xl bg-[#112338] hover:bg-[#1a3654] text-white text-[11.5px] sm:text-[12px] font-bold tracking-wider uppercase transition-all shadow-xs hover:shadow-md flex items-center justify-center gap-2 self-start cursor-pointer active:scale-[0.99]"
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/80 to-transparent flex flex-col justify-end p-8">
-                <h3 className="text-white text-2xl font-bold font-serif italic mb-1 group-hover:text-primary transition-colors">Visit our Store</h3>
-                <p className="text-white/80 text-sm">Experience the quality of our premium paper in person. Click for directions.</p>
-              </div>
+              <MessageCircle size={15} /> Send via WhatsApp
+            </button>
+          </form>
+        </div>
+
+        {/* Map Section */}
+        <div className="lg:col-span-12 bg-white rounded-xl sm:rounded-2xl border border-[#e5e1d7] overflow-hidden shadow-xs mt-2">
+          <div className="p-3 sm:p-4 border-b border-[#e5e1d7] bg-[#faf8f5] flex items-center justify-between">
+            <div>
+              <h3 className="font-serif text-[15px] sm:text-[16px] font-bold text-[#112338]">
+                Store Location Map
+              </h3>
+              <p className="text-[11.5px] text-[#64748b]">
+                Lahore Paper Market, Abkari Road, Anarkali Bazaar, Lahore
+              </p>
+            </div>
+            <a
+              href="https://maps.google.com?q=Nazir%20and%20Sons%20Paper,%20Lahore%20paper%20market,%20Abkari%20Road,%20Anarkali%20Bazaar%20Lahore"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11.5px] font-bold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+            >
+              <span>Open in Google Maps</span>
+              <ExternalLink size={12} />
             </a>
-            <iframe 
-              src="https://maps.google.com/maps?q=Nazir%20and%20Sons%20Paper,%20Lahore&t=&z=15&ie=UTF8&iwloc=&output=embed" 
-              width="100%" 
-              height="100%" 
-              style={{ border: 0 }} 
-              allowFullScreen="" 
-              loading="lazy" 
+          </div>
+
+          <div className="w-full h-[260px] sm:h-[320px] relative bg-gray-100">
+            <iframe
+              src="https://maps.google.com/maps?q=Nazir%20and%20Sons%20Paper,%20Lahore&t=&z=15&ie=UTF8&iwloc=&output=embed"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen=""
+              loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              className="absolute inset-0 grayscale contrast-125 opacity-80 mix-blend-multiply pointer-events-none"
+              title="Nazir & Sons Store Map"
+              className="w-full h-full"
             ></iframe>
           </div>
-        </motion.div>
-
+        </div>
       </div>
     </main>
   );

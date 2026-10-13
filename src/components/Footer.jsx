@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, MapPin, Phone, ArrowRight, Sparkles, ChevronDown } from 'lucide-react';
+import { Mail, MapPin, Phone, ArrowRight, ChevronDown } from 'lucide-react';
 import { BUSINESS, DEPARTMENT_NAMES, categoryPath } from '../lib/site';
 
 const Footer = () => {

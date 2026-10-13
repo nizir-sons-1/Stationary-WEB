@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
@@ -128,31 +128,36 @@ const CompactProductCard = ({ product }) => {
         </div>
 
         {/* Compact Add to Cart Button */}
-        <button
-          type="button"
-          ref={btnRef}
-          disabled={!inStock}
-          onClick={handleAdd}
-          className={`w-full h-8 sm:h-8.5 rounded-md text-[11px] sm:text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs mt-auto cursor-pointer ${
-            isAdded
-              ? 'bg-emerald-600 text-white'
-              : inStock
-              ? 'bg-[#112338] hover:bg-[#1a3654] text-white active:scale-[0.98]'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          {isAdded ? (
-            <>
-              <Check size={13} className="stroke-[2.5]" />
-              <span>Added</span>
-            </>
-          ) : (
-            <>
-              <ShoppingCart size={13} />
-              <span>{inStock ? 'Add to Cart' : 'Out of Stock'}</span>
-            </>
-          )}
-        </button>
+        {(() => {
+          let relBtnStyle = 'bg-gray-200 text-gray-400 cursor-not-allowed';
+          if (isAdded) {
+            relBtnStyle = 'bg-emerald-600 text-white';
+          } else if (inStock) {
+            relBtnStyle = 'bg-[#112338] hover:bg-[#1a3654] text-white active:scale-[0.98]';
+          }
+
+          return (
+            <button
+              type="button"
+              ref={btnRef}
+              disabled={!inStock}
+              onClick={handleAdd}
+              className={`w-full h-8 sm:h-8.5 rounded-md text-[11px] sm:text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs mt-auto cursor-pointer ${relBtnStyle}`}
+            >
+              {isAdded ? (
+                <>
+                  <Check size={13} className="stroke-[2.5]" />
+                  <span>Added</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart size={13} />
+                  <span>{inStock ? 'Add to Cart' : 'Out of Stock'}</span>
+                </>
+              )}
+            </button>
+          );
+        })()}
       </div>
     </article>
   );
@@ -161,7 +166,6 @@ const CompactProductCard = ({ product }) => {
 const ProductDetails = () => {
   const { name } = useParams();
   const decodedName = decodeURIComponent(name);
-  const navigate = useNavigate();
   const { addToCart } = useCart();
 
   const { product: currentProduct, loading } = useProduct(decodedName);
@@ -174,7 +178,7 @@ const ProductDetails = () => {
 
   // Map Supabase product_variations to the expected format
   const productVariations = useMemo(() => {
-    if (!currentProduct || !currentProduct.product_variations) return [];
+    if (!currentProduct?.product_variations) return [];
     return currentProduct.product_variations.map((v) => ({
       PRODUCT_NAME: currentProduct.product_name,
       Description: currentProduct.description,
@@ -269,20 +273,29 @@ const ProductDetails = () => {
       .sort((a, b) => a - b);
     const prices = productVariations.map((v) => Number(v.CALCULATED_PRICE_RS)).filter((n) => n > 0);
 
+    let gsmFact = null;
+    if (gsms.length) {
+      const minGsm = gsms[0];
+      const maxGsm = gsms.at(-1);
+      const gsmRange = minGsm === maxGsm ? String(minGsm) : `${minGsm}–${maxGsm}`;
+      gsmFact = `GSM: ${gsmRange}`;
+    }
+
     const facts = [
       sizes.length ? `Sizes: ${sizes.slice(0, 4).join(', ')}` : null,
-      gsms.length
-        ? `GSM: ${gsms[0] === gsms[gsms.length - 1] ? gsms[0] : `${gsms[0]}–${gsms[gsms.length - 1]}`}`
-        : null,
+      gsmFact,
       prices.length ? `From Rs. ${Math.min(...prices).toLocaleString()}` : null,
     ].filter(Boolean);
+
+    const categorySuffix = displayCategory ? ` — ${displayCategory}` : '';
+    const categoryParenthesis = displayCategory ? ` (${displayCategory})` : '';
 
     return {
       displayCategory,
       department,
-      title: `${decodedName}${displayCategory ? ` — ${displayCategory}` : ''} | Nazir & Sons`,
+      title: `${decodedName}${categorySuffix} | Nazir & Sons`,
       description: [
-        `Buy ${decodedName}${displayCategory ? ` (${displayCategory})` : ''} from Nazir & Sons, Lahore.`,
+        `Buy ${decodedName}${categoryParenthesis} from Nazir & Sons, Lahore.`,
         facts.join('. ') + (facts.length ? '.' : ''),
         'Wholesale and retail, delivered across Pakistan.',
       ]
@@ -485,10 +498,11 @@ const ProductDetails = () => {
               } gap-2 sm:gap-3 mb-2.5 sm:mb-3`}
             >
               <div className="flex flex-col">
-                <label className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                <label htmlFor="pdp-size" className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                   Select Size
                 </label>
                 <select
+                  id="pdp-size"
                   value={selectedSize}
                   onChange={(e) => setSelectedSize(e.target.value)}
                   className="w-full bg-white border border-[#dcd7cb] text-[#112338] text-[11.5px] sm:text-[13px] font-semibold h-8.5 sm:h-9 px-2.5 rounded-lg outline-none focus:border-primary shadow-2xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center] bg-[length:12px] cursor-pointer hover:border-gray-400 transition-colors"
@@ -511,10 +525,11 @@ const ProductDetails = () => {
 
               {departmentOf(currentVariation.Category) === PAPER_AND_CANVAS && (
                 <div className="flex flex-col">
-                  <label className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  <label htmlFor="pdp-gsm" className="text-[9.5px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                     Select GSM
                   </label>
                   <select
+                    id="pdp-gsm"
                     value={selectedGsm}
                     onChange={(e) => setSelectedGsm(e.target.value)}
                     className="w-full bg-white border border-[#dcd7cb] text-[#112338] text-[11.5px] sm:text-[13px] font-semibold h-8.5 sm:h-9 px-2.5 rounded-lg outline-none focus:border-primary shadow-2xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center] bg-[length:12px] cursor-pointer hover:border-gray-400 transition-colors"
@@ -643,31 +658,41 @@ const ProductDetails = () => {
           </div>
 
           {/* Add to Cart Button (Compact & with flyToCart) */}
-          <button
-            type="button"
-            ref={mainBtnRef}
-            onClick={handleAddToCart}
-            disabled={!inStock}
-            className={`w-full h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2 font-bold text-sm sm:text-base transition-all duration-200 shadow-sm cursor-pointer ${
-              isMainAdded
-                ? 'bg-emerald-600 text-white'
-                : inStock
-                ? 'bg-[#112338] hover:bg-[#1a3654] text-white hover:shadow-md active:scale-[0.99]'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {isMainAdded ? (
-              <>
-                <Check size={17} className="stroke-[2.5]" />
-                <span>Added to Cart!</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag size={17} />
-                <span>{inStock ? (isBulk ? 'Add Bulk Request to Cart' : 'Add to Cart') : 'Currently Out of Stock'}</span>
-              </>
-            )}
-          </button>
+          {(() => {
+            let mainBtnStyle = 'bg-gray-200 text-gray-400 cursor-not-allowed';
+            if (isMainAdded) {
+              mainBtnStyle = 'bg-emerald-600 text-white';
+            } else if (inStock) {
+              mainBtnStyle = 'bg-[#112338] hover:bg-[#1a3654] text-white hover:shadow-md active:scale-[0.99]';
+            }
+
+            let mainBtnText = 'Currently Out of Stock';
+            if (inStock) {
+              mainBtnText = isBulk ? 'Add Bulk Request to Cart' : 'Add to Cart';
+            }
+
+            return (
+              <button
+                type="button"
+                ref={mainBtnRef}
+                onClick={handleAddToCart}
+                disabled={!inStock}
+                className={`w-full h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2 font-bold text-sm sm:text-base transition-all duration-200 shadow-sm cursor-pointer ${mainBtnStyle}`}
+              >
+                {isMainAdded ? (
+                  <>
+                    <Check size={17} className="stroke-[2.5]" />
+                    <span>Added to Cart!</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag size={17} />
+                    <span>{mainBtnText}</span>
+                  </>
+                )}
+              </button>
+            );
+          })()}
 
           {/* WhatsApp & View Cart row */}
           <div className="flex items-center justify-between text-xs text-gray-500 mt-2.5 px-0.5">
