@@ -1,9 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShoppingCart, Heart, Check, Truck, ShieldCheck, Headphones } from 'lucide-react';
+import {
+  ArrowRight,
+  ShoppingCart,
+  Heart,
+  Check,
+  Truck,
+  ShieldCheck,
+  Headphones,
+  Shuffle,
+  ChevronUp,
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { categoryPath } from '../lib/site';
-import { useTaxonomyImages } from '../hooks/useSupabase';
+import { useProducts, useTaxonomyImages } from '../hooks/useSupabase';
+import { departmentOf } from '../data/categories';
 import { flyToCart } from '../lib/cartAnimation';
 
 const DEPARTMENTS = [
@@ -39,30 +50,70 @@ const DEPARTMENTS = [
   },
 ];
 
-const POPULAR_PICKS = [
+const FALLBACK_POPULAR = [
   {
-    id: 'pop-1',
-    name: 'A4 Premium Copy Paper (80 GSM) - Pack of 500',
-    price: 2450,
-    image: '/images/copy_paper.webp',
+    id: 'fb-1',
+    name: 'F4 Premium Copy Paper (80 GSM)',
+    price: 1300,
+    image: 'https://i.postimg.cc/BnPdYMnV/ezgif-com-video-to-gif-converter.gif',
+    category: 'Copy Paper',
+    department: 'Paper & Canvas',
   },
   {
-    id: 'pop-2',
-    name: 'Canvas Panel 12 x 16 inch (Artist Grade)',
-    price: 1850,
-    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=500&q=80',
+    id: 'fb-2',
+    name: 'Pindo Art Card (Gloss Finish)',
+    price: 2390,
+    image: 'https://i.postimg.cc/dtkc3mPB/image.png',
+    category: 'Art Card',
+    department: 'Paper & Canvas',
   },
   {
-    id: 'pop-3',
-    name: 'Watercolour Set (24 Colours) + Brush',
-    price: 3200,
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=500&q=80',
+    id: 'fb-3',
+    name: 'KINMARI Art Paper (Smooth White)',
+    price: 7375,
+    image: 'https://i.postimg.cc/jdPwNfyd/image.png',
+    category: 'Art Paper',
+    department: 'Paper & Canvas',
   },
   {
-    id: 'pop-4',
-    name: 'Hard Cover Notebook (A5) - Ruled',
-    price: 1250,
-    image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=500&q=80',
+    id: 'fb-4',
+    name: 'IK Premium Offset Paper',
+    price: 7011,
+    image: 'https://i.postimg.cc/76PnGnsx/23-36-70.png',
+    category: 'Offset Paper',
+    department: 'Paper & Canvas',
+  },
+  {
+    id: 'fb-5',
+    name: 'Al Baster Ivory Card',
+    price: 2897,
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSf2Olx5mpxGPgRWoe2r5bQG1slsdWwIRkpHxeFA6eKfvk0Ayo1nvyyqk07alM&s',
+    category: 'Ivory Card',
+    department: 'Paper & Canvas',
+  },
+  {
+    id: 'fb-6',
+    name: 'Polo Heavy Duty BoxBoard',
+    price: 4231,
+    image: 'https://i.postimg.cc/N0NNXXRq/image.png',
+    category: 'BoxBoard',
+    department: 'Paper & Canvas',
+  },
+  {
+    id: 'fb-7',
+    name: 'Ningbo Premium Bleach Card',
+    price: 3019,
+    image: 'https://i.postimg.cc/LX10RvZM/image.png',
+    category: 'Bleach Card',
+    department: 'Paper & Canvas',
+  },
+  {
+    id: 'fb-8',
+    name: 'Impression Carbonless Paper Ream',
+    price: 5950,
+    image: 'https://i.postimg.cc/sXmdMsRW/Capture1.jpg',
+    category: 'Carbonless',
+    department: 'Paper & Canvas',
   },
 ];
 
@@ -157,8 +208,87 @@ const VideoSection = () => {
 const CategoryCards = () => {
   const { addToCart } = useCart();
   const { departmentImages } = useTaxonomyImages();
+  const { products: dbProducts } = useProducts(null);
   const [wishlist, setWishlist] = useState({});
   const [addedItems, setAddedItems] = useState({});
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [shuffleOffset, setShuffleOffset] = useState(0);
+
+  // Filter and round-robin distinct real products across all departments
+  const allAvailablePicks = useMemo(() => {
+    if (!dbProducts || dbProducts.length === 0) {
+      return FALLBACK_POPULAR;
+    }
+
+    const valid = dbProducts
+      .filter((p) => {
+        const hasImg = Boolean(p.image_url || p.product_variations?.[0]?.image_url);
+        const hasPrice = Number(p.product_variations?.[0]?.price) > 0;
+        return hasImg && hasPrice;
+      })
+      .map((p) => {
+        const firstVar = p.product_variations?.[0];
+        const price = Number(firstVar?.price) || 0;
+        const img = p.image_url || firstVar?.image_url || '/images/copy_paper.webp';
+        const dept = departmentOf(p.category) || 'Stationery';
+        return {
+          id: p.id,
+          name: p.product_name,
+          price: Math.round(price),
+          image: img,
+          category: p.category,
+          department: dept,
+        };
+      });
+
+    if (valid.length === 0) return FALLBACK_POPULAR;
+
+    // Group into department buckets so we can sample diverse products across departments
+    const departmentsList = ['Paper & Canvas', 'Fine Arts', 'Stationery', 'Accessories', 'Notebooks'];
+    const buckets = {};
+    for (const d of departmentsList) buckets[d] = [];
+
+    for (const item of valid) {
+      const d = item.department || 'Stationery';
+      if (!buckets[d]) buckets[d] = [];
+      buckets[d].push(item);
+    }
+
+    // Interleave across departments so adjacent cards are always from different departments/categories
+    const interleaved = [];
+    let added = true;
+    let index = 0;
+    while (added && interleaved.length < 32) {
+      added = false;
+      for (const d of departmentsList) {
+        if (buckets[d]?.[index]) {
+          interleaved.push(buckets[d][index]);
+          added = true;
+        }
+      }
+      index++;
+    }
+
+    return interleaved.length > 0 ? interleaved : valid;
+  }, [dbProducts]);
+
+  const displayedProducts = useMemo(() => {
+    const total = allAvailablePicks.length;
+    if (total === 0) return [];
+    
+    // Rotate items by shuffleOffset
+    const offset = shuffleOffset % total;
+    const rotated = [
+      ...allAvailablePicks.slice(offset),
+      ...allAvailablePicks.slice(0, offset),
+    ];
+
+    return isExpanded ? rotated.slice(0, 12) : rotated.slice(0, 4);
+  }, [allAvailablePicks, isExpanded, shuffleOffset]);
+
+  const handleShuffle = () => {
+    setShuffleOffset((prev) => prev + 4);
+  };
 
   const toggleWishlist = (id) => {
     setWishlist((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -236,27 +366,47 @@ const CategoryCards = () => {
       <div className="w-full">
         
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-4 md:mb-5 pb-2.5 border-b border-gray-100 gap-1.5">
+        <div className="flex items-end justify-between mb-4 md:mb-5 pb-2.5 border-b border-gray-100 gap-2">
           <div>
             <p className="text-[10px] md:text-[11px] font-bold text-[#64748b] uppercase tracking-[0.18em] mb-0.5">
               FEATURED PRODUCTS
             </p>
-            <h2 className="font-serif text-[22px] sm:text-[25px] md:text-[27px] font-normal text-[#112338] tracking-tight">
+            <h2 className="font-serif text-[20px] sm:text-[25px] md:text-[27px] font-normal text-[#112338] tracking-tight leading-tight">
               Popular Picks
             </h2>
           </div>
-          <Link
-            to="/shop"
-            className="inline-flex items-center gap-1 text-[12px] md:text-[13px] font-semibold text-[#112338] hover:text-primary transition-colors group"
-          >
-            <span>View All Products</span>
-            <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
+
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Randomize / Shuffle Button */}
+            <button
+              type="button"
+              onClick={handleShuffle}
+              title="Shuffle to see other best sellers"
+              className="inline-flex items-center gap-1 text-[10.5px] sm:text-[11px] font-bold text-gray-600 hover:text-[#112338] bg-white hover:bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-[3px] border border-[#e5e1d7] shadow-2xs transition-all cursor-pointer active:scale-95"
+            >
+              <Shuffle size={11} className="text-gray-500" />
+              <span className="hidden xs:inline">Randomize</span>
+            </button>
+
+            {/* View All / Toggle Button - Positioned on the Right */}
+            <button
+              type="button"
+              onClick={() => setIsExpanded((prev) => !prev)}
+              className="inline-flex items-center gap-1 text-[12px] sm:text-[13px] font-semibold text-[#112338] hover:text-primary transition-colors cursor-pointer group"
+            >
+              <span>{isExpanded ? 'Show Less' : 'View All'}</span>
+              {isExpanded ? (
+                <ChevronUp size={13} className="group-hover:-translate-y-0.5 transition-transform" />
+              ) : (
+                <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* 4-Column Product Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5 md:gap-4">
-          {POPULAR_PICKS.map((product) => {
+          {displayedProducts.map((product) => {
             const isLiked = wishlist[product.id];
             const isAdded = addedItems[product.id];
 
@@ -267,17 +417,22 @@ const CategoryCards = () => {
               >
                 {/* Product Image & Wishlist Button */}
                 <div className="relative w-full aspect-[4/3] bg-[#fbfaf8] rounded-[2px] overflow-hidden mb-2.5">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = '/images/copy_paper.webp';
-                    }}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
-                  />
+                  <Link
+                    to={`/product/${encodeURIComponent(product.name)}`}
+                    className="w-full h-full flex items-center justify-center p-2"
+                  >
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/images/copy_paper.webp';
+                      }}
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out"
+                    />
+                  </Link>
                   
                   {/* Heart Wishlist Button */}
                   <button
@@ -295,9 +450,14 @@ const CategoryCards = () => {
 
                 {/* Product Title & Price */}
                 <div className="flex flex-col flex-1 mb-2.5">
-                  <h3 className="text-[12px] sm:text-[13px] font-medium text-[#112338] line-clamp-2 min-h-[34px] leading-snug">
-                    {product.name}
-                  </h3>
+                  <span className="text-[9.5px] font-semibold text-[#8892a0] uppercase tracking-wider block mb-0.5 line-clamp-1">
+                    {product.category || product.department}
+                  </span>
+                  <Link to={`/product/${encodeURIComponent(product.name)}`}>
+                    <h3 className="text-[12px] sm:text-[13px] font-medium text-[#112338] hover:text-primary transition-colors line-clamp-2 min-h-[34px] leading-snug">
+                      {product.name}
+                    </h3>
+                  </Link>
                   <p className="text-[13px] sm:text-[14px] font-bold text-[#112338] mt-1">
                     PKR {product.price.toLocaleString()}
                   </p>

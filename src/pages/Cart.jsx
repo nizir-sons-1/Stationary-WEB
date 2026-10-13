@@ -43,13 +43,18 @@ const Cart = () => {
   // Force default methods if switching types
   React.useEffect(() => {
     if (isB2B) {
-      if (shippingMethod === 'standard_delivery') setShippingMethod('self_pickup');
-      if (paymentMethod === 'cod' || paymentMethod === 'online') setPaymentMethod('shop');
+      setShippingMethod(prev => (prev === 'standard_delivery' ? 'self_pickup' : prev));
+      setPaymentMethod(prev => (prev === 'cod' || prev === 'online' ? 'shop' : prev));
     } else {
-      if (shippingMethod !== 'standard_delivery') setShippingMethod('standard_delivery');
-      if (paymentMethod === 'shop') setPaymentMethod('cod');
+      setShippingMethod(prev => (prev !== 'standard_delivery' ? 'standard_delivery' : prev));
+      setPaymentMethod(prev => (prev === 'shop' ? 'cod' : prev));
     }
   }, [isB2B]);
+
+  // Scroll to top immediately when checkout phase transitions
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [checkoutPhase]);
 
   const handleCheckout = async (e) => {
     e?.preventDefault();
@@ -110,7 +115,11 @@ const Cart = () => {
         .select()
         .single();
 
-      const orderId = insertedOrder?.id?.slice(0, 8).toUpperCase() || `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
+      const fallbackOrderId = typeof window !== 'undefined' && window.crypto?.getRandomValues
+        ? `ORD-${(window.crypto.getRandomValues(new Uint32Array(1))[0] % 90000) + 10000}`
+        : `ORD-${Date.now().toString(36).toUpperCase()}`;
+
+      const orderId = insertedOrder?.id?.slice(0, 8).toUpperCase() || fallbackOrderId;
 
       if (insertError) {
         // Log but don't block — still send WhatsApp so customer isn't stuck
@@ -252,7 +261,9 @@ const Cart = () => {
                 <span className="text-base md:text-lg font-mono font-black text-secondary">#{placedOrder.id}</span>
                 <button 
                   onClick={() => {
-                    navigator.clipboard?.writeText(placedOrder.id);
+                    if (navigator.clipboard?.writeText) {
+                      navigator.clipboard.writeText(placedOrder.id).catch(() => {});
+                    }
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}
@@ -286,8 +297,8 @@ const Cart = () => {
           <div className="mb-8">
             <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 mb-3">Purchased Items ({placedOrder.items.length})</h3>
             <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden bg-white max-h-60 overflow-y-auto custom-scrollbar">
-              {placedOrder.items.map((item, idx) => (
-                <div key={idx} className="p-3.5 flex items-center justify-between gap-4">
+              {placedOrder.items.map((item) => (
+                <div key={`${item.name}-${item.size || 'std'}-${item.gsm || '0'}-${item.quantity}`} className="p-3.5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     {item.image && (
                       <div className="w-10 h-10 bg-gray-50 rounded-lg p-1 shrink-0 border border-gray-100 overflow-hidden">
@@ -330,7 +341,7 @@ const Cart = () => {
           {/* Optional Support Link */}
           <div className="mt-6 text-center">
             <a 
-              href={`https://wa.me/923202220001?text=${encodeURIComponent(`Hi Nazir & Sons, I have a query about my order #${placedOrder.id}`)}`}
+              href={`https://wa.me/923202220001?text=${encodeURIComponent('Hi Nazir & Sons, I have a query about my order #' + placedOrder.id)}`}
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#25D366] transition-colors"
@@ -358,10 +369,39 @@ const Cart = () => {
     );
   }
 
+  let shippingFeeText = 'TBD';
+  if (shippingMethod === 'self_pickup') {
+    shippingFeeText = 'FREE';
+  } else if (shippingMethod === 'standard_delivery') {
+    shippingFeeText = 'Rs 200';
+  }
+
   return (
-    <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto">
-      
-      <header className="mb-stack-lg border-b border-outline-variant pb-stack-sm flex justify-between items-end">
+    <main className="flex-grow pt-4 sm:pt-6 md:pt-8 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto">
+      {/* Standard Unified Back Button */}
+      <div className="mb-3 sm:mb-4">
+        {checkoutPhase === 'cart' ? (
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase bg-white px-3.5 py-1.5 rounded-[3px] border border-[#e5e1d7] shadow-sm w-fit text-[10px] transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={13} /> Back to Shop
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setCheckoutPhase('cart');
+              window.scrollTo({ top: 0, behavior: 'instant' });
+            }}
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase bg-white px-3.5 py-1.5 rounded-[3px] border border-[#e5e1d7] shadow-sm w-fit text-[10px] transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={13} /> Back to Cart
+          </button>
+        )}
+      </div>
+
+      <header className="mb-stack-lg border-b border-outline-variant pb-stack-sm">
         <div>
           <h1 className="font-headline-xl text-headline-xl text-on-surface">
             {checkoutPhase === 'cart' ? 'Review Order' : 'Checkout Details'}
@@ -372,11 +412,6 @@ const Cart = () => {
               : 'Complete your details to confirm your order.'}
           </p>
         </div>
-        {checkoutPhase === 'checkout' && (
-          <button onClick={() => setCheckoutPhase('cart')} className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-            <ArrowLeft size={16} /> Back to Cart
-          </button>
-        )}
       </header>
       
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
@@ -455,24 +490,24 @@ const Cart = () => {
                   <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Customer Information</h3>
                   
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-gray-700">Full Name *</label>
-                    <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Enter your full name" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
+                    <label htmlFor="customer-fullName" className="text-sm font-bold text-gray-700">Full Name *</label>
+                    <input id="customer-fullName" type="text" required value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Enter your full name" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
                   </div>
                   
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-gray-700">Phone Number *</label>
-                    <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter your phone number" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
+                    <label htmlFor="customer-phone" className="text-sm font-bold text-gray-700">Phone Number *</label>
+                    <input id="customer-phone" type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter your phone number" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
                   </div>
                   
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-gray-700">Email Address (Optional)</label>
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
+                    <label htmlFor="customer-email" className="text-sm font-bold text-gray-700">Email Address (Optional)</label>
+                    <input id="customer-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
                   </div>
                   
                   {!isB2B && (
                     <div className="flex flex-col gap-2">
-                      <label className="text-sm font-bold text-gray-700">Delivery Address *</label>
-                      <textarea required value={address} onChange={e => setAddress(e.target.value)} placeholder="Enter your full shipping address" rows="3" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white resize-none" />
+                      <label htmlFor="customer-address" className="text-sm font-bold text-gray-700">Delivery Address *</label>
+                      <textarea id="customer-address" required value={address} onChange={e => setAddress(e.target.value)} placeholder="Enter your full shipping address" rows="3" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white resize-none" />
                     </div>
                   )}
                 </div>
@@ -592,7 +627,7 @@ const Cart = () => {
             <div className="flex justify-between items-center py-2">
               <span className="text-sm font-medium text-gray-500">Shipping</span>
               <span className="text-sm font-bold text-primary">
-                {shippingMethod === 'self_pickup' ? 'FREE' : shippingMethod === 'standard_delivery' ? 'Rs 200' : 'TBD'}
+                {shippingFeeText}
               </span>
             </div>
 
@@ -613,8 +648,8 @@ const Cart = () => {
               <div className="mb-8 border-t border-gray-200 pt-6">
                 <h3 className="text-xs font-bold text-gray-900 mb-4">Items in Cart:</h3>
                 <div className="flex flex-col gap-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                  {cartItems.map((item, i) => (
-                    <div key={i} className="flex flex-col text-sm">
+                  {cartItems.map((item) => (
+                    <div key={`${item.id}-${item.name}-${item.size || ''}`} className="flex flex-col text-sm">
                       <span className="text-gray-700 font-medium">{item.name} ({item.size}{departmentOf(item.category) === PAPER_AND_CANVAS ? `, ${item.gsm}g` : ''})</span>
                       <span className="text-[11px] text-gray-500">{item.quantity} × Rs. {(item.price * item.quantity).toLocaleString()} (Rs. {item.price.toLocaleString()}/{item.packingType})</span>
                     </div>
@@ -624,7 +659,14 @@ const Cart = () => {
             )}
             
             {checkoutPhase === 'cart' ? (
-              <button onClick={() => setCheckoutPhase('checkout')} className="w-full text-white bg-[#111111] hover:bg-primary hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 py-5 font-bold text-sm uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCheckoutPhase('checkout');
+                  window.scrollTo({ top: 0, behavior: 'instant' });
+                }}
+                className="w-full text-white bg-[#111111] hover:bg-primary hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 py-5 font-bold text-sm uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+              >
                 Proceed to Checkout <ArrowRight size={18} />
               </button>
             ) : (
@@ -632,7 +674,14 @@ const Cart = () => {
                 <button type="submit" form="checkout-form" disabled={isCheckingOut} className={`w-full text-white py-5 font-bold text-sm uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 ${isCheckingOut ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#111111] hover:bg-primary hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1'}`}>
                   <PackageCheck size={20} /> {isCheckingOut ? 'Processing Order...' : 'Confirm & Place Order'}
                 </button>
-                <button onClick={() => setCheckoutPhase('cart')} className="w-full py-4 text-sm font-bold text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-colors">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCheckoutPhase('cart');
+                    window.scrollTo({ top: 0, behavior: 'instant' });
+                  }}
+                  className="w-full py-4 text-sm font-bold text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-colors cursor-pointer"
+                >
                   Cancel Checkout
                 </button>
               </div>
