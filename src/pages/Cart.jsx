@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Minus, Plus, Trash2, ArrowRight, MessageCircle, ArrowLeft, Truck, PackageCheck, CreditCard, Building2, MapPin, CheckCircle2, Check, Copy, ShieldCheck } from 'lucide-react';
+import { Minus, Plus, Trash2, ArrowRight, MessageCircle, ArrowLeft, Truck, PackageCheck, CreditCard, Building2, MapPin, CheckCircle2, Check, Copy } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -203,62 +203,72 @@ const Cart = () => {
   // Render Order Confirmation Receipt Screen
   if (checkoutPhase === 'success' && placedOrder) {
     return (
-      <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-4xl w-full mx-auto">
+      <main className="flex-grow pt-4 sm:pt-6 md:pt-8 pb-stack-lg px-margin-mobile md:px-gutter max-w-4xl w-full mx-auto">
+        {/* Standard Unified Back Button */}
+        <div className="mb-3 sm:mb-4">
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-[#112338] font-label-caps font-bold tracking-widest uppercase bg-white px-3.5 py-1.5 rounded-[3px] border border-[#e5e1d7] shadow-sm w-fit text-[10px] transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={13} /> Back to Shop
+          </Link>
+        </div>
+
         <motion.div 
-          initial={{ opacity: 0, scale: 0.96 }}
+          initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4 }}
-          className="bg-white border border-gray-100 shadow-[0_12px_40px_rgba(0,0,0,0.06)] rounded-[32px] p-6 md:p-12 overflow-hidden"
+          transition={{ duration: 0.35 }}
+          className="bg-white border border-gray-100 shadow-[0_12px_40px_rgba(0,0,0,0.06)] rounded-[24px] md:rounded-[32px] p-5 sm:p-8 md:p-12 overflow-hidden"
         >
           {/* Header */}
           <div className="flex flex-col items-center text-center mb-8">
-            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-5 border border-green-100 shadow-sm">
-              <CheckCircle2 size={44} className="text-[#25D366]" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-4 border border-emerald-100 shadow-sm">
+              <CheckCircle2 size={40} className="text-emerald-600" />
             </div>
-            <span className="inline-block bg-green-100/80 text-green-800 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
+            <span className="inline-block bg-emerald-50 text-emerald-800 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-2.5 border border-emerald-100">
               Order Confirmed
             </span>
-            <h1 className="font-headline-xl text-3xl md:text-4xl font-black text-secondary tracking-tight">
-              Order Placed Successfully!
+            <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-normal text-[#112338] tracking-tight">
+              Thank You! Your Order Has Been Placed
             </h1>
-            <p className="font-body-lg text-gray-500 mt-2 max-w-lg">
-              Thank you, <strong className="text-secondary">{placedOrder.customerName}</strong>! Your order has been registered in our system and is being processed.
+            <p className="text-sm md:text-base text-gray-600 mt-2.5 max-w-lg leading-relaxed">
+              We have received your order <strong className="font-mono text-[#112338]">#{placedOrder.id}</strong>. Our warehouse team is now packaging your items.
             </p>
           </div>
 
-          {/* Notifications Status Box */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="bg-emerald-50/70 border border-emerald-100/90 rounded-2xl p-4 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-[#25D366]/15 flex items-center justify-center shrink-0 mt-0.5">
-                <MessageCircle size={20} className="text-[#25D366]" />
+          {/* Verification Status Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-7">
+            <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-4 flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-emerald-600/10 flex items-center justify-center shrink-0 mt-0.5 text-emerald-700">
+                <CheckCircle2 size={20} />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-emerald-950">WhatsApp Confirmation Sent</h4>
-                <p className="text-xs text-emerald-800/80 mt-0.5">
-                  Order details sent to your number: <span className="font-mono font-semibold">{placedOrder.phone}</span>
+                <h4 className="font-bold text-sm text-emerald-950">Order Verified &amp; Saved</h4>
+                <p className="text-xs text-emerald-800/80 mt-0.5 leading-relaxed">
+                  Registered under customer: <strong className="font-medium text-emerald-950">{placedOrder.customerName}</strong> ({placedOrder.phone})
                 </p>
               </div>
             </div>
 
-            <div className="bg-blue-50/70 border border-blue-100/90 rounded-2xl p-4 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                <ShieldCheck size={20} className="text-blue-600" />
+            <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-blue-600/10 flex items-center justify-center shrink-0 mt-0.5 text-blue-600">
+                <Truck size={20} />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-blue-950">Store Alert Dispatched</h4>
-                <p className="text-xs text-blue-800/80 mt-0.5">
-                  Nazir & Sons team notified for packing & dispatch.
+                <h4 className="font-bold text-sm text-blue-950">Processing for Dispatch</h4>
+                <p className="text-xs text-blue-800/80 mt-0.5 leading-relaxed">
+                  Method: <strong className="font-medium text-blue-950">{placedOrder.shipping}</strong>. Items will be handled promptly.
                 </p>
               </div>
             </div>
           </div>
 
           {/* Order Details Grid */}
-          <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-[#fbfaf8] rounded-2xl p-4 sm:p-5 mb-7 border border-[#e5e1d7] grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Order ID</span>
+              <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Order ID</span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-base md:text-lg font-mono font-black text-secondary">#{placedOrder.id}</span>
+                <span className="text-base md:text-lg font-mono font-bold text-[#112338]">#{placedOrder.id}</span>
                 <button 
                   onClick={() => {
                     if (navigator.clipboard?.writeText) {
@@ -276,27 +286,38 @@ const Cart = () => {
             </div>
 
             <div>
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Payment</span>
-              <span className="text-sm font-bold text-secondary mt-0.5 block truncate" title={placedOrder.payment}>{placedOrder.payment}</span>
+              <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Payment</span>
+              <span className="text-sm font-bold text-[#112338] mt-0.5 block truncate" title={placedOrder.payment}>{placedOrder.payment}</span>
             </div>
 
             <div>
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Shipping</span>
-              <span className="text-sm font-bold text-secondary mt-0.5 block truncate" title={placedOrder.shipping}>{placedOrder.shipping}</span>
+              <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Shipping</span>
+              <span className="text-sm font-bold text-[#112338] mt-0.5 block truncate" title={placedOrder.shipping}>{placedOrder.shipping}</span>
             </div>
 
             <div>
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Total Amount</span>
+              <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Total Amount</span>
               <span className="text-base md:text-lg font-black text-primary mt-0.5 block">
                 Rs. {placedOrder.total.toLocaleString()}
               </span>
             </div>
           </div>
 
+          {/* Customer Address Summary (if provided) */}
+          {placedOrder.address && (
+            <div className="mb-7 bg-white border border-[#e5e1d7] rounded-xl p-3.5 flex items-start gap-3">
+              <MapPin size={18} className="text-gray-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Delivery Destination</span>
+                <p className="text-xs sm:text-sm text-gray-700 font-medium mt-0.5">{placedOrder.address}</p>
+              </div>
+            </div>
+          )}
+
           {/* Items Summary */}
           <div className="mb-8">
             <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 mb-3">Purchased Items ({placedOrder.items.length})</h3>
-            <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden bg-white max-h-60 overflow-y-auto custom-scrollbar">
+            <div className="divide-y divide-gray-100 border border-[#e5e1d7] rounded-2xl overflow-hidden bg-white max-h-60 overflow-y-auto custom-scrollbar">
               {placedOrder.items.map((item) => (
                 <div key={`${item.name}-${item.size || 'std'}-${item.gsm || '0'}-${item.quantity}`} className="p-3.5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
@@ -306,7 +327,7 @@ const Cart = () => {
                       </div>
                     )}
                     <div>
-                      <h4 className="font-bold text-sm text-secondary">{item.name}</h4>
+                      <h4 className="font-bold text-sm text-[#112338]">{item.name}</h4>
                       <div className="flex flex-wrap gap-1.5 text-xs text-gray-500 mt-0.5">
                         {item.size && <span>{item.size}</span>}
                         {item.gsm && <span>• {item.gsm}g</span>}
@@ -314,7 +335,7 @@ const Cart = () => {
                       </div>
                     </div>
                   </div>
-                  <span className="font-bold text-sm text-secondary shrink-0">
+                  <span className="font-bold text-sm text-[#112338] shrink-0">
                     Rs. {(item.price * item.quantity).toLocaleString()}
                   </span>
                 </div>
@@ -338,16 +359,11 @@ const Cart = () => {
             </Link>
           </div>
 
-          {/* Optional Support Link */}
+          {/* Customer Support Notice */}
           <div className="mt-6 text-center">
-            <a 
-              href={`https://wa.me/923202220001?text=${encodeURIComponent('Hi Nazir & Sons, I have a query about my order #' + placedOrder.id)}`}
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#25D366] transition-colors"
-            >
-              <MessageCircle size={14} /> Need support? Chat with Nazir & Sons on WhatsApp
-            </a>
+            <p className="text-xs text-gray-400">
+              Need assistance? Contact Nazir &amp; Sons at <a href="tel:+923202220001" className="text-gray-600 hover:text-primary font-semibold underline">+92 320 2220001</a> or visit our store in Lahore.
+            </p>
           </div>
         </motion.div>
       </main>
@@ -519,40 +535,40 @@ const Cart = () => {
                     
                     {isB2B ? (
                       <>
-                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'self_pickup' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'self_pickup' ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                           <input type="radio" name="shipping" value="self_pickup" checked={shippingMethod === 'self_pickup'} onChange={() => setShippingMethod('self_pickup')} className="sr-only" />
-                          <Building2 className={shippingMethod === 'self_pickup' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <Building2 className={shippingMethod === 'self_pickup' ? 'text-primary' : 'text-gray-400'} size={24} />
                           <div>
-                            <div className={`font-bold text-sm ${shippingMethod === 'self_pickup' ? 'text-[#25D366]' : 'text-gray-700'}`}>Self Pickup</div>
-                            <div className={`text-xs mt-0.5 ${shippingMethod === 'self_pickup' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>FREE</div>
+                            <div className={`font-bold text-sm ${shippingMethod === 'self_pickup' ? 'text-primary' : 'text-gray-700'}`}>Self Pickup</div>
+                            <div className={`text-xs mt-0.5 ${shippingMethod === 'self_pickup' ? 'text-primary/80' : 'text-gray-500'}`}>FREE</div>
                           </div>
                         </label>
 
-                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'delivery_open' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'delivery_open' ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                           <input type="radio" name="shipping" value="delivery_open" checked={shippingMethod === 'delivery_open'} onChange={() => setShippingMethod('delivery_open')} className="sr-only" />
-                          <Truck className={shippingMethod === 'delivery_open' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <Truck className={shippingMethod === 'delivery_open' ? 'text-primary' : 'text-gray-400'} size={24} />
                           <div>
-                            <div className={`font-bold text-sm ${shippingMethod === 'delivery_open' ? 'text-[#25D366]' : 'text-gray-700'}`}>Delivery - Open</div>
-                            <div className={`text-xs mt-0.5 ${shippingMethod === 'delivery_open' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Min Rs 350</div>
+                            <div className={`font-bold text-sm ${shippingMethod === 'delivery_open' ? 'text-primary' : 'text-gray-700'}`}>Delivery - Open</div>
+                            <div className={`text-xs mt-0.5 ${shippingMethod === 'delivery_open' ? 'text-primary/80' : 'text-gray-500'}`}>Min Rs 350</div>
                           </div>
                         </label>
 
-                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'delivery_bundle' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'delivery_bundle' ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                           <input type="radio" name="shipping" value="delivery_bundle" checked={shippingMethod === 'delivery_bundle'} onChange={() => setShippingMethod('delivery_bundle')} className="sr-only" />
-                          <PackageCheck className={shippingMethod === 'delivery_bundle' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <PackageCheck className={shippingMethod === 'delivery_bundle' ? 'text-primary' : 'text-gray-400'} size={24} />
                           <div>
-                            <div className={`font-bold text-sm ${shippingMethod === 'delivery_bundle' ? 'text-[#25D366]' : 'text-gray-700'}`}>Delivery - Bundle</div>
-                            <div className={`text-xs mt-0.5 ${shippingMethod === 'delivery_bundle' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Only for Adda</div>
+                            <div className={`font-bold text-sm ${shippingMethod === 'delivery_bundle' ? 'text-primary' : 'text-gray-700'}`}>Delivery - Bundle</div>
+                            <div className={`text-xs mt-0.5 ${shippingMethod === 'delivery_bundle' ? 'text-primary/80' : 'text-gray-500'}`}>Only for Adda</div>
                           </div>
                         </label>
                       </>
                     ) : (
-                      <label className={`md:col-span-3 cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'standard_delivery' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                      <label className={`md:col-span-3 cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${shippingMethod === 'standard_delivery' ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                         <input type="radio" name="shipping" value="standard_delivery" checked={shippingMethod === 'standard_delivery'} onChange={() => setShippingMethod('standard_delivery')} className="sr-only" />
-                        <Truck className={shippingMethod === 'standard_delivery' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                        <Truck className={shippingMethod === 'standard_delivery' ? 'text-primary' : 'text-gray-400'} size={24} />
                         <div>
-                          <div className={`font-bold text-sm ${shippingMethod === 'standard_delivery' ? 'text-[#25D366]' : 'text-gray-700'}`}>Standard Delivery</div>
-                          <div className={`text-xs mt-0.5 ${shippingMethod === 'standard_delivery' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Rs 200 Flat Rate</div>
+                          <div className={`font-bold text-sm ${shippingMethod === 'standard_delivery' ? 'text-primary' : 'text-gray-700'}`}>Standard Delivery</div>
+                          <div className={`text-xs mt-0.5 ${shippingMethod === 'standard_delivery' ? 'text-primary/80' : 'text-gray-500'}`}>Rs 200 Flat Rate</div>
                         </div>
                       </label>
                     )}
@@ -567,41 +583,41 @@ const Cart = () => {
                     
                     {isB2B ? (
                       <>
-                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'shop' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'shop' ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                           <input type="radio" name="payment" value="shop" checked={paymentMethod === 'shop'} onChange={() => setPaymentMethod('shop')} className="sr-only" />
-                          <MapPin className={paymentMethod === 'shop' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <MapPin className={paymentMethod === 'shop' ? 'text-primary' : 'text-gray-400'} size={24} />
                           <div>
-                            <div className={`font-bold text-sm ${paymentMethod === 'shop' ? 'text-[#25D366]' : 'text-gray-700'}`}>Pay at Shop</div>
-                            <div className={`text-xs mt-0.5 ${paymentMethod === 'shop' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Pay when collecting</div>
+                            <div className={`font-bold text-sm ${paymentMethod === 'shop' ? 'text-primary' : 'text-gray-700'}`}>Pay at Shop</div>
+                            <div className={`text-xs mt-0.5 ${paymentMethod === 'shop' ? 'text-primary/80' : 'text-gray-500'}`}>Pay when collecting</div>
                           </div>
                         </label>
 
-                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'bank' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'bank' ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                           <input type="radio" name="payment" value="bank" checked={paymentMethod === 'bank'} onChange={() => setPaymentMethod('bank')} className="sr-only" />
-                          <CreditCard className={paymentMethod === 'bank' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <CreditCard className={paymentMethod === 'bank' ? 'text-primary' : 'text-gray-400'} size={24} />
                           <div>
-                            <div className={`font-bold text-sm ${paymentMethod === 'bank' ? 'text-[#25D366]' : 'text-gray-700'}`}>Bank Transfer</div>
-                            <div className={`text-xs mt-0.5 ${paymentMethod === 'bank' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Details via WhatsApp</div>
+                            <div className={`font-bold text-sm ${paymentMethod === 'bank' ? 'text-primary' : 'text-gray-700'}`}>Bank Transfer</div>
+                            <div className={`text-xs mt-0.5 ${paymentMethod === 'bank' ? 'text-primary/80' : 'text-gray-500'}`}>Account details on confirmation</div>
                           </div>
                         </label>
                       </>
                     ) : (
                       <>
-                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'cod' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'cod' ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                           <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="sr-only" />
-                          <MapPin className={paymentMethod === 'cod' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <MapPin className={paymentMethod === 'cod' ? 'text-primary' : 'text-gray-400'} size={24} />
                           <div>
-                            <div className={`font-bold text-sm ${paymentMethod === 'cod' ? 'text-[#25D366]' : 'text-gray-700'}`}>Cash on Delivery (COD)</div>
-                            <div className={`text-xs mt-0.5 ${paymentMethod === 'cod' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Pay at your doorstep</div>
+                            <div className={`font-bold text-sm ${paymentMethod === 'cod' ? 'text-primary' : 'text-gray-700'}`}>Cash on Delivery (COD)</div>
+                            <div className={`text-xs mt-0.5 ${paymentMethod === 'cod' ? 'text-primary/80' : 'text-gray-500'}`}>Pay at your doorstep</div>
                           </div>
                         </label>
 
-                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'online' ? 'border-[#25D366] bg-[#25D366]/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                        <label className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${paymentMethod === 'online' ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                           <input type="radio" name="payment" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="sr-only" />
-                          <CreditCard className={paymentMethod === 'online' ? 'text-[#25D366]' : 'text-gray-400'} size={24} />
+                          <CreditCard className={paymentMethod === 'online' ? 'text-primary' : 'text-gray-400'} size={24} />
                           <div>
-                            <div className={`font-bold text-sm ${paymentMethod === 'online' ? 'text-[#25D366]' : 'text-gray-700'}`}>Online Payment</div>
-                            <div className={`text-xs mt-0.5 ${paymentMethod === 'online' ? 'text-[#25D366]/80' : 'text-gray-500'}`}>Bank / EasyPaisa / JazzCash</div>
+                            <div className={`font-bold text-sm ${paymentMethod === 'online' ? 'text-primary' : 'text-gray-700'}`}>Online Payment</div>
+                            <div className={`text-xs mt-0.5 ${paymentMethod === 'online' ? 'text-primary/80' : 'text-gray-500'}`}>Bank / EasyPaisa / JazzCash</div>
                           </div>
                         </label>
                       </>
@@ -688,7 +704,7 @@ const Cart = () => {
             )}
             
             <p className="text-[11px] font-medium text-gray-400 mt-6 text-center px-4 leading-relaxed">
-              Paper market prices fluctuate. This is an estimated quote. Final rates and delivery charges will be confirmed on WhatsApp.
+              Orders are placed directly into our system. You will receive an immediate confirmation upon completion.
             </p>
           </div>
         </div>
