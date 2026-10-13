@@ -169,6 +169,72 @@ const CompactProductCard = ({ product }) => {
   );
 };
 
+function computeRelevantProducts(allProducts, currentProduct) {
+  if (!allProducts || allProducts.length === 0 || !currentProduct) return [];
+  const currentCat = (currentProduct.category || '').toLowerCase();
+  const currentDept = departmentOf(currentProduct.category);
+
+  const others = allProducts.filter(
+    (p) => p.id !== currentProduct.id && p.product_name !== currentProduct.product_name
+  );
+
+  const sameCat = others.filter((p) => (p.category || '').toLowerCase() === currentCat);
+  const sameDept = others.filter(
+    (p) => (p.category || '').toLowerCase() !== currentCat && departmentOf(p.category) === currentDept
+  );
+  const remaining = others.filter(
+    (p) => (p.category || '').toLowerCase() !== currentCat && departmentOf(p.category) !== currentDept
+  );
+
+  return [...sameCat, ...sameDept, ...remaining].slice(0, 4);
+}
+
+function buildCatalogueSummary(currentProduct, productVariations, decodedName) {
+  if (!currentProduct || productVariations.length === 0) return null;
+
+  const category = currentProduct.category || '';
+  const displayCategory = displayNameOf(category);
+  const department = departmentOf(category);
+  const sizes = [...new Set(productVariations.map((v) => v.Display_Size).filter(Boolean))];
+  const gsms = [...new Set(productVariations.map((v) => v.GSM).filter((g) => g && g !== 'null'))]
+    .map(Number)
+    .filter((n) => !Number.isNaN(n) && n > 0)
+    .sort((a, b) => a - b);
+  const prices = productVariations.map((v) => Number(v.CALCULATED_PRICE_RS)).filter((n) => n > 0);
+
+  let gsmFact = null;
+  if (gsms.length) {
+    const minGsm = gsms[0];
+    const maxGsm = gsms.at(-1);
+    const gsmRange = minGsm === maxGsm ? String(minGsm) : `${minGsm}–${maxGsm}`;
+    gsmFact = `GSM: ${gsmRange}`;
+  }
+
+  const facts = [
+    sizes.length ? `Sizes: ${sizes.slice(0, 4).join(', ')}` : null,
+    gsmFact,
+    prices.length ? `From Rs. ${Math.min(...prices).toLocaleString()}` : null,
+  ].filter(Boolean);
+
+  const categorySuffix = displayCategory ? ` — ${displayCategory}` : '';
+  const categoryParenthesis = displayCategory ? ` (${displayCategory})` : '';
+
+  return {
+    displayCategory,
+    department,
+    title: `${decodedName}${categorySuffix} | Nazir & Sons`,
+    description: [
+      `Buy ${decodedName}${categoryParenthesis} from Nazir & Sons, Lahore.`,
+      facts.join('. ') + (facts.length ? '.' : ''),
+      'Wholesale and retail, delivered across Pakistan.',
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .slice(0, 300),
+    image: currentProduct.image_url || productVariations[0]?.IMAGE_URL,
+  };
+}
+
 const ProductDetails = () => {
   const { name } = useParams();
   const decodedName = decodeURIComponent(name);
@@ -272,69 +338,11 @@ const ProductDetails = () => {
 
   // Relevant products list (up to 4 items)
   const relevantProducts = useMemo(() => {
-    if (!allProducts || allProducts.length === 0 || !currentProduct) return [];
-    const currentCat = (currentProduct.category || '').toLowerCase();
-    const currentDept = departmentOf(currentProduct.category);
-
-    const others = allProducts.filter(
-      (p) => p.id !== currentProduct.id && p.product_name !== currentProduct.product_name
-    );
-
-    const sameCat = others.filter((p) => (p.category || '').toLowerCase() === currentCat);
-    const sameDept = others.filter(
-      (p) => (p.category || '').toLowerCase() !== currentCat && departmentOf(p.category) === currentDept
-    );
-    const remaining = others.filter(
-      (p) => (p.category || '').toLowerCase() !== currentCat && departmentOf(p.category) !== currentDept
-    );
-
-    return [...sameCat, ...sameDept, ...remaining].slice(0, 4);
+    return computeRelevantProducts(allProducts, currentProduct);
   }, [allProducts, currentProduct]);
 
   const catalogue = useMemo(() => {
-    if (!currentProduct || productVariations.length === 0) return null;
-
-    const category = currentProduct.category || '';
-    const displayCategory = displayNameOf(category);
-    const department = departmentOf(category);
-    const sizes = [...new Set(productVariations.map((v) => v.Display_Size).filter(Boolean))];
-    const gsms = [...new Set(productVariations.map((v) => v.GSM).filter((g) => g && g !== 'null'))]
-      .map(Number)
-      .filter((n) => !Number.isNaN(n) && n > 0)
-      .sort((a, b) => a - b);
-    const prices = productVariations.map((v) => Number(v.CALCULATED_PRICE_RS)).filter((n) => n > 0);
-
-    let gsmFact = null;
-    if (gsms.length) {
-      const minGsm = gsms[0];
-      const maxGsm = gsms.at(-1);
-      const gsmRange = minGsm === maxGsm ? String(minGsm) : `${minGsm}–${maxGsm}`;
-      gsmFact = `GSM: ${gsmRange}`;
-    }
-
-    const facts = [
-      sizes.length ? `Sizes: ${sizes.slice(0, 4).join(', ')}` : null,
-      gsmFact,
-      prices.length ? `From Rs. ${Math.min(...prices).toLocaleString()}` : null,
-    ].filter(Boolean);
-
-    const categorySuffix = displayCategory ? ` — ${displayCategory}` : '';
-    const categoryParenthesis = displayCategory ? ` (${displayCategory})` : '';
-
-    return {
-      displayCategory,
-      department,
-      title: `${decodedName}${categorySuffix} | Nazir & Sons`,
-      description: [
-        `Buy ${decodedName}${categoryParenthesis} from Nazir & Sons, Lahore.`,
-        facts.join('. ') + (facts.length ? '.' : ''),
-        'Wholesale and retail, delivered across Pakistan.',
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .slice(0, 300),
-      image: currentProduct.image_url || productVariations[0]?.IMAGE_URL,
-    };
+    return buildCatalogueSummary(currentProduct, productVariations, decodedName);
   }, [currentProduct, productVariations, decodedName]);
 
   usePageSeo('/product', {
@@ -627,15 +635,14 @@ const ProductDetails = () => {
                   <input
                     type="checkbox"
                     id="bulk-toggle"
+                    aria-label="Place Bulk Order Request"
                     checked={isBulk}
                     onChange={(e) => setIsBulk(e.target.checked)}
                     className="w-4 h-4 mt-0.5 text-[#112338] bg-white border-gray-300 rounded focus:ring-[#112338] accent-[#112338] cursor-pointer shrink-0"
                   />
-                  <label htmlFor="bulk-toggle" className="cursor-pointer select-none">
-                    <span className="text-xs sm:text-[13px] font-bold text-[#112338] block leading-snug">
-                      Place Bulk Order Request
-                    </span>
-                    <span className="text-[10.5px] sm:text-[11px] text-[#64748b] leading-tight block mt-0.5">
+                  <label htmlFor="bulk-toggle" className="cursor-pointer select-none text-xs sm:text-[13px] font-bold text-[#112338] block leading-snug">
+                    Place Bulk Order Request
+                    <span className="text-[10.5px] sm:text-[11px] text-[#64748b] leading-tight block mt-0.5 font-normal">
                       Check for B2B quantities or special pricing. Rates finalized on WhatsApp.
                     </span>
                   </label>

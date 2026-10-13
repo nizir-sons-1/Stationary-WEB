@@ -355,8 +355,8 @@ const TrackOrder = () => {
             </h3>
             
             <div className="divide-y divide-gray-100 border border-[#e5e1d7] rounded-xl overflow-hidden bg-white mb-6">
-              {Array.isArray(result.items) && result.items.map((item, idx) => (
-                <div key={`${item.name || 'item'}-${idx}`} className="p-3.5 sm:p-4 flex items-center justify-between gap-4">
+              {Array.isArray(result.items) && result.items.map((item) => (
+                <div key={item.id ? `${item.id}-${item.size || ''}-${item.gsm || ''}` : `${item.name || 'item'}-${item.size || 'std'}-${item.gsm || '0'}-${item.quantity || 1}`} className="p-3.5 sm:p-4 flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <h4 className="font-bold text-sm text-[#112338] truncate">{item.name}</h4>
                     <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-0.5">

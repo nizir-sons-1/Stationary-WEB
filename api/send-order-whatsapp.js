@@ -43,10 +43,10 @@ export function buildCustomerMessage(orderDetails) {
 
   const itemsList = items.map((item, idx) => {
     const spec = formatItemSpec(item.size, item.gsm);
-    const specStr = spec ? `(${spec})` : '';
-    const packingStr = item.packingType ? ` ${item.packingType}` : '';
+    const specStr = spec ? ` (${spec})` : '';
+    const packingStr = item.packingType ? ' ' + item.packingType : '';
     const formattedPrice = Number(item.price * item.quantity).toLocaleString();
-    return `${idx + 1}. *${item.name}* ${specStr}\n   Qty: ${item.quantity}${packingStr} — Rs. ${formattedPrice}`;
+    return `${idx + 1}. *${item.name}*${specStr}\n   Qty: ${item.quantity}${packingStr} — Rs. ${formattedPrice}`;
   }).join('\n');
 
   return `📄 *NAZIR & SONS — ORDER CONFIRMATION*
@@ -87,17 +87,17 @@ export function buildAdminMessage(orderDetails) {
 
   const itemsList = items.map((item, idx) => {
     const spec = formatItemSpec(item.size, item.gsm);
-    const specStr = spec ? `(${spec})` : '';
+    const specStr = spec ? ` (${spec})` : '';
     const bulkTag = item.isBulk ? ' [BULK REQUEST]' : '';
     const formattedPrice = Number(item.price * item.quantity).toLocaleString();
-    return `${idx + 1}. ${item.name} ${specStr}${bulkTag} × ${item.quantity} = Rs. ${formattedPrice}`;
+    return `${idx + 1}. ${item.name}${specStr}${bulkTag} × ${item.quantity} = Rs. ${formattedPrice}`;
   }).join('\n');
 
   let bulkSection = '';
   if (hasBulk) {
     const bulkNotesList = bulkItems
       .filter((i) => i.bulkDetails)
-      .map((i) => `• *${i.name}*: "${i.bulkDetails}"`)
+      .map((i) => '• *' + i.name + '*: "' + i.bulkDetails + '"')
       .join('\n');
 
     const notesContent = bulkNotesList
