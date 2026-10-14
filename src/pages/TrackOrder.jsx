@@ -57,10 +57,14 @@ async function fetchOrderByPhone(digits) {
 }
 
 async function fetchOrderByFallback(text) {
+  // Strip PostgREST filter delimiters and wildcard injection characters
+  const cleanText = String(text || '').replace(/[,()%.]/g, '').trim();
+  if (cleanText.length < 3) return null;
+
   const { data } = await supabase
     .from('orders')
     .select(ORDER_SELECT_FIELDS)
-    .or(`customer_name.ilike.%${text}%,customer_email.ilike.%${text}%`)
+    .or(`customer_name.ilike.%${cleanText}%,customer_email.ilike.%${cleanText}%`)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, act } from '@testing-library/react';
 import React from 'react';
-import { CartProvider, useCart } from '../CartContext.jsx';
+import { CartProvider } from '../CartContext.jsx';
+import { useCart } from '../../hooks/useCart';
 
 // localStorage mock
 const localStorageMock = (() => {

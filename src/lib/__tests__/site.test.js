@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   SITE_URL,
-  SITE_NAME,
   BUSINESS,
   DEPARTMENT_NAMES,
   absoluteUrl,

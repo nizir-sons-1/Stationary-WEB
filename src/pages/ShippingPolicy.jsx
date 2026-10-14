@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Truck, PackageCheck, Building2, MapPin } from 'lucide-react';
+import { Truck, Building2 } from 'lucide-react';
 import { usePageSeo } from '../lib/seo';
 
 const ShippingPolicy = () => {

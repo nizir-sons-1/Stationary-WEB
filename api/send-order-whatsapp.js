@@ -29,6 +29,13 @@ export function formatItemSpec(size, gsm) {
   return [cleanSize, cleanGsm].filter(Boolean).join(' | ');
 }
 
+// Helper to sanitize user input against WhatsApp markdown breaking characters
+export function cleanWa(val) {
+  return String(val ?? '')
+    .replace(/[*_~`]/g, '')
+    .trim();
+}
+
 // Generate customer confirmation message text
 export function buildCustomerMessage(orderDetails) {
   const {
@@ -41,30 +48,36 @@ export function buildCustomerMessage(orderDetails) {
     items = []
   } = orderDetails;
 
+  const safeCustomerName = cleanWa(customer_name);
+  const safeAddress = cleanWa(customer_address) || 'Self Pickup / Shop';
+  const safeShipping = cleanWa(shipping_method);
+  const safePayment = cleanWa(payment_method);
+  const safeOrderId = cleanWa(order_id);
+
   const itemsList = items.map((item, idx) => {
     const spec = formatItemSpec(item.size, item.gsm);
     const specStr = spec ? ` (${spec})` : '';
-    const packingStr = item.packingType ? ' ' + item.packingType : '';
+    const packingStr = item.packingType ? ' ' + cleanWa(item.packingType) : '';
     const formattedPrice = Number(item.price * item.quantity).toLocaleString();
-    return `${idx + 1}. *${item.name}*${specStr}\n   Qty: ${item.quantity}${packingStr} — Rs. ${formattedPrice}`;
+    return `${idx + 1}. *${cleanWa(item.name)}*${specStr}\n   Qty: ${item.quantity}${packingStr} — Rs. ${formattedPrice}`;
   }).join('\n');
 
   return `📄 *NAZIR & SONS — ORDER CONFIRMATION*
 
-Assalam-o-Alaikum *${customer_name}*,
+Assalam-o-Alaikum *${safeCustomerName}*,
 Aapka order kamyabi se receive ho gaya hai!
 
-🆔 *Order ID:* #${order_id}
+🆔 *Order ID:* #${safeOrderId}
 💰 *Total Amount:* Rs. ${Number(total_amount).toLocaleString()}
-🚚 *Shipping:* ${shipping_method}
-💳 *Payment:* ${payment_method}
-📍 *Delivery Address:* ${customer_address || 'Self Pickup / Shop'}
+🚚 *Shipping:* ${safeShipping}
+💳 *Payment:* ${safePayment}
+📍 *Delivery Address:* ${safeAddress}
 
 🛒 *Order Items:*
 ${itemsList || 'Order items recorded'}
 
 🔍 *Track Your Order:*
-https://nazirandsons.shop/track-order?id=${order_id}
+https://nazirandsons.shop/track-order?id=${safeOrderId}
 
 Humari team jald hi processing shuru karegi. Shukriya for choosing Nazir & Sons!`;
 }
@@ -82,6 +95,13 @@ export function buildAdminMessage(orderDetails) {
     items = []
   } = orderDetails;
 
+  const safeCustomerName = cleanWa(customer_name);
+  const safeCustomerPhone = cleanWa(customer_phone);
+  const safeAddress = cleanWa(customer_address) || 'Self Pickup / Shop';
+  const safeShipping = cleanWa(shipping_method);
+  const safePayment = cleanWa(payment_method);
+  const safeOrderId = cleanWa(order_id);
+
   const hasBulk = items.some((item) => item.isBulk);
   const bulkItems = items.filter((item) => item.isBulk);
 
@@ -90,14 +110,14 @@ export function buildAdminMessage(orderDetails) {
     const specStr = spec ? ` (${spec})` : '';
     const bulkTag = item.isBulk ? ' [BULK REQUEST]' : '';
     const formattedPrice = Number(item.price * item.quantity).toLocaleString();
-    return `${idx + 1}. ${item.name}${specStr}${bulkTag} × ${item.quantity} = Rs. ${formattedPrice}`;
+    return `${idx + 1}. ${cleanWa(item.name)}${specStr}${bulkTag} × ${item.quantity} = Rs. ${formattedPrice}`;
   }).join('\n');
 
   let bulkSection = '';
   if (hasBulk) {
     const bulkNotesList = bulkItems
       .filter((i) => i.bulkDetails)
-      .map((i) => '• *' + i.name + '*: "' + i.bulkDetails + '"')
+      .map((i) => '• *' + cleanWa(i.name) + '*: "' + cleanWa(i.bulkDetails) + '"')
       .join('\n');
 
     const notesContent = bulkNotesList
@@ -109,19 +129,19 @@ export function buildAdminMessage(orderDetails) {
 
   return `🚨 *NEW ORDER ALERT — NAZIR & SONS*
 
-🆔 *Order ID:* #${order_id}
-👤 *Customer:* ${customer_name}
-📞 *Phone:* ${customer_phone}
-📍 *Address:* ${customer_address || 'Self Pickup / Shop'}
-🚚 *Shipping:* ${shipping_method}
-💳 *Payment:* ${payment_method}
+🆔 *Order ID:* #${safeOrderId}
+👤 *Customer:* ${safeCustomerName}
+📞 *Phone:* ${safeCustomerPhone}
+📍 *Address:* ${safeAddress}
+🚚 *Shipping:* ${safeShipping}
+💳 *Payment:* ${safePayment}
 💰 *Total:* Rs. ${Number(total_amount).toLocaleString()}${bulkSection}
 
 🛒 *Items:*
 ${itemsList || 'Items recorded'}
 
 🔍 *View in System:*
-https://nazirandsons.shop/track-order?id=${order_id}`;
+https://nazirandsons.shop/track-order?id=${safeOrderId}`;
 }
 
 // Dispatch WhatsApp message via configured provider

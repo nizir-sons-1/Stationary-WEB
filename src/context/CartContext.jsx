@@ -1,14 +1,18 @@
-import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from 'react';
-
-const CartContext = createContext();
-
-export const useCart = () => useContext(CartContext);
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { CartContext } from './cartContextDef';
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState(() => {
-    // Load from local storage if available
-    const saved = localStorage.getItem('paperWebCart');
-    return saved ? JSON.parse(saved) : [];
+    // Load from local storage if available — wrapped in try/catch because
+    // localStorage throws in Safari private mode, when storage is disabled,
+    // or when the stored JSON is corrupt. A failure here would crash the
+    // entire app before any ErrorBoundary could catch it.
+    try {
+      const saved = localStorage.getItem('paperWebCart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   // Save to local storage whenever cart changes

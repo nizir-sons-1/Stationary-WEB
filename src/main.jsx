@@ -4,7 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react'
 import './index.css'
 import App from './App.jsx'
 
-import ErrorBoundary from './ErrorBoundary.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { CartProvider } from './context/CartContext.jsx';
 
 createRoot(document.getElementById('root')).render(

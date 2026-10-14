@@ -11,7 +11,7 @@ import {
   Shuffle,
   ChevronUp,
 } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../hooks/useCart';
 import { categoryPath } from '../lib/site';
 import { useProducts, useTaxonomyImages } from '../hooks/useSupabase';
 import { departmentOf } from '../data/categories';

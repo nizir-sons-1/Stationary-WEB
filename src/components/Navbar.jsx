@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShoppingBag, ShoppingCart, Menu, X, ChevronRight, Phone } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../hooks/useCart';
 import { categoryPath } from '../lib/site';
 import SearchModal from './SearchModal';
 
@@ -44,6 +44,11 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isCartBumping, setIsCartBumping] = useState(false);
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    setIsMac(typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  }, []);
 
   useEffect(() => {
     const onCartArrive = () => {
@@ -240,7 +245,7 @@ const Navbar = () => {
                 Search...
               </span>
               <kbd className="hidden xl:inline text-[10px] bg-[#ece8df] text-[#64748b] px-1.5 py-0.5 rounded font-mono font-medium">
-                ⌘K
+                {isMac ? '⌘K' : 'Ctrl+K'}
               </kbd>
             </button>
 

@@ -12,6 +12,7 @@ const Reviews = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newReview, setNewReview] = useState({ name: '', text: '', rating: 5 });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   // Calculate stats
   const totalReviews = reviews.length;
@@ -23,7 +24,7 @@ const Reviews = () => {
     let result = [...reviews];
     
     if (filterStar !== 'All') {
-      result = result.filter(r => r.rating === parseInt(filterStar));
+      result = result.filter(r => r.rating === Number.parseInt(filterStar, 10));
     }
     
     if (sortBy === 'highest') {
@@ -41,6 +42,7 @@ const Reviews = () => {
     if (!newReview.name || !newReview.text || isSubmitting) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       await submitReview({
         name: newReview.name,
@@ -51,7 +53,7 @@ const Reviews = () => {
       setNewReview({ name: '', text: '', rating: 5 });
     } catch (err) {
       console.error('Failed to submit review:', err);
-      alert('Could not submit your review. Please try again.');
+      setSubmitError('Could not submit your review. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -73,9 +75,9 @@ const Reviews = () => {
   };
 
   const renderStars = (rating) => {
-    return [...Array(5)].map((_, i) => (
+    return Array.from({ length: 5 }, (_, i) => (
       <Star 
-        key={i} 
+        key={`star-${i}`} 
         size={14} 
         className={i < rating ? "fill-primary text-primary" : "text-gray-300"} 
       />
@@ -110,8 +112,8 @@ const Reviews = () => {
               <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 pb-6 md:pb-0 md:pr-6">
                 <div className="text-6xl font-bold text-[#111111] mb-2">{averageRating}</div>
                 <div className="flex gap-1 mb-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={20} className={i < Math.round(averageRating) ? "fill-primary text-primary" : "text-gray-300"} />
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={`avg-star-${i}`} size={20} className={i < Math.round(Number(averageRating)) ? "fill-primary text-primary" : "text-gray-300"} />
                   ))}
                 </div>
                 <p className="text-gray-500 text-sm font-medium">Based on {totalReviews} reviews</p>
@@ -153,15 +155,19 @@ const Reviews = () => {
             >
               All
             </button>
-            {[5, 4, 3, 2, 1].map(star => (
-              <button 
-                key={star}
-                onClick={() => setFilterStar(star)}
-                className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border ${filterStar === star ? 'bg-[#111111] text-white border-[#111111]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-              >
-                {star} <Star size={12} className={filterStar === star ? 'fill-white' : 'fill-gray-400'} />
-              </button>
-            ))}
+            {[5, 4, 3, 2, 1].map(star => {
+              const isSelected = String(filterStar) === String(star);
+              return (
+                <button 
+                  key={star}
+                  type="button"
+                  onClick={() => setFilterStar(star)}
+                  className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1 transition-colors border ${isSelected ? 'bg-[#111111] text-white border-[#111111]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                >
+                  {star} <Star size={12} className={isSelected ? 'fill-white' : 'fill-gray-400'} />
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex gap-3 w-full sm:w-auto">
@@ -190,78 +196,91 @@ const Reviews = () => {
 
         {/* Reviews List */}
         <div className="flex flex-col gap-4">
-          {loading ? (
-            // Skeleton
-            [...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white border border-gray-100 p-6 rounded-3xl animate-pulse">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-200" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-24 mb-1" />
-                    <div className="h-3 bg-gray-200 rounded w-16" />
-                  </div>
-                </div>
-                <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-                <div className="h-4 bg-gray-200 rounded w-2/3" />
-              </div>
-            ))
-          ) : filteredAndSortedReviews.length > 0 ? (
-            filteredAndSortedReviews.map((review) => (
-              <div key={review.id} className="bg-white border border-gray-100 p-6 rounded-3xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-shadow">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-lg">
-                      {review.name.charAt(0)}
+          {(() => {
+            if (loading) {
+              return (
+                <>
+                  {Array.from({ length: 3 }, (_, i) => (
+                    <div key={`skeleton-${i}`} className="bg-white border border-gray-100 p-6 rounded-3xl animate-pulse">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-gray-200" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded w-24 mb-1" />
+                          <div className="h-3 bg-gray-200 rounded w-16" />
+                        </div>
+                      </div>
+                      <div className="h-4 bg-gray-200 rounded w-full mb-2" />
+                      <div className="h-4 bg-gray-200 rounded w-2/3" />
                     </div>
-                    <div>
-                      <div className="font-bold text-[#111111]">{review.name}</div>
-                      <div className="text-xs text-gray-500 font-medium">{formatDate(review.created_at)}</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-1 bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-full">
-                    {renderStars(review.rating)}
-                  </div>
-                </div>
+                  ))}
+                </>
+              );
+            }
+            if (filteredAndSortedReviews.length > 0) {
+              return (
+                <>
+                  {filteredAndSortedReviews.map((review) => (
+                    <div key={review.id} className="bg-white border border-gray-100 p-6 rounded-3xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-shadow">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-lg">
+                            {review.name.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-bold text-[#111111]">{review.name}</div>
+                            <div className="text-xs text-gray-500 font-medium">{formatDate(review.created_at)}</div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-full">
+                          {renderStars(review.rating)}
+                        </div>
+                      </div>
 
-                <p className="text-gray-700 text-sm leading-relaxed mb-4">
-                  "{review.text}"
-                </p>
+                      <p className="text-gray-700 text-sm leading-relaxed mb-4">
+                        "{review.text}"
+                      </p>
 
-                <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                  {review.verified && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
-                      <CheckCircle size={12} />
-                      Verified Purchase
+                      <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+                        {review.verified && (
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                            <CheckCircle size={12} />
+                            Verified Purchase
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-4 ml-auto">
+                          <span className="text-xs text-gray-400 font-bold">Helpful?</span>
+                          <button type="button" className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-primary transition-colors">
+                            <ThumbsUp size={14} /> {review.helpful || 0}
+                          </button>
+                          <button type="button" className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-red-500 transition-colors">
+                            <ThumbsDown size={14} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  
-                  <div className="flex items-center gap-4 ml-auto">
-                    <span className="text-xs text-gray-400 font-bold">Helpful?</span>
-                    <button className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-primary transition-colors">
-                      <ThumbsUp size={14} /> {review.helpful || 0}
-                    </button>
-                    <button className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-red-500 transition-colors">
-                      <ThumbsDown size={14} />
-                    </button>
-                  </div>
-                </div>
+                  ))}
+                </>
+              );
+            }
+            return (
+              <div className="text-center py-12 bg-white rounded-3xl border border-gray-200 border-dashed">
+                <MessageSquare size={32} className="mx-auto text-gray-300 mb-3" />
+                <div className="text-gray-800 font-bold">No reviews found</div>
+                <p className="text-gray-500 text-sm mt-1">Try changing your filters.</p>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-12 bg-white rounded-3xl border border-gray-200 border-dashed">
-              <MessageSquare size={32} className="mx-auto text-gray-300 mb-3" />
-              <div className="text-gray-800 font-bold">No reviews found</div>
-              <p className="text-gray-500 text-sm mt-1">Try changing your filters.</p>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 
       {/* Write Review Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm"
+          <button 
+            type="button"
+            aria-label="Close modal backdrop"
+            className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm cursor-default border-0"
             onClick={() => setIsModalOpen(false)}
           />
           
@@ -277,14 +296,20 @@ const Reviews = () => {
             <p className="text-gray-500 text-sm mb-6 font-medium">Share your experience with other customers.</p>
 
             <form onSubmit={handleSubmitReview} className="flex flex-col gap-5">
+              {submitError && (
+                <div className="p-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl">
+                  {submitError}
+                </div>
+              )}
               
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Overall Rating</label>
+              <fieldset className="border-0 p-0 m-0">
+                <legend className="block text-sm font-bold text-gray-700 mb-2">Overall Rating</legend>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map(star => (
                     <button
                       key={star}
                       type="button"
+                      aria-label={`${star} star${star > 1 ? 's' : ''}`}
                       onClick={() => setNewReview({ ...newReview, rating: star })}
                       className="p-1 transition-transform hover:scale-110"
                     >
@@ -292,11 +317,12 @@ const Reviews = () => {
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Your Name</label>
+                <label htmlFor="review-name" className="block text-sm font-bold text-gray-700 mb-2">Your Name</label>
                 <input 
+                  id="review-name"
                   type="text"
                   required
                   value={newReview.name}
@@ -307,8 +333,9 @@ const Reviews = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Review</label>
+                <label htmlFor="review-text" className="block text-sm font-bold text-gray-700 mb-2">Review</label>
                 <textarea 
+                  id="review-text"
                   required
                   rows="4"
                   value={newReview.text}

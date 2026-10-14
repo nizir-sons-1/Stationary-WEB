@@ -4,7 +4,7 @@ import {
   loadSavedCustomer,
   saveCustomerInfo,
   clearSavedCustomer,
-} from '../../pages/Cart';
+} from '../customerStorage.js';
 
 describe('Cart Customer Storage Helpers', () => {
   beforeEach(() => {
