@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Minus, Plus, Trash2, ArrowRight, MessageCircle, ArrowLeft, Truck, PackageCheck, CreditCard, Building2, MapPin, CheckCircle2, Check, Copy } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageSeo } from '../lib/seo';
@@ -43,17 +43,27 @@ const PAPER_CATEGORIES = [
   'local paper', 'boxboard', 'news', 'butter paper', 'kraft card', 'book paper'
 ];
 
-function isB2BCart(cartItems) {
-  return cartItems.every((item) => {
-    const cat = (item.category || '').toLowerCase();
-    const dept = (item.department || '').toLowerCase();
-    const isPaperCategory = PAPER_CATEGORIES.some((c) => cat.includes(c));
-    const isPaperDept = dept === 'paper & canvas' && isPaperCategory;
-    return isPaperCategory || isPaperDept;
-  });
+function isPaperAndCanvasItem(item) {
+  if (!item) return false;
+  const dept = String(item.department || item.Department || '').trim().toLowerCase();
+  if (dept === PAPER_AND_CANVAS.toLowerCase() || dept === 'paper & canvas' || dept === 'paper-and-canvas') {
+    return true;
+  }
+  const rawCat = String(item.category || item.Category || '');
+  const resolvedDept = String(departmentOf(rawCat) || '').trim().toLowerCase();
+  if (resolvedDept === PAPER_AND_CANVAS.toLowerCase() || resolvedDept === 'paper & canvas' || resolvedDept === 'paper-and-canvas') {
+    return true;
+  }
+  const catLower = rawCat.toLowerCase();
+  return PAPER_CATEGORIES.some((c) => catLower.includes(c));
 }
 
-function validateCheckoutInput({ checkoutPhase, fullName, phone, address, isB2B }) {
+function isB2BCart(cartItems) {
+  if (cartItems.some((item) => item.isBulk)) return true;
+  return cartItems.every(isPaperAndCanvasItem);
+}
+
+function validateCheckoutInput({ checkoutPhase, fullName, phone, address, isB2B, shippingMethod }) {
   if (checkoutPhase !== 'checkout') return { valid: true };
   if (!fullName?.trim()) {
     return { valid: false, message: 'Please enter your full name.' };
@@ -64,8 +74,13 @@ function validateCheckoutInput({ checkoutPhase, fullName, phone, address, isB2B 
       message: 'Kripya 11 digits Pakistani mobile number enter karein jo 03 se shuru ho (e.g. 0300 1234567). Order confirm hone ke liye 11 digits mobile number zaroori hai.'
     };
   }
-  if (!isB2B && !address?.trim()) {
-    return { valid: false, message: 'Please enter your delivery address.' };
+  if (shippingMethod !== 'self_pickup' && !address?.trim()) {
+    return {
+      valid: false,
+      message: isB2B
+        ? 'Please enter your delivery city, shop, or goods transport / adda address.'
+        : 'Please enter your delivery address.'
+    };
   }
   return { valid: true };
 }
@@ -310,9 +325,9 @@ function OrderSuccessView({ placedOrder, copied, onCopy }) {
               <CheckCircle2 size={20} />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-emerald-950">Order Verified &amp; Saved</h4>
+              <h4 className="font-bold text-sm text-emerald-950">Order Confirmed</h4>
               <p className="text-xs text-emerald-800/80 mt-0.5 leading-relaxed">
-                Registered under customer: <strong className="font-medium text-emerald-950">{placedOrder.customerName}</strong> ({placedOrder.phone})
+                Customer: <strong className="font-medium text-emerald-950">{placedOrder.customerName}</strong> ({placedOrder.phone})
               </p>
             </div>
           </div>
@@ -322,9 +337,9 @@ function OrderSuccessView({ placedOrder, copied, onCopy }) {
               <Truck size={20} />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-blue-950">Processing for Dispatch</h4>
+              <h4 className="font-bold text-sm text-blue-950">Dispatch &amp; Delivery</h4>
               <p className="text-xs text-blue-800/80 mt-0.5 leading-relaxed">
-                Method: <strong className="font-medium text-blue-950">{placedOrder.shipping}</strong>. Items will be handled promptly.
+                Method: <strong className="font-medium text-blue-950">{placedOrder.shipping}</strong>
               </p>
             </div>
           </div>
@@ -334,23 +349,23 @@ function OrderSuccessView({ placedOrder, copied, onCopy }) {
         {placedOrder.hasBulk && (
           <div className="mb-6 bg-[#fcfbf9] border border-amber-300 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 shadow-xs">
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 text-amber-800 mt-0.5">
-              <PackageCheck size={20} />
+              <MessageCircle size={20} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-bold text-sm text-[#112338]">Bulk Order Request Registered</h4>
+                <h4 className="font-bold text-sm text-[#112338]">Bulk Order Inquiry Received</h4>
                 <span className="text-[9.5px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
-                  B2B Wholesale
+                  Wholesale
                 </span>
               </div>
               <p className="text-xs text-[#64748b] leading-relaxed">
-                Your bulk inquiry is recorded in database under <strong className="text-[#112338]">{placedOrder.orderType}</strong>. Our wholesale desk will coordinate custom B2B rates directly with you on WhatsApp.
+                Aapka bulk order inquiry hume receive ho gaya hai. Humari team jald hi aap se WhatsApp (<strong className="text-[#112338]">{placedOrder.phone}</strong>) par rabta karegi aur best wholesale rates &amp; dispatch schedule confirm karegi.
               </p>
               {placedOrder.items
                 .filter((i) => i.isBulk && i.bulkDetails)
                 .map((i) => (
                   <div key={`${i.name}-${i.size || 'std'}-${i.gsm || '0'}`} className="mt-2 text-xs bg-white border border-[#e2ddd3] rounded-lg p-2.5 text-[#112338]">
-                    <span className="font-bold text-amber-800">Note for {i.name}:</span> {i.bulkDetails}
+                    <span className="font-bold text-amber-800">Your Requirements for {i.name}:</span> {i.bulkDetails}
                   </div>
                 ))}
             </div>
@@ -492,16 +507,39 @@ function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
           </div>
           
           <div className="md:col-span-3 flex justify-start md:justify-center items-center">
-            <div className="flex items-center border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
-              <button onClick={() => updateQuantity(item.id, item.isBulk, item.quantity - 1, item.isInstallment, item.installmentPlan)} className="px-3 py-2 hover:bg-gray-50 active:bg-gray-100 text-gray-700 transition-colors"><Minus size={14} /></button>
-              <span className="w-8 text-center font-bold text-sm text-gray-900">{item.quantity}</span>
-              <button onClick={() => updateQuantity(item.id, item.isBulk, item.quantity + 1, item.isInstallment, item.installmentPlan)} className="px-3 py-2 hover:bg-gray-50 active:bg-gray-100 text-gray-700 transition-colors"><Plus size={14} /></button>
-            </div>
+            {item.isBulk ? (
+              <div className="flex flex-col items-center gap-1">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                  Bulk Request
+                </span>
+                <span className="text-[10px] text-gray-400 font-medium">Qty: {item.quantity} (Quoted)</span>
+              </div>
+            ) : (
+              <div className="flex items-center border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => updateQuantity(item.id, item.isBulk, item.quantity - 1, item.isInstallment, item.installmentPlan)}
+                  className="px-3 py-2 hover:bg-gray-50 active:bg-gray-100 text-gray-700 transition-colors cursor-pointer"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="w-8 text-center font-bold text-sm text-gray-900">{item.quantity}</span>
+                <button
+                  type="button"
+                  onClick={() => updateQuantity(item.id, item.isBulk, item.quantity + 1, item.isInstallment, item.installmentPlan)}
+                  className="px-3 py-2 hover:bg-gray-50 active:bg-gray-100 text-gray-700 transition-colors cursor-pointer"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="md:col-span-3 text-left md:text-right flex flex-col justify-center">
             <span className="text-lg md:text-xl font-black text-primary">Rs. {(item.price * item.quantity).toLocaleString()}</span>
-            <span className="text-[11px] font-bold text-gray-400">Rs. {item.price.toLocaleString()} / {item.packingType}</span>
+            <span className="text-[11px] font-bold text-gray-400">
+              {item.isBulk ? 'Rates finalized on WhatsApp' : `Rs. ${item.price.toLocaleString()} / ${item.packingType}`}
+            </span>
           </div>
           
           <div className="md:col-span-12 flex justify-end md:-mt-8">
@@ -516,18 +554,15 @@ function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
 }
 
 function getPhoneInputBorderClass(phoneVal, isValid) {
-  if (phoneVal.length === 0) {
-    return 'border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary';
+  if (phoneVal.length > 0 && !isValid) {
+    return 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-400 text-[#112338]';
   }
-  if (isValid) {
-    return 'border-emerald-500 ring-1 ring-emerald-500/20 text-[#112338]';
-  }
-  return 'border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-400';
+  return 'border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary text-[#112338]';
 }
 
 function RadioOptionCard({ name, value, checked, onChange, icon: Icon, title, subtitle, colSpan }) {
   return (
-    <label className={`${colSpan ? 'md:col-span-3' : ''} cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${
+    <label className={`${colSpan ? 'col-span-full' : ''} cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all ${
       checked ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'
     }`}>
       <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="sr-only" />
@@ -538,6 +573,31 @@ function RadioOptionCard({ name, value, checked, onChange, icon: Icon, title, su
       </div>
     </label>
   );
+}
+
+function getAddressFieldConfig({ shippingMethod, isB2B, hasPaperAndCanvas }) {
+  if (shippingMethod === 'delivery_bundle') {
+    return {
+      label: 'Goods Transport / Adda Address *',
+      placeholder: 'Enter your city and goods transport / adda details',
+    };
+  }
+  if (isB2B) {
+    if (hasPaperAndCanvas) {
+      return {
+        label: 'Delivery / Adda / City Address *',
+        placeholder: 'Enter your city, shop name, or goods transport / adda details',
+      };
+    }
+    return {
+      label: 'Delivery / Shop / City Address *',
+      placeholder: 'Enter your city, shop, or delivery address',
+    };
+  }
+  return {
+    label: 'Delivery Address *',
+    placeholder: 'Enter your full shipping address',
+  };
 }
 
 function CustomerInfoFields({
@@ -551,12 +611,15 @@ function CustomerInfoFields({
   address,
   setAddress,
   isB2B,
+  shippingMethod,
   rememberDetails,
   setRememberDetails,
   onClearDetails,
   hasAutoFilled,
+  hasPaperAndCanvas,
 }) {
   const phoneBorderClass = getPhoneInputBorderClass(phone, isPhoneValid);
+  const addressConfig = getAddressFieldConfig({ shippingMethod, isB2B, hasPaperAndCanvas });
 
   return (
     <div className="flex flex-col gap-5">
@@ -592,38 +655,22 @@ function CustomerInfoFields({
         <input id="customer-fullName" type="text" required value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Enter your full name" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
       </div>
       
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <label htmlFor="customer-phone" className="text-sm font-bold text-gray-700">Phone Number *</label>
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border transition-colors ${
-            isPhoneValid
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-amber-50 text-amber-800 border-amber-200'
-          }`}>
-            {isPhoneValid ? '✓ 11 Digits Verified' : '11 Digits Required (03xx)'}
-          </span>
-        </div>
-        <div className="relative">
-          <input 
-            id="customer-phone" 
-            type="tel" 
-            inputMode="numeric"
-            autoComplete="tel"
-            required 
-            value={phone} 
-            onChange={handlePhoneChange} 
-            placeholder="0300 1234567" 
-            className={`w-full p-4 rounded-xl border outline-none shadow-sm bg-white font-medium text-sm transition-all ${phoneBorderClass}`} 
-          />
-        </div>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="customer-phone" className="text-sm font-bold text-gray-700">Phone Number *</label>
+        <input 
+          id="customer-phone" 
+          type="tel" 
+          inputMode="numeric"
+          autoComplete="tel"
+          required 
+          value={phone} 
+          onChange={handlePhoneChange} 
+          placeholder="0300 1234567" 
+          className={`p-4 rounded-xl border outline-none shadow-sm bg-white text-sm transition-all ${phoneBorderClass}`} 
+        />
         {phone.length > 0 && !isPhoneValid && (
-          <p className="text-[11.5px] font-semibold text-amber-800 bg-amber-50/70 border border-amber-200/80 rounded-lg px-2.5 py-1.5">
-            ⚠️ Kripya 11 digits Pakistani mobile number enter karein jo 03 se shuru ho (e.g. 0300 1234567). Order confirmation is par aayegi.
-          </p>
-        )}
-        {phone.length === 0 && (
-          <p className="text-[11px] text-gray-400">
-            11-digit mobile number for WhatsApp order tracking &amp; confirmation (e.g. 0300 1234567).
+          <p className="text-[11.5px] font-medium text-red-500">
+            Kripya 11 digits Pakistani mobile number enter karein (e.g. 0300 1234567).
           </p>
         )}
       </div>
@@ -633,10 +680,20 @@ function CustomerInfoFields({
         <input id="customer-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
       </div>
       
-      {!isB2B && (
+      {(shippingMethod !== 'self_pickup' || !isB2B) && (
         <div className="flex flex-col gap-2">
-          <label htmlFor="customer-address" className="text-sm font-bold text-gray-700">Delivery Address *</label>
-          <textarea id="customer-address" required value={address} onChange={e => setAddress(e.target.value)} placeholder="Enter your full shipping address" rows="3" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white resize-none" />
+          <label htmlFor="customer-address" className="text-sm font-bold text-gray-700">
+            {addressConfig.label}
+          </label>
+          <textarea
+            id="customer-address"
+            required={shippingMethod !== 'self_pickup'}
+            value={address}
+            onChange={e => setAddress(e.target.value)}
+            placeholder={addressConfig.placeholder}
+            rows="3"
+            className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white resize-none"
+          />
         </div>
       )}
 
@@ -656,11 +713,11 @@ function CustomerInfoFields({
   );
 }
 
-function ShippingMethodSelector({ isB2B, shippingMethod, setShippingMethod }) {
+function ShippingMethodSelector({ isB2B, shippingMethod, setShippingMethod, hasPaperAndCanvas }) {
   return (
     <div className="flex flex-col gap-5">
       <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Shipping Method</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 ${hasPaperAndCanvas && isB2B ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
         {isB2B ? (
           <>
             <RadioOptionCard
@@ -681,15 +738,17 @@ function ShippingMethodSelector({ isB2B, shippingMethod, setShippingMethod }) {
               title="Delivery - Open"
               subtitle="Min Rs 350"
             />
-            <RadioOptionCard
-              name="shipping"
-              value="delivery_bundle"
-              checked={shippingMethod === 'delivery_bundle'}
-              onChange={() => setShippingMethod('delivery_bundle')}
-              icon={PackageCheck}
-              title="Delivery - Bundle"
-              subtitle="Only for Adda"
-            />
+            {hasPaperAndCanvas && (
+              <RadioOptionCard
+                name="shipping"
+                value="delivery_bundle"
+                checked={shippingMethod === 'delivery_bundle'}
+                onChange={() => setShippingMethod('delivery_bundle')}
+                icon={PackageCheck}
+                title="Delivery - Bundle"
+                subtitle="Only for Adda"
+              />
+            )}
           </>
         ) : (
           <RadioOptionCard
@@ -762,6 +821,7 @@ function PaymentMethodSelector({ isB2B, paymentMethod, setPaymentMethod }) {
 }
 
 function CheckoutForm({
+  cartItems,
   fullName,
   setFullName,
   phone,
@@ -781,7 +841,10 @@ function CheckoutForm({
   setRememberDetails,
   onClearDetails,
   hasAutoFilled,
+  hasPaperAndCanvas,
 }) {
+  const hasBulk = Array.isArray(cartItems) && cartItems.some((item) => item.isBulk);
+
   return (
     <motion.form 
       id="checkout-form"
@@ -792,6 +855,22 @@ function CheckoutForm({
       exit={{ opacity: 0, x: 20 }}
       className="flex flex-col gap-10"
     >
+      {hasBulk && (
+        <div className="bg-blue-50/90 border border-blue-200/90 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0 mt-0.5">
+            <PackageCheck size={20} />
+          </div>
+          <div className="text-xs text-blue-900 leading-relaxed">
+            <strong className="block font-bold text-blue-950 text-xs sm:text-sm">
+              Bulk Order Checkout Active
+            </strong>
+            {hasPaperAndCanvas
+              ? "This order includes wholesale items with custom specifications. Please complete your contact and shipping information below. Final invoice and bilty/adda dispatch details will be verified with you."
+              : "This order includes wholesale items with custom specifications. Please complete your contact and shipping information below. Final invoice and dispatch details will be verified with you."}
+          </div>
+        </div>
+      )}
+
       <CustomerInfoFields
         fullName={fullName}
         setFullName={setFullName}
@@ -803,15 +882,18 @@ function CheckoutForm({
         address={address}
         setAddress={setAddress}
         isB2B={isB2B}
+        shippingMethod={shippingMethod}
         rememberDetails={rememberDetails}
         setRememberDetails={setRememberDetails}
         onClearDetails={onClearDetails}
         hasAutoFilled={hasAutoFilled}
+        hasPaperAndCanvas={hasPaperAndCanvas}
       />
       <ShippingMethodSelector
         isB2B={isB2B}
         shippingMethod={shippingMethod}
         setShippingMethod={setShippingMethod}
+        hasPaperAndCanvas={hasPaperAndCanvas}
       />
       <PaymentMethodSelector
         isB2B={isB2B}
@@ -865,9 +947,21 @@ function OrderSummary({
           <h3 className="text-xs font-bold text-gray-900 mb-4">Items in Cart:</h3>
           <div className="flex flex-col gap-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
             {cartItems.map((item) => (
-              <div key={`${item.id}-${item.name}-${item.size || ''}`} className="flex flex-col text-sm">
-                <span className="text-gray-700 font-medium">{item.name} ({item.size}{departmentOf(item.category) === PAPER_AND_CANVAS ? `, ${item.gsm}g` : ''})</span>
+              <div key={`${item.id}-${item.name}-${item.size || ''}-${item.isBulk ? 'bulk' : 'std'}`} className="flex flex-col text-sm border-b border-gray-100 last:border-0 pb-2 last:pb-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-gray-700 font-medium">{item.name} ({item.size}{departmentOf(item.category) === PAPER_AND_CANVAS ? `, ${item.gsm}g` : ''})</span>
+                  {item.isBulk && (
+                    <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-blue-900 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                      Bulk
+                    </span>
+                  )}
+                </div>
                 <span className="text-[11px] text-gray-500">{item.quantity} × Rs. {(item.price * item.quantity).toLocaleString()} (Rs. {item.price.toLocaleString()}/{item.packingType})</span>
+                {item.bulkDetails && (
+                  <span className="text-[10px] text-blue-900 bg-blue-50/70 rounded px-1.5 py-0.5 mt-1 border border-blue-200/60 italic line-clamp-2">
+                    {item.bulkDetails}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -912,13 +1006,35 @@ function OrderSummary({
 
 const Cart = () => {
   usePageSeo('/cart');
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   
+  const isCheckoutRequested =
+    searchParams.get('phase') === 'checkout' ||
+    searchParams.get('checkout') === 'true' ||
+    location.state?.phase === 'checkout';
+
+  const checkoutAutoTriggered = React.useRef(false);
+
   // Checkout States
   const [savedProfile] = useState(loadSavedCustomer);
   const [rememberDetails, setRememberDetails] = useState(true);
-  const [checkoutPhase, setCheckoutPhase] = useState('cart'); // 'cart' | 'checkout' | 'success'
+  const [checkoutPhase, setCheckoutPhase] = useState(() => {
+    if (isCheckoutRequested && cartItems.length > 0) {
+      checkoutAutoTriggered.current = true;
+      return 'checkout';
+    }
+    return 'cart';
+  });
+
+  React.useEffect(() => {
+    if (isCheckoutRequested && cartItems.length > 0 && !checkoutAutoTriggered.current) {
+      checkoutAutoTriggered.current = true;
+      setCheckoutPhase('checkout');
+    }
+  }, [isCheckoutRequested, cartItems.length]);
   const [fullName, setFullName] = useState(() => savedProfile.fullName || '');
   const [phone, setPhone] = useState(() => savedProfile.phone || '');
   const [email, setEmail] = useState(() => savedProfile.email || '');
@@ -950,17 +1066,22 @@ const Cart = () => {
   };
 
   const isB2B = isB2BCart(cartItems);
+  const hasPaperAndCanvas = cartItems.some(isPaperAndCanvasItem);
 
   // Force default methods if switching types
   React.useEffect(() => {
     if (isB2B) {
-      setShippingMethod(prev => (prev === 'standard_delivery' ? 'self_pickup' : prev));
+      setShippingMethod(prev => {
+        if (prev === 'standard_delivery') return 'self_pickup';
+        if (prev === 'delivery_bundle' && !hasPaperAndCanvas) return 'delivery_open';
+        return prev;
+      });
       setPaymentMethod(prev => (prev === 'cod' || prev === 'online' ? 'shop' : prev));
     } else {
       setShippingMethod(prev => (prev !== 'standard_delivery' ? 'standard_delivery' : prev));
       setPaymentMethod(prev => (prev === 'shop' ? 'cod' : prev));
     }
-  }, [isB2B]);
+  }, [isB2B, hasPaperAndCanvas]);
 
   // Scroll to top immediately when checkout phase transitions
   React.useEffect(() => {
@@ -985,7 +1106,7 @@ const Cart = () => {
   const handleCheckout = async (e) => {
     e?.preventDefault();
     if (cartItems.length === 0) return;
-    const check = validateCheckoutInput({ checkoutPhase, fullName, phone, address, isB2B });
+    const check = validateCheckoutInput({ checkoutPhase, fullName, phone, address, isB2B, shippingMethod });
     if (!check.valid) {
       alert(check.message);
       if (!isValidPakistaniPhone(phone)) {
@@ -1139,6 +1260,7 @@ const Cart = () => {
 
             {checkoutPhase === 'checkout' && (
               <CheckoutForm
+                cartItems={cartItems}
                 fullName={fullName}
                 setFullName={setFullName}
                 phone={phone}
@@ -1158,6 +1280,7 @@ const Cart = () => {
                 setRememberDetails={setRememberDetails}
                 onClearDetails={handleClearDetails}
                 hasAutoFilled={hasAutoFilled}
+                hasPaperAndCanvas={hasPaperAndCanvas}
               />
             )}
           </AnimatePresence>
