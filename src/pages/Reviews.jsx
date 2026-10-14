@@ -97,7 +97,9 @@ const Reviews = () => {
             <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
               <MessageSquare className="text-primary" size={24} />
             </div>
-            <h1 className="text-3xl font-display font-bold tracking-tight">Customer Reviews</h1>
+            <h1 className="text-3xl md:text-4xl font-headline-xl text-secondary font-black tracking-tight">
+              Customer <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 font-serif italic font-medium">Reviews</span>
+            </h1>
           </div>
 
           {loading ? (

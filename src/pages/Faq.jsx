@@ -13,14 +13,25 @@ const Faq = () => {
   return (
     <main className="flex-grow pt-14 md:pt-20 pb-16 px-4 sm:px-6 max-w-4xl w-full mx-auto font-sans">
       {/* Header */}
-      <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
-        <h1 className="text-3xl sm:text-4xl font-bold text-[#112338] tracking-tight mb-3">
-          Frequently Asked Questions
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="text-center max-w-3xl mx-auto mb-12 sm:mb-14"
+      >
+        <div className="inline-block px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-4">
+          <p className="text-primary text-[12px] font-bold uppercase tracking-widest">Answers</p>
+        </div>
+        <h1 className="font-headline-xl text-[36px] md:text-[56px] text-secondary font-black tracking-tight leading-none mb-4">
+          Frequently Asked{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 font-serif italic font-medium">
+            Questions
+          </span>
         </h1>
-        <p className="text-gray-600 text-[15px] sm:text-base leading-relaxed">
+        <p className="font-body-lg text-body-lg text-gray-500">
           {seo.summary}
         </p>
-      </div>
+      </motion.div>
 
       {/* FAQ List */}
       <div className="flex flex-col gap-3.5 sm:gap-4">

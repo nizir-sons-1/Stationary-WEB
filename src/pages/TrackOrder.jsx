@@ -162,18 +162,21 @@ const TrackOrder = () => {
 
       {/* Page Heading */}
       <motion.div 
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="text-center mb-6 sm:mb-8"
+        transition={{ duration: 0.6 }}
+        className="text-center mb-8 max-w-2xl mx-auto"
       >
-        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-3.5 shadow-sm border border-orange-100">
-          <Package size={28} className="text-primary" />
+        <div className="inline-block px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-4">
+          <p className="text-primary text-[12px] font-bold uppercase tracking-widest">Live Tracking</p>
         </div>
-        <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl text-[#112338] font-normal tracking-tight mb-2">
-          Track Your Order
+        <h1 className="font-headline-xl text-[34px] sm:text-[44px] md:text-[52px] text-secondary font-black tracking-tight leading-none mb-3">
+          Track Your{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 font-serif italic font-medium">
+            Order
+          </span>
         </h1>
-        <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto">
+        <p className="font-body-lg text-body-lg text-gray-500 max-w-md mx-auto">
           Enter your 8-digit Order ID or your phone number to check live processing and delivery details.
         </p>
       </motion.div>
