@@ -5,19 +5,18 @@ import { usePageSeo } from '../lib/seo';
 const TermsOfService = () => {
   usePageSeo('/terms');
   return (
-    <main className="flex-grow pt-32 md:pt-40 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto">
-      
+    <main className="flex-grow pt-14 md:pt-20 pb-16 px-4 sm:px-6 max-w-4xl w-full mx-auto font-sans">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="mb-16 text-center max-w-3xl mx-auto"
+        className="mb-12 sm:mb-14 text-center max-w-3xl mx-auto"
       >
-        <div className="inline-block px-4 py-1.5 rounded-full bg-slate-100 border border-slate-200 mb-4">
-          <p className="text-slate-600 text-[12px] font-bold uppercase tracking-widest">Legal Agreement</p>
+        <div className="inline-block px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-4">
+          <p className="text-primary text-[12px] font-bold uppercase tracking-widest">Legal Agreement</p>
         </div>
         <h1 className="font-headline-xl text-[36px] md:text-[56px] text-secondary font-black tracking-tight leading-none mb-4">
-          Terms of <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-600 to-gray-500 font-serif italic font-medium">Service</span>
+          Terms of <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 font-serif italic font-medium">Service</span>
         </h1>
         <p className="font-body-lg text-body-lg text-gray-500">
           By accessing and using nazirandsons.shop, you accept and agree to be bound by the terms and provision of this agreement.
@@ -25,10 +24,10 @@ const TermsOfService = () => {
       </motion.div>
 
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="glass-panel bg-white p-8 md:p-16 rounded-[40px] border border-gray-100 max-w-4xl mx-auto prose prose-gray max-w-none prose-headings:font-serif prose-headings:italic prose-a:text-primary shadow-glass"
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="bg-white p-6 sm:p-10 md:p-12 rounded-lg border border-[#e5e1d7] shadow-xs prose prose-gray max-w-none prose-headings:text-[#112338] prose-headings:font-bold prose-a:text-primary"
       >
         <h2>1. General Conditions</h2>
         <p>
@@ -39,26 +38,20 @@ const TermsOfService = () => {
         <p>
           Prices for our premium paper stocks and fine arts products are subject to change without notice due to the volatile nature of paper market rates. We reserve the right at any time to modify or discontinue the Service (or any part or content thereof) without notice at any time. We shall not be liable to you or to any third-party for any modification, price change, suspension or discontinuance of the Service.
         </p>
-        <p>
-          Certain products or services may be available exclusively online through the website. These products or services may have limited quantities and are subject to return or exchange only according to our Return Policy.
-        </p>
 
         <h2>3. Accuracy of Billing and Account Information</h2>
         <p>
-          We reserve the right to refuse any order you place with us. We may, in our sole discretion, limit or cancel quantities purchased per person, per household or per order. These restrictions may include orders placed by or under the same customer account, the same credit card, and/or orders that use the same billing and/or shipping address.
-        </p>
-        <p>
-          In the event that we make a change to or cancel an order, we may attempt to notify you by contacting the e-mail and/or billing address/phone number provided at the time the order was made.
+          We reserve the right to refuse any order you place with us. We may, in our sole discretion, limit or cancel quantities purchased per person, per business or per order. These restrictions may include orders placed by or under the same customer account, the same WhatsApp number, or orders that use the same billing and/or shipping address.
         </p>
 
-        <h2>4. Paper Weights and Dimensions</h2>
+        <h2>4. Governing Law</h2>
         <p>
-          While we make every effort to ensure the accuracy of the GSM (Grams per Square Meter) and dimensions listed on our site, please note that minor industry-standard tolerances apply. A variance of ±5% in GSM or ±1-2mm in dimensions is considered acceptable within the paper manufacturing industry.
+          These Terms of Service and any separate agreements whereby we provide you Services shall be governed by and construed in accordance with the laws of the Islamic Republic of Pakistan, with jurisdiction in Lahore courts.
         </p>
 
         <h2>5. Contact Information</h2>
         <p>
-          Questions about the Terms of Service should be sent to us at <strong>support@nazirandsons.shop</strong>.
+          Questions about the Terms of Service should be sent to us via WhatsApp at <strong>+92 320 2220001</strong> or by email at <strong>support@nazirandsons.shop</strong>.
         </p>
       </motion.div>
     </main>
