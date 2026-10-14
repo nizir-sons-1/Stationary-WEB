@@ -285,14 +285,21 @@ const ProductDetails = () => {
 
             {/* Main Product Image */}
             <img
-              src={thumb(currentVariation.IMAGE_URL, 800)}
-              srcSet={thumbSrcSet(currentVariation.IMAGE_URL, [400, 600, 800, 1200])}
+              src={thumb(currentVariation.IMAGE_URL || currentProduct?.image_url, 800)}
+              srcSet={thumbSrcSet(currentVariation.IMAGE_URL || currentProduct?.image_url, [400, 600, 800, 1200])}
               sizes="(min-width: 1024px) 500px, 100vw"
               alt={decodedName}
               fetchPriority="high"
               decoding="async"
               className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300 relative z-1 mix-blend-multiply"
-              onError={fallbackOnError}
+              onError={(e) => {
+                if (currentProduct?.image_url && e.currentTarget.src !== currentProduct.image_url) {
+                  e.currentTarget.src = currentProduct.image_url;
+                  e.currentTarget.srcset = '';
+                  return;
+                }
+                fallbackOnError(e);
+              }}
             />
           </div>
         </div>
