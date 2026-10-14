@@ -98,8 +98,8 @@ const SELECT =
   'product_variations(id,size,gsm,price,packing_type,stock,image_url)';
 
 async function fetchCatalogue() {
-  const url = process.env.VITE_SUPABASE_URL;
-  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   if (!url || !key) {
     console.warn('[prerender] no Supabase credentials — static routes only, no catalogue.');
     return [];
@@ -134,8 +134,8 @@ const EMPTY_TAXONOMY = { department: {}, category: {}, hidden: { department: {},
  * link.
  */
 async function fetchTaxonomyImages() {
-  const url = process.env.VITE_SUPABASE_URL;
-  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   if (!url || !key) return EMPTY_TAXONOMY;
 
   const headers = { apikey: key, Authorization: `Bearer ${key}` };
