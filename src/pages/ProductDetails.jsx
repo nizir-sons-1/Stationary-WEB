@@ -18,8 +18,7 @@ import TermsModal from '../components/TermsModal';
 import { PLACEHOLDER_IMAGE, fallbackOnError, thumb, thumbSrcSet } from '../lib/images';
 import { displayNameOf, departmentOf } from '../data/categories';
 import { usePageSeo } from '../lib/seo';
-import { productSchema } from '../lib/schema';
-import { categoryPath, productPath } from '../lib/site';
+import { categoryPath } from '../lib/site';
 import { flyToCart } from '../lib/cartAnimation';
 import {
   determineVariationType,
@@ -33,6 +32,10 @@ import {
   extractQuantityFromNote,
   cleanDescriptionText,
   isEligibleForInstallments,
+  mapProductVariations,
+  findActiveVariation,
+  buildProductPageSeo,
+  getMainButtonState,
 } from '../lib/productDetails';
 import CompactProductCard from '../components/product/CompactProductCard';
 import ProductDetailsSkeleton from '../components/product/ProductDetailsSkeleton';
@@ -56,19 +59,7 @@ const ProductDetails = () => {
 
   // Map Supabase product_variations to the expected format
   const productVariations = useMemo(() => {
-    if (!currentProduct?.product_variations) return [];
-    return currentProduct.product_variations.map((v) => ({
-      PRODUCT_NAME: currentProduct.product_name,
-      Description: currentProduct.description,
-      Category: currentProduct.category,
-      ProductID: v.id,
-      Display_Size: v.size,
-      GSM: String(v.gsm),
-      CALCULATED_PRICE_RS: v.price,
-      PACKING_TYPE: v.packing_type,
-      Stock: v.stock,
-      IMAGE_URL: v.image_url || currentProduct.image_url,
-    }));
+    return mapProductVariations(currentProduct);
   }, [currentProduct]);
 
   const [selectedSize, setSelectedSize] = useState('');
@@ -153,60 +144,16 @@ const ProductDetails = () => {
     return buildCatalogueSummary(currentProduct, productVariations, decodedName);
   }, [currentProduct, productVariations, decodedName]);
 
-  usePageSeo('/product', {
-    title: catalogue?.title || `${decodedName} | Nazir & Sons`,
-    description:
-      catalogue?.description ||
-      `${decodedName} from Nazir & Sons — premium paper, fine arts and stationery in Lahore, delivered across Pakistan.`,
-    canonicalPath: productPath(decodedName),
-    image: catalogue?.image,
-    imageAlt: decodedName,
-    type: 'product',
-    pageType: 'ItemPage',
-    noindex: !catalogue,
-    trail: [
-      { name: 'Home', path: '/' },
-      { name: 'Shop', path: '/shop' },
-      ...(catalogue
-        ? [
-            { name: catalogue.department, path: categoryPath(catalogue.department) },
-            {
-              name: catalogue.displayCategory,
-              path: categoryPath(catalogue.department, catalogue.displayCategory),
-            },
-          ]
-        : []),
-      { name: decodedName, path: productPath(decodedName) },
-    ],
-    extraNodes: catalogue
-      ? [
-          productSchema({
-            name: decodedName,
-            description: currentProduct.description,
-            category: catalogue.displayCategory,
-            image: catalogue.image,
-            path: productPath(decodedName),
-            variations: productVariations.map((v) => ({
-              sku: v.ProductID,
-              size: v.Display_Size,
-              gsm: v.GSM,
-              price: Number(v.CALCULATED_PRICE_RS),
-              stock: Number(v.Stock),
-              packingType: v.PACKING_TYPE,
-            })),
-          }),
-        ]
-      : [],
-  });
+  const productSeo = useMemo(() => {
+    return buildProductPageSeo(decodedName, currentProduct, catalogue, productVariations);
+  }, [decodedName, currentProduct, catalogue, productVariations]);
+
+  usePageSeo('/product', productSeo);
 
   if (loading) return <ProductDetailsSkeleton />;
   if (productVariations.length === 0 || !currentProduct) return <ProductNotFound />;
 
-  const currentVariation =
-    productVariations.find((p) => {
-      const pSize = p.LENGTH_INCH && p.WIDTH_INCH ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}` : p.Display_Size || 'N/A';
-      return p.GSM === selectedGsm && pSize === selectedSize;
-    }) || productVariations[0];
+  const currentVariation = findActiveVariation(productVariations, selectedGsm, selectedSize);
 
   const formattedDescription = cleanDescriptionText(
     currentVariation?.Description ||
@@ -291,19 +238,11 @@ const ProductDetails = () => {
 
   const isAdded = isMainAdded || isBulkAdded;
 
-  let mainButtonClass = 'bg-[#112338] hover:bg-[#1a3654] active:scale-[0.99] text-white hover:shadow-lg';
-  if (!inStock) {
-    mainButtonClass = 'bg-gray-200 text-gray-400 cursor-not-allowed';
-  } else if (isAdded) {
-    mainButtonClass = 'bg-emerald-600 text-white shadow-lg';
-  }
-
-  let mainButtonLabel = 'Currently Out of Stock';
-  if (isBulk) {
-    mainButtonLabel = 'Add Bulk Request to Cart';
-  } else if (inStock) {
-    mainButtonLabel = 'Add to Cart';
-  }
+  const { className: mainButtonClass, label: mainButtonLabel } = getMainButtonState(
+    inStock,
+    isAdded,
+    isBulk
+  );
 
 
   return (
@@ -606,7 +545,7 @@ const ProductDetails = () => {
       {/* Relevant Products Section */}
       {relevantProducts.length > 0 && (
         <section className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-[#e5e1d7]">
-          {/* Header with polished View All pill button */}
+          {/* Header with polished View All text link */}
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
               <span className="text-[10px] sm:text-[11px] font-bold text-primary uppercase tracking-widest block mb-1">
@@ -618,10 +557,10 @@ const ProductDetails = () => {
             </div>
             <Link
               to={categoryTargetUrl}
-              className="px-3 sm:px-3.5 py-1.5 rounded-full bg-[#f8f6f0] hover:bg-[#112338] text-[#112338] hover:text-white border border-[#e2ddd3] hover:border-[#112338] text-[11px] sm:text-xs font-bold transition-all duration-200 shadow-2xs inline-flex items-center gap-1.5 shrink-0 group/btn cursor-pointer"
+              className="inline-flex items-center gap-1 text-[12px] sm:text-[13px] font-semibold text-[#112338] hover:text-primary transition-colors cursor-pointer shrink-0 group"
             >
               <span>View All</span>
-              <ArrowRight size={13} className="transition-transform group-hover/btn:translate-x-0.5" />
+              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 

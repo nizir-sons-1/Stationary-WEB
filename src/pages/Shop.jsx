@@ -72,6 +72,132 @@ const CATEGORY_SIZES = {
   normal: '(min-width: 1024px) 240px, (min-width: 768px) 190px, 33vw',
 };
 
+const CATEGORY_SKELETON_KEYS = [
+  'cat-skel-1',
+  'cat-skel-2',
+  'cat-skel-3',
+  'cat-skel-4',
+  'cat-skel-5',
+  'cat-skel-6',
+  'cat-skel-7',
+  'cat-skel-8',
+  'cat-skel-9',
+  'cat-skel-10',
+];
+
+const resolveDepartmentImage = (deptName, adminImages, cards) => {
+  if (adminImages[deptName]) return adminImages[deptName];
+  if (deptName === 'Notebooks') return DEPARTMENT_FALLBACK_IMAGES['Notebooks'];
+  if (deptName === PAPER_AND_CANVAS) {
+    return DEPARTMENT_FALLBACK_IMAGES[PAPER_AND_CANVAS] || PLACEHOLDER_IMAGE;
+  }
+  return cards.find((c) => c.image)?.image || DEPARTMENT_FALLBACK_IMAGES[deptName] || PLACEHOLDER_IMAGE;
+};
+
+const mapGroupedProducts = (dbProducts) => {
+  if (!dbProducts) return [];
+  return dbProducts
+    .map((p) => {
+      const variations = p.product_variations.map((v) => ({
+        PRODUCT_NAME: p.product_name,
+        Description: p.description,
+        Category: p.category,
+        ProductID: v.id,
+        Display_Size: v.size,
+        GSM: String(v.gsm),
+        CALCULATED_PRICE_RS: v.price,
+        PACKING_TYPE: v.packing_type,
+        Stock: v.stock,
+        IMAGE_URL: v.image_url || p.image_url,
+      }));
+      return { name: p.product_name, installmentHidden: p.installment_hidden, variations };
+    })
+    .filter((group) => group.variations.length > 0);
+};
+
+const computeCanonicalPath = (showingProducts, deptSlug, categorySlug, selectedMainCategory) => {
+  if (showingProducts) {
+    return `/shop/${deptSlug}/${categorySlug}`;
+  }
+  if (selectedMainCategory) {
+    return categoryPath(selectedMainCategory);
+  }
+  return '/shop';
+};
+
+const computeShopSeo = ({
+  showingProducts,
+  categoryHeading,
+  selectedMainCategory,
+  canonicalPath,
+  groupedProducts,
+  dynamicCategories,
+  departments,
+}) => {
+  if (showingProducts) {
+    const count = groupedProducts.length;
+    return {
+      title: `${categoryHeading} — Price & Sizes in Lahore | Nazir & Sons`,
+      description: `Buy ${categoryHeading} from Nazir & Sons, Lahore. ${
+        count ? `${count} products` : 'Stock'
+      } listed by size and GSM with live prices in PKR — wholesale and retail, delivered across Pakistan.`,
+      trail: [
+        { name: 'Home', path: '/' },
+        { name: 'Shop', path: '/shop' },
+        { name: selectedMainCategory || 'Catalogue', path: categoryPath(selectedMainCategory) },
+        { name: categoryHeading, path: canonicalPath },
+      ],
+      extraNodes: groupedProducts.length
+        ? [
+            itemListSchema({
+              name: categoryHeading,
+              path: canonicalPath,
+              items: groupedProducts.map((g) => ({ name: g.name, path: productPath(g.name) })),
+            }),
+          ]
+        : [],
+    };
+  }
+
+  if (selectedMainCategory) {
+    return {
+      title: `${selectedMainCategory} — Buy Online in Pakistan | Nazir & Sons`,
+      description: `Browse ${
+        dynamicCategories.length ? `${dynamicCategories.length} categories of ` : ''
+      }${selectedMainCategory} at Nazir & Sons, Lahore. Live prices in PKR, wholesale and retail, delivered nationwide.`,
+      trail: [
+        { name: 'Home', path: '/' },
+        { name: 'Shop', path: '/shop' },
+        { name: selectedMainCategory, path: canonicalPath },
+      ],
+      extraNodes: dynamicCategories.length
+        ? [
+            itemListSchema({
+              name: selectedMainCategory,
+              path: canonicalPath,
+              items: dynamicCategories.map((c) => ({
+                name: c.name,
+                path: categoryPath(selectedMainCategory, c.name),
+              })),
+            }),
+          ]
+        : [],
+    };
+  }
+
+  return {
+    title: ROUTES['/shop'].title,
+    description: ROUTES['/shop'].description,
+    trail: undefined,
+    extraNodes: [
+      itemListSchema({
+        name: 'Departments',
+        path: '/shop',
+        items: departments.map((d) => ({ name: d.name, path: categoryPath(d.name) })),
+      }),
+    ],
+  };
+};
 
 const Shop = () => {
   const location = useLocation();
@@ -188,15 +314,15 @@ const Shop = () => {
   const showingProducts = Boolean(categorySlug);
   const categoryHeading = selectedSubCategory || titleFromSlug(categorySlug);
 
-  // Stagger categories on mount
+  // Stagger categories on mount or when categories arrive
   useEffect(() => {
-    if (!showingProducts && categoriesGridRef.current) {
+    if (!showingProducts && categoriesGridRef.current && dynamicCategories.length > 0) {
       gsap.fromTo('.category-card',
         { y: 25, opacity: 0 },
         { y: 0, opacity: 1, duration: 0.5, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
       );
     }
-  }, [selectedMainCategory, showingProducts]);
+  }, [selectedMainCategory, showingProducts, dynamicCategories.length]);
 
   // Stagger products when selected category changes
   useEffect(() => {
@@ -228,38 +354,9 @@ const Shop = () => {
   );
 
   // Group products by PRODUCT_NAME mapping Supabase data to existing format
-  const groupedProducts = useMemo(() => {
-    if (!dbProducts) return [];
-    return dbProducts.map(p => {
-      const variations = p.product_variations.map(v => ({
-        PRODUCT_NAME: p.product_name,
-        Description: p.description,
-        Category: p.category,
-        ProductID: v.id,
-        Display_Size: v.size,
-        GSM: String(v.gsm),
-        CALCULATED_PRICE_RS: v.price,
-        PACKING_TYPE: v.packing_type,
-        Stock: v.stock,
-        IMAGE_URL: v.image_url || p.image_url
-      }));
-      return { name: p.product_name, installmentHidden: p.installment_hidden, variations };
-    }).filter(group => group.variations.length > 0);
-  }, [dbProducts]);
-
-  const resolveDepartmentImage = (deptName, adminImages, cards) => {
-    if (adminImages[deptName]) return adminImages[deptName];
-    if (deptName === 'Notebooks') return DEPARTMENT_FALLBACK_IMAGES['Notebooks'];
-    if (deptName === PAPER_AND_CANVAS) {
-      return DEPARTMENT_FALLBACK_IMAGES[PAPER_AND_CANVAS] || PLACEHOLDER_IMAGE;
-    }
-    return cards.find((c) => c.image)?.image || DEPARTMENT_FALLBACK_IMAGES[deptName] || PLACEHOLDER_IMAGE;
-  };
+  const groupedProducts = useMemo(() => mapGroupedProducts(dbProducts), [dbProducts]);
 
   // Department tiles: how many categories each holds, and the artwork to use.
-  // A department an admin has hidden is dropped here, which is what takes it off
-  // the index; its own hidden categories are dropped from the tally too, so the
-  // "N Categories" badge never promises shelves the visitor cannot open.
   const departments = useMemo(
     () =>
       DEPARTMENTS.filter((dept) => !hiddenDepartments[dept.name]).map((dept) => {
@@ -273,86 +370,34 @@ const Shop = () => {
     [cardsByDepartment, adminDepartmentImages, hiddenDepartments, hiddenCategories]
   );
 
-  /*
-   * One shop component serves three different kinds of page — the department
-   * index, a department's category index, and a category's product list — so
-   * it has to describe whichever one it is currently rendering. Sharing /shop's
-   * title across all ~175 of them is what would make them duplicates.
-   *
-   * Computed before the early returns below because it feeds a hook.
-   */
-  let canonicalPath = '/shop';
-  if (showingProducts) {
-    canonicalPath = `/shop/${deptSlug}/${categorySlug}`;
-  } else if (selectedMainCategory) {
-    canonicalPath = categoryPath(selectedMainCategory);
-  }
+  const canonicalPath = computeCanonicalPath(
+    showingProducts,
+    deptSlug,
+    categorySlug,
+    selectedMainCategory
+  );
 
-  const seo = useMemo(() => {
-    if (showingProducts) {
-      const count = groupedProducts.length;
-      return {
-        title: `${categoryHeading} — Price & Sizes in Lahore | Nazir & Sons`,
-        description: `Buy ${categoryHeading} from Nazir & Sons, Lahore. ${
-          count ? `${count} products` : 'Stock'
-        } listed by size and GSM with live prices in PKR — wholesale and retail, delivered across Pakistan.`,
-        trail: [
-          { name: 'Home', path: '/' },
-          { name: 'Shop', path: '/shop' },
-          { name: selectedMainCategory || 'Catalogue', path: categoryPath(selectedMainCategory) },
-          { name: categoryHeading, path: canonicalPath },
-        ],
-        extraNodes: groupedProducts.length
-          ? [
-              itemListSchema({
-                name: categoryHeading,
-                path: canonicalPath,
-                items: groupedProducts.map((g) => ({ name: g.name, path: productPath(g.name) })),
-              }),
-            ]
-          : [],
-      };
-    }
-
-    if (selectedMainCategory) {
-      return {
-        title: `${selectedMainCategory} — Buy Online in Pakistan | Nazir & Sons`,
-        description: `Browse ${
-          dynamicCategories.length ? `${dynamicCategories.length} categories of ` : ''
-        }${selectedMainCategory} at Nazir & Sons, Lahore. Live prices in PKR, wholesale and retail, delivered nationwide.`,
-        trail: [
-          { name: 'Home', path: '/' },
-          { name: 'Shop', path: '/shop' },
-          { name: selectedMainCategory, path: canonicalPath },
-        ],
-        extraNodes: dynamicCategories.length
-          ? [
-              itemListSchema({
-                name: selectedMainCategory,
-                path: canonicalPath,
-                items: dynamicCategories.map((c) => ({
-                  name: c.name,
-                  path: categoryPath(selectedMainCategory, c.name),
-                })),
-              }),
-            ]
-          : [],
-      };
-    }
-
-    return {
-      title: ROUTES['/shop'].title,
-      description: ROUTES['/shop'].description,
-      trail: undefined,
-      extraNodes: [
-        itemListSchema({
-          name: 'Departments',
-          path: '/shop',
-          items: departments.map((d) => ({ name: d.name, path: categoryPath(d.name) })),
-        }),
-      ],
-    };
-  }, [selectedMainCategory, showingProducts, categoryHeading, canonicalPath, groupedProducts, dynamicCategories, departments]);
+  const seo = useMemo(
+    () =>
+      computeShopSeo({
+        showingProducts,
+        categoryHeading,
+        selectedMainCategory,
+        canonicalPath,
+        groupedProducts,
+        dynamicCategories,
+        departments,
+      }),
+    [
+      showingProducts,
+      categoryHeading,
+      selectedMainCategory,
+      canonicalPath,
+      groupedProducts,
+      dynamicCategories,
+      departments,
+    ]
+  );
 
   usePageSeo('/shop', {
     title: seo.title,
@@ -433,6 +478,84 @@ const Shop = () => {
     );
   }
 
+  let categoryGridContent;
+  if (dynamicCategories.length === 0 && countsLoading) {
+    categoryGridContent = (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
+        {CATEGORY_SKELETON_KEYS.map((key) => (
+          <div
+            key={key}
+            className="w-full flex flex-col bg-white rounded-[4px] border border-[#e5e1d7] shadow-2xs overflow-hidden animate-pulse"
+          >
+            <div className="w-full aspect-[4/3] bg-gray-100" />
+            <div className="p-2.5 sm:p-3 border-t border-[#e5e1d7]/70 flex items-center justify-between gap-1.5">
+              <div className="h-4 bg-gray-200 rounded w-24" />
+              <div className="h-3 bg-gray-100 rounded w-12" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  } else if (dynamicCategories.length === 0) {
+    categoryGridContent = (
+      <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[4px] border border-dashed border-[#e5e1d7] shadow-xs">
+        <Package size={44} className="text-gray-300 mb-2.5" />
+        <h3 className="font-serif text-[#112338] font-medium text-[17px]">No categories found</h3>
+        <p className="text-gray-500 text-xs mt-1">Please check back soon or explore other departments.</p>
+      </div>
+    );
+  } else {
+    categoryGridContent = (
+      <div
+        ref={categoriesGridRef}
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5"
+      >
+        {dynamicCategories.map((cat, idx) => {
+          const count = cat.count || 0;
+          let countBadge = 'Available';
+          if (countsLoading) {
+            countBadge = '...';
+          } else if (count > 0) {
+            countBadge = `${count} Items`;
+          }
+
+          return (
+            <Link
+              key={cat.name}
+              to={categoryPath(selectedMainCategory, cat.name)}
+              aria-label={`${cat.name} — ${count} items`}
+              className="category-card group cursor-pointer w-full flex flex-col bg-white rounded-[4px] border border-[#e5e1d7] hover:border-[#112338]/40 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+            >
+              {/* Clean Image Area without Dark Overlays */}
+              <div className="w-full aspect-[4/3] bg-[#fbfaf8] relative overflow-hidden">
+                <CardArt
+                  src={cat.image}
+                  alt={cat.name}
+                  eager={idx < 6}
+                  width={400}
+                  sizes={CATEGORY_SIZES.normal}
+                />
+              </div>
+
+              {/* Bottom Panel with Title & Next Arrow matching Department Cards */}
+              <div className="w-full bg-white p-2.5 sm:p-3 border-t border-[#e5e1d7]/70 flex items-center justify-between gap-1.5 z-10 shrink-0 flex-1">
+                <h3 className="font-serif text-[13px] sm:text-[14px] md:text-[15px] font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1 line-clamp-1">
+                  <span>{cat.name}</span>
+                  <span className="text-[12px] text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0">
+                    &rarr;
+                  </span>
+                </h3>
+                <span className="text-[9.5px] sm:text-[10.5px] font-medium text-[#64748b] bg-[#f5f3ee] px-2 py-0.5 rounded-[3px] border border-[#e5e1d7]/60 whitespace-nowrap shrink-0">
+                  {countBadge}
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    );
+  }
+
   if (!showingProducts) {
     return (
       <main className="flex-1 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full flex flex-col pt-16 md:pt-20 pb-stack-lg">
@@ -453,53 +576,7 @@ const Shop = () => {
           </div>
         </div>
 
-        <div
-          ref={categoriesGridRef}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5"
-        >
-          {dynamicCategories.map((cat, idx) => {
-            const count = cat.count || 0;
-            let countBadge = 'Available';
-            if (countsLoading) {
-              countBadge = '...';
-            } else if (count > 0) {
-              countBadge = `${count} Items`;
-            }
-
-            return (
-              <Link
-                key={cat.name}
-                to={categoryPath(selectedMainCategory, cat.name)}
-                aria-label={`${cat.name} — ${count} items`}
-                className="category-card group cursor-pointer w-full flex flex-col bg-white rounded-[4px] border border-[#e5e1d7] hover:border-[#112338]/40 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-              >
-                {/* Clean Image Area without Dark Overlays */}
-                <div className="w-full aspect-[4/3] bg-[#fbfaf8] relative overflow-hidden">
-                  <CardArt
-                    src={cat.image}
-                    alt={cat.name}
-                    eager={idx < 6}
-                    width={400}
-                    sizes={CATEGORY_SIZES.normal}
-                  />
-                </div>
-
-                {/* Bottom Panel with Title & Next Arrow matching Department Cards */}
-                <div className="w-full bg-white p-2.5 sm:p-3 border-t border-[#e5e1d7]/70 flex items-center justify-between gap-1.5 z-10 shrink-0 flex-1">
-                  <h3 className="font-serif text-[13px] sm:text-[14px] md:text-[15px] font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1 line-clamp-1">
-                    <span>{cat.name}</span>
-                    <span className="text-[12px] text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0">
-                      &rarr;
-                    </span>
-                  </h3>
-                  <span className="text-[9.5px] sm:text-[10.5px] font-medium text-[#64748b] bg-[#f5f3ee] px-2 py-0.5 rounded-[3px] border border-[#e5e1d7]/60 whitespace-nowrap shrink-0">
-                    {countBadge}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        {categoryGridContent}
       </main>
     );
   }

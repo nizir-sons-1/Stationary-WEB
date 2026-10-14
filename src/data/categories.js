@@ -310,13 +310,27 @@ export function groupCategories(counts, images = {}, overrides = {}) {
     if (!entry.image && !card.image && images[rawName]) card.image = images[rawName];
   };
 
-  for (const rawName of Object.keys(counts)) {
-    const entry = BY_DB_NAME.get(rawName.toLowerCase());
-    if (entry) {
-      push(entry, rawName);
-    } else {
-      // Unknown shelf: surface it under the catch-all rather than dropping it.
-      push({ dept: CATCH_ALL_DEPARTMENT, name: rawName, icon: Box, db: [rawName] }, rawName);
+  // When counts are not yet loaded or empty, fallback to static catalogue so categories are never blank
+  if (!counts || Object.keys(counts).length === 0) {
+    for (const entry of CATALOGUE) {
+      merged.set(entry.name, {
+        name: entry.name,
+        dept: entry.dept,
+        icon: entry.icon || Box,
+        image: overrideFor(entry) || entry.image || null,
+        count: 0,
+        dbNames: entry.db || [entry.name],
+      });
+    }
+  } else {
+    for (const rawName of Object.keys(counts)) {
+      const entry = BY_DB_NAME.get(rawName.toLowerCase());
+      if (entry) {
+        push(entry, rawName);
+      } else {
+        // Unknown shelf: surface it under the catch-all rather than dropping it.
+        push({ dept: CATCH_ALL_DEPARTMENT, name: rawName, icon: Box, db: [rawName] }, rawName);
+      }
     }
   }
 

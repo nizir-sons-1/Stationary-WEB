@@ -1,4 +1,99 @@
 import { displayNameOf, departmentOf } from '../data/categories';
+import { categoryPath, productPath } from './site';
+import { productSchema } from './schema';
+
+export function mapProductVariations(currentProduct) {
+  if (!currentProduct?.product_variations) return [];
+  return currentProduct.product_variations.map((v) => ({
+    PRODUCT_NAME: currentProduct.product_name,
+    Description: currentProduct.description,
+    Category: currentProduct.category,
+    ProductID: v.id,
+    Display_Size: v.size,
+    GSM: String(v.gsm),
+    CALCULATED_PRICE_RS: v.price,
+    PACKING_TYPE: v.packing_type,
+    Stock: v.stock,
+    IMAGE_URL: v.image_url || currentProduct.image_url,
+  }));
+}
+
+export function findActiveVariation(productVariations, selectedGsm, selectedSize) {
+  if (!productVariations || productVariations.length === 0) return null;
+  return (
+    productVariations.find((p) => {
+      const pSize = p.LENGTH_INCH && p.WIDTH_INCH ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}` : p.Display_Size || 'N/A';
+      return p.GSM === selectedGsm && pSize === selectedSize;
+    }) || productVariations[0]
+  );
+}
+
+export function buildProductPageSeo(decodedName, currentProduct, catalogue, productVariations) {
+  const trail = [
+    { name: 'Home', path: '/' },
+    { name: 'Shop', path: '/shop' },
+  ];
+  if (catalogue) {
+    trail.push(
+      { name: catalogue.department, path: categoryPath(catalogue.department) },
+      { name: catalogue.displayCategory, path: categoryPath(catalogue.department, catalogue.displayCategory) }
+    );
+  }
+  trail.push({ name: decodedName, path: productPath(decodedName) });
+
+  const extraNodes = catalogue
+    ? [
+        productSchema({
+          name: decodedName,
+          description: currentProduct?.description,
+          category: catalogue.displayCategory,
+          image: catalogue.image,
+          path: productPath(decodedName),
+          variations: productVariations.map((v) => ({
+            sku: v.ProductID,
+            size: v.Display_Size,
+            gsm: v.GSM,
+            price: Number(v.CALCULATED_PRICE_RS),
+            stock: Number(v.Stock),
+            packingType: v.PACKING_TYPE,
+          })),
+        }),
+      ]
+    : [];
+
+  return {
+    title: catalogue?.title || `${decodedName} | Nazir & Sons`,
+    description:
+      catalogue?.description ||
+      `${decodedName} from Nazir & Sons — premium paper, fine arts and stationery in Lahore, delivered across Pakistan.`,
+    canonicalPath: productPath(decodedName),
+    image: catalogue?.image,
+    imageAlt: decodedName,
+    type: 'product',
+    pageType: 'ItemPage',
+    noindex: !catalogue,
+    trail,
+    extraNodes,
+  };
+}
+
+export function getMainButtonState(inStock, isAdded, isBulk) {
+  let className = 'bg-[#112338] hover:bg-[#1a3654] active:scale-[0.99] text-white hover:shadow-lg';
+  if (!inStock) {
+    className = 'bg-gray-200 text-gray-400 cursor-not-allowed';
+  } else if (isAdded) {
+    className = 'bg-emerald-600 text-white shadow-lg';
+  }
+
+  let label = 'Currently Out of Stock';
+  if (isBulk) {
+    label = 'Add Bulk Request to Cart';
+  } else if (inStock) {
+    label = 'Add to Cart';
+  }
+
+  return { className, label };
+}
 
 export const INSTALLMENT_CATEGORIES = new Set([
   'bleach card',
