@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { AnimatePresence } from 'framer-motion';
 import { usePageSeo } from '../lib/seo';
 import { isValidPakistaniPhone } from '../lib/phone';
@@ -32,7 +31,7 @@ const Cart = () => {
   const location = useLocation();
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  
+
   const isCheckoutRequested =
     searchParams.get('phase') === 'checkout' ||
     searchParams.get('checkout') === 'true' ||
@@ -112,7 +111,7 @@ const Cart = () => {
 
   const handleCopyOrderId = () => {
     if (placedOrder?.id && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(placedOrder.id).catch(() => {});
+      navigator.clipboard.writeText(placedOrder.id).catch(() => { });
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -128,6 +127,7 @@ const Cart = () => {
   const handleCheckout = async (e) => {
     e?.preventDefault();
     if (cartItems.length === 0) return;
+
     const check = validateCheckoutInput({ checkoutPhase, fullName, phone, address, isB2B, shippingMethod });
     if (!check.valid) {
       alert(check.message);
@@ -136,85 +136,49 @@ const Cart = () => {
       }
       return;
     }
-    
+
     setIsCheckingOut(true);
     try {
-      const {
-        orderPayload,
-        cleanPhone,
-        finalTotal,
-        hasBulk,
-        bulkNotesText,
-        calculatedOrderType,
-        shipLabel,
-        payLabel,
-        formattedAddress
-      } = buildOrderPayload({
-        cartItems,
-        fullName,
-        phone,
-        email,
-        address,
-        shippingMethod,
-        paymentMethod,
-        isB2B,
-        cartTotal
+      const orderConfig = buildOrderPayload({
+        cartItems, fullName, phone, email, address, shippingMethod, paymentMethod, isB2B, cartTotal
       });
 
-      const { data: insertedOrder, error: insertError } = await supabase
-        .from('orders')
-        .insert(orderPayload)
-        .select()
-        .single();
+      const idempotencyKey = getOrCreateIdempotencyKey();
+      const payloadBody = {
+        cartItems, fullName, phone, email, address, shippingMethod, paymentMethod, isB2B, idempotencyKey
+      };
 
-      if (insertError) {
-        console.error('Supabase order insert error:', insertError);
-      }
+      const { order: insertedOrder, finalTotal: confirmedTotal } = await placeOrderViaApi(
+        payloadBody, idempotencyKey, orderConfig.orderPayload
+      );
 
+      localStorage.removeItem('paperWeb_order_idempotency');
       const orderId = insertedOrder?.id?.slice(0, 8).toUpperCase() || generateFallbackOrderId();
 
       sendOrderNotifications({
-        orderId,
-        fullName,
-        phone: cleanPhone,
-        email,
-        address,
-        shipLabel,
-        payLabel,
-        finalTotal,
-        cartItems
+        orderId, fullName, phone: orderConfig.cleanPhone, email, address,
+        shipLabel: orderConfig.shipLabel, payLabel: orderConfig.payLabel,
+        finalTotal: confirmedTotal, cartItems
       });
 
       setPlacedOrder({
-        id: orderId,
-        customerName: fullName,
-        phone: cleanPhone,
-        email: email,
-        address: formattedAddress,
-        rawAddress: address,
-        shipping: shipLabel,
-        payment: payLabel,
-        total: finalTotal,
-        orderType: calculatedOrderType,
-        hasBulk: hasBulk,
-        bulkNotes: bulkNotesText,
+        id: orderId, customerName: fullName, phone: orderConfig.cleanPhone,
+        email: email, address: orderConfig.formattedAddress, rawAddress: address,
+        shipping: orderConfig.shipLabel, payment: orderConfig.payLabel,
+        total: confirmedTotal, orderType: orderConfig.calculatedOrderType,
+        hasBulk: orderConfig.hasBulk, bulkNotes: orderConfig.bulkNotesText,
         items: [...cartItems]
       });
 
       if (rememberDetails) {
-        saveCustomerInfo({
-          fullName,
-          phone: cleanPhone,
-          email: email || '',
-          address: address || '',
-        });
+        saveCustomerInfo({ fullName, phone: orderConfig.cleanPhone, email: email || '', address: address || '' });
       }
 
       clearCart();
       setCheckoutPhase('success');
     } catch (err) {
       console.error('Checkout failed:', err);
-      alert('Failed to place order. Please try again or contact us directly.');
+      alert(err.message || 'Failed to place order. Please try again or contact us directly.');
     } finally {
       setIsCheckingOut(false);
     }
@@ -261,13 +225,13 @@ const Cart = () => {
             {checkoutPhase === 'cart' ? 'Review Order' : 'Checkout Details'}
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">
-            {checkoutPhase === 'cart' 
-              ? 'Verify specifications before proceeding.' 
+            {checkoutPhase === 'cart'
+              ? 'Verify specifications before proceeding.'
               : 'Complete your details to confirm your order.'}
           </p>
         </div>
       </header>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
         {/* Left Column (Cart Items OR Checkout Form) */}
         <div className="lg:col-span-8 flex flex-col gap-stack-md">
@@ -307,7 +271,7 @@ const Cart = () => {
             )}
           </AnimatePresence>
         </div>
-        
+
         {/* Right Column (Order Summary) */}
         <div className="lg:col-span-4 mt-8 lg:mt-0">
           <OrderSummary

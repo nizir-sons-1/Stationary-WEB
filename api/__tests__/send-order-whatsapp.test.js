@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import handler, { formatPhoneNumber, buildCustomerMessage, buildAdminMessage } from '../send-order-whatsapp.js';
+import handler, {
+  formatPhoneNumber,
+  buildCustomerMessage,
+  buildAdminMessage,
+  cleanWa,
+  enforceMessageLimit,
+  validateOrderDetails,
+  stripHtml
+} from '../send-order-whatsapp.js';
 
 function makeReq(overrides = {}) {
   return { method: 'POST', body: {}, ...overrides };
@@ -61,6 +69,47 @@ describe('Message builders', () => {
   });
 });
 
+describe('cleanWa sanitization and normalization', () => {
+  it('strips HTML, style, and script blocks using linear non-regex parser', () => {
+    const dirty = '<script>alert("hack")</script><style>.hidden{display:none}</style><b>Order #123</b> <p>Details</p>';
+    expect(stripHtml(dirty)).toBe('Order #123 Details');
+  });
+
+  it('strips script blocks and remaining HTML tags in cleanWa', () => {
+    const dirty = '<script>alert("hack")</script><b>Special Offer</b> <p>Details</p>';
+    expect(cleanWa(dirty)).toBe('Special Offer Details');
+  });
+
+  it('strips WhatsApp markdown formatting characters (*, _, ~, `)', () => {
+    const dirty = '*bold* _italic_ ~strike~ `code`';
+    expect(cleanWa(dirty)).toBe('bold italic strike code');
+  });
+
+  it('normalizes CRLF and collapses triple+ newlines to double newlines', () => {
+    const dirty = 'Line 1\r\n\r\n\r\n\r\nLine 2\r\n\r\nLine 3';
+    expect(cleanWa(dirty)).toBe('Line 1\n\nLine 2\n\nLine 3');
+  });
+
+  it('collapses multiple horizontal spaces into single space', () => {
+    const dirty = 'Nazir   and     Sons    Paper';
+    expect(cleanWa(dirty)).toBe('Nazir and Sons Paper');
+  });
+});
+
+describe('enforceMessageLimit', () => {
+  it('preserves messages under 4096 characters', () => {
+    const msg = 'Order confirmed for Nazir & Sons';
+    expect(enforceMessageLimit(msg)).toBe(msg);
+  });
+
+  it('truncates messages exceeding 4096 characters to fit WhatsApp limit', () => {
+    const huge = 'A'.repeat(5000);
+    const result = enforceMessageLimit(huge);
+    expect(result.length).toBeLessThanOrEqual(4096);
+    expect(result).toContain('... [truncated]');
+  });
+});
+
 describe('send-order-whatsapp handler', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -80,6 +129,80 @@ describe('send-order-whatsapp handler', () => {
     const res = makeRes();
     await handler(makeReq({ body: { orderDetails: { customer_name: 'Test' } } }), res);
     expect(res._status).toBe(400);
+  });
+
+  it('rejects oversized bulkDetails (e.g. 5KB payload) with 400 error', async () => {
+    const res = makeRes();
+    const oversizedBulk = 'X'.repeat(5120); // 5KB payload
+    await handler(
+      makeReq({
+        body: {
+          orderDetails: {
+            ...SAMPLE_ORDER,
+            bulkDetails: oversizedBulk
+          }
+        }
+      }),
+      res
+    );
+    expect(res._status).toBe(400);
+    expect(res._json.error).toBe('Field too long: bulkDetails exceeds 2000 characters');
+  });
+
+  it('rejects oversized customer_name (>100 chars) with 400 error', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          orderDetails: {
+            ...SAMPLE_ORDER,
+            customer_name: 'A'.repeat(101)
+          }
+        }
+      }),
+      res
+    );
+    expect(res._status).toBe(400);
+    expect(res._json.error).toBe('Field too long: customer_name exceeds 100 characters');
+  });
+
+  it('rejects oversized customer_address (>500 chars) with 400 error', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          orderDetails: {
+            ...SAMPLE_ORDER,
+            customer_address: 'B'.repeat(501)
+          }
+        }
+      }),
+      res
+    );
+    expect(res._status).toBe(400);
+    expect(res._json.error).toBe('Field too long: customer_address exceeds 500 characters');
+  });
+
+  it('rejects too many items (>50 items) with 400 error', async () => {
+    const res = makeRes();
+    const tooManyItems = Array.from({ length: 51 }, (_, i) => ({
+      name: `Item ${i + 1}`,
+      price: 100,
+      quantity: 1
+    }));
+    await handler(
+      makeReq({
+        body: {
+          orderDetails: {
+            ...SAMPLE_ORDER,
+            items: tooManyItems
+          }
+        }
+      }),
+      res
+    );
+    expect(res._status).toBe(400);
+    expect(res._json.error).toBe('Too many items: maximum 50 items allowed per order');
   });
 
   it('operates in simulation mode when API keys are not yet configured', async () => {
@@ -109,3 +232,4 @@ describe('send-order-whatsapp handler', () => {
     expect(mockFetch.mock.calls[0][0]).toContain('https://api.ultramsg.com/instance999/messages/chat');
   });
 });
+

@@ -30,3 +30,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Security scans & audit artifacts
+strix_runs/
+test_*.js
+test_*.cjs
+test_*.mjs

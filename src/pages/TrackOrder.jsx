@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Package, ArrowRight, CheckCircle2, Clock, Truck, XCircle, ArrowLeft, MapPin, Copy, Check, ShoppingBag, PackageCheck } from 'lucide-react';
+import { Search, Package, ArrowRight, CheckCircle2, Clock, Truck, XCircle, ArrowLeft, MapPin, Copy, Check, PackageCheck, AlertCircle } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { usePageSeo } from '../lib/seo';
 import { isColorVariation, isMeaninglessVariation } from '../lib/variations';
+import { isValidPakistaniPhone, normalizePakistaniPhone } from '../lib/phone';
 
 const STATUS_MAP = {
   pending: { label: 'Order Received', step: 1, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
@@ -24,75 +25,118 @@ const STEP_PROGRESS_WIDTH = {
 
 const ORDER_SELECT_FIELDS = 'id, status, created_at, total_amount, total_price, customer_name, customer_phone, customer_email, customer_address, payment_method, shipping_method, items';
 
-async function fetchOrderByHex8(hex) {
-  const { data } = await supabase
-    .from('orders')
-    .select(ORDER_SELECT_FIELDS)
-    .gte('id', `${hex}-0000-0000-0000-000000000000`)
-    .lte('id', `${hex}-ffff-ffff-ffff-ffffffffffff`)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data;
+const isSafeEmail = (str) => typeof str === 'string' && str.length <= 100 && /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,10}$/.test(str);
+
+// Helper: Check client-side rate limit (max 10 attempts / hour per session)
+function checkClientRateLimit() {
+  const now = Date.now();
+  const oneHour = 60 * 60 * 1000;
+  try {
+    const raw = localStorage.getItem('paperWeb_tracking_attempts');
+    const stored = raw ? JSON.parse(raw) : [];
+    const valid = stored.filter((t) => now - t < oneHour);
+
+    if (valid.length >= 10) {
+      return false;
+    }
+
+    valid.push(now);
+    localStorage.setItem('paperWeb_tracking_attempts', JSON.stringify(valid));
+    return true;
+  } catch {
+    return true;
+  }
 }
 
-async function fetchOrderByUuid(uuid) {
-  const { data } = await supabase
-    .from('orders')
-    .select(ORDER_SELECT_FIELDS)
-    .eq('id', uuid)
-    .maybeSingle();
-  return data;
-}
-
-async function fetchOrderByPhone(digits) {
-  const { data } = await supabase
-    .from('orders')
-    .select(ORDER_SELECT_FIELDS)
-    .or(`customer_phone.ilike.%${digits}%,whatsapp_number.ilike.%${digits}%`)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data;
-}
-
-async function fetchOrderByFallback(text) {
-  // Strip PostgREST filter delimiters and wildcard injection characters
-  const cleanText = String(text || '').replace(/[,()%.]/g, '').trim();
-  if (cleanText.length < 3) return null;
-
-  const { data } = await supabase
-    .from('orders')
-    .select(ORDER_SELECT_FIELDS)
-    .or(`customer_name.ilike.%${cleanText}%,customer_email.ilike.%${cleanText}%`)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data;
-}
-
-async function fetchOrderRecord(clean) {
+// Fallback direct query if serverless API is offline (Strict Exact Match Only)
+async function fetchOrderRecordDirect(clean) {
   if (/^[0-9a-f]{8}$/i.test(clean)) {
-    const res = await fetchOrderByHex8(clean.toLowerCase());
-    if (res) return res;
+    const hex = clean.toLowerCase();
+    const { data } = await supabase
+      .from('orders')
+      .select(ORDER_SELECT_FIELDS)
+      .gte('id', `${hex}-0000-0000-0000-000000000000`)
+      .lte('id', `${hex}-ffff-ffff-ffff-ffffffffffff`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data;
   }
 
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean)) {
-    const res = await fetchOrderByUuid(clean.toLowerCase());
-    if (res) return res;
+    const { data } = await supabase
+      .from('orders')
+      .select(ORDER_SELECT_FIELDS)
+      .eq('id', clean.toLowerCase())
+      .maybeSingle();
+    return data;
   }
 
-  const digits = clean.replace(/\D/g, '');
-  if (digits.length >= 7) {
-    const res = await fetchOrderByPhone(digits);
-    if (res) return res;
+  if (isValidPakistaniPhone(clean)) {
+    const exactPhone = normalizePakistaniPhone(clean);
+    const { data } = await supabase
+      .from('orders')
+      .select(ORDER_SELECT_FIELDS)
+      .or(`customer_phone.eq.${exactPhone},whatsapp_number.eq.${exactPhone}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data;
   }
 
-  if (clean.length >= 3 && !/^[0-9a-f]{8}$/i.test(clean)) {
-    return await fetchOrderByFallback(clean);
+  if (isSafeEmail(clean)) {
+    const { data } = await supabase
+      .from('orders')
+      .select(ORDER_SELECT_FIELDS)
+      .eq('customer_email', clean.toLowerCase())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data;
   }
 
   return null;
+}
+
+function validateTrackingInput(clean) {
+  const digitsOnly = clean.replace(/\D/g, '');
+  const isNumberInput = digitsOnly.length > 0 && /^\+?[\d\s-]+$/.test(clean);
+
+  if (isNumberInput) {
+    if (!isValidPakistaniPhone(clean)) {
+      return 'Kripya mukammal 11 digits Pakistani mobile number enter karein jo 03 se shuru ho (e.g. 0300 1234567).';
+    }
+    return null;
+  }
+
+  const isHex8 = /^[0-9a-f]{8}$/i.test(clean);
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
+  const isEmail = isSafeEmail(clean);
+
+  if (!isHex8 && !isUuid && !isEmail && clean.length < 5) {
+    return 'Please enter a valid 8-character Order ID (e.g. 6B7BD55B) or your 11-digit phone number.';
+  }
+
+  return null;
+}
+
+async function executeTrackingLookup(clean) {
+  const res = await fetch('/api/track-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: clean }),
+  });
+
+  if (res.status === 429) {
+    throw new Error('Rate limit reached (max 10 attempts/hour). Please try again after some time.');
+  }
+
+  if (res.ok) {
+    const json = await res.json();
+    return json.order;
+  }
+
+  return await fetchOrderRecordDirect(clean);
 }
 
 const TrackOrder = () => {
@@ -103,33 +147,57 @@ const TrackOrder = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [cooldownSec, setCooldownSec] = useState(0);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (cooldownSec <= 0) return;
+    const timer = setTimeout(() => {
+      setCooldownSec((prev) => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [cooldownSec]);
 
   const searchOrder = async (idToSearch) => {
     let clean = (idToSearch || '').trim();
     if (clean.startsWith('#')) clean = clean.slice(1).trim();
-    if (!clean) return;
+    if (!clean || cooldownSec > 0) return;
+
+    setErrorMessage('');
+    setNotFound(false);
+
+    const validationError = validateTrackingInput(clean);
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    if (!checkClientRateLimit()) {
+      setErrorMessage('Too many tracking attempts (max 10/hour). Please wait before trying again.');
+      return;
+    }
 
     setIsSearching(true);
     setResult(null);
-    setNotFound(false);
+    setCooldownSec(3);
 
     try {
-      const matchedOrder = await fetchOrderRecord(clean);
+      const matchedOrder = await executeTrackingLookup(clean);
       if (matchedOrder) {
         setResult(matchedOrder);
       } else {
         setNotFound(true);
       }
     } catch (err) {
-      console.error('Track order error:', err);
-      setNotFound(true);
+      console.warn('Tracking query error:', err);
+      setErrorMessage(err.message || 'Failed to look up order.');
     } finally {
       setIsSearching(false);
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialId) {
       void searchOrder(initialId);
     }
@@ -147,9 +215,22 @@ const TrackOrder = () => {
 
   const totalAmount = Number(result?.total_price || result?.total_amount || 0);
 
+  const renderButtonContent = () => {
+    if (isSearching) {
+      return <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />;
+    }
+    if (cooldownSec > 0) {
+      return <span>Wait ({cooldownSec}s)</span>;
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        Track <ArrowRight size={15} />
+      </span>
+    );
+  };
+
   return (
     <main className="flex-grow pt-4 sm:pt-6 md:pt-8 pb-stack-lg px-margin-mobile md:px-gutter max-w-4xl w-full mx-auto">
-      
       {/* Standard Unified Back Button */}
       <div className="mb-4 sm:mb-6">
         <Link
@@ -177,7 +258,7 @@ const TrackOrder = () => {
           </span>
         </h1>
         <p className="font-body-lg text-body-lg text-gray-500 max-w-md mx-auto">
-          Enter your 8-digit Order ID or your phone number to check live processing and delivery details.
+          Enter your 8-digit Order ID or your 11-digit phone number to check live processing and delivery details.
         </p>
       </motion.div>
 
@@ -191,24 +272,31 @@ const TrackOrder = () => {
                 type="text" 
                 value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value)}
-                placeholder="Enter Order ID (e.g. 6B7BD55B) or Phone (e.g. 0329...)" 
+                placeholder="Enter Order ID (e.g. 6B7BD55B) or 11-digit Phone (03001234567)" 
                 className="w-full bg-[#fbfaf8] border border-gray-200 rounded-xl py-3.5 pl-11 pr-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-[#112338] font-medium text-sm"
                 required
               />
             </div>
             <button 
               type="submit" 
-              disabled={isSearching}
-              className={`bg-[#111111] text-white px-7 py-3.5 rounded-xl font-bold tracking-widest uppercase text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md ${isSearching ? 'opacity-70 cursor-wait' : 'hover:bg-primary hover:shadow-primary/30 hover:-translate-y-0.5 cursor-pointer'}`}
+              disabled={isSearching || cooldownSec > 0}
+              className={`bg-[#111111] text-white px-7 py-3.5 rounded-xl font-bold tracking-widest uppercase text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md ${
+                isSearching || cooldownSec > 0
+                  ? 'opacity-70 cursor-not-allowed bg-gray-400'
+                  : 'hover:bg-primary hover:shadow-primary/30 hover:-translate-y-0.5 cursor-pointer'
+              }`}
             >
-              {isSearching ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>Track <ArrowRight size={15} /></>
-              )}
+              {renderButtonContent()}
             </button>
           </div>
         </form>
+
+        {errorMessage && (
+          <div className="mt-3.5 flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl border border-red-100 text-xs font-medium">
+            <AlertCircle size={15} className="shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
       </div>
 
       {/* Result Section */}
@@ -219,189 +307,134 @@ const TrackOrder = () => {
           transition={{ duration: 0.35 }}
           className="bg-white rounded-[24px] sm:rounded-[28px] border border-[#e5e1d7] shadow-md overflow-hidden"
         >
-          {/* Header Status Bar */}
-          <div className="p-5 sm:p-6 border-b border-gray-100 bg-[#fbfaf8] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Header */}
+          <div className="p-6 sm:p-8 border-b border-gray-100 bg-[#fbfaf8] flex flex-wrap items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Order Reference</span>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-lg sm:text-xl font-bold text-[#112338]">
-                  #{result.id.slice(0, 8).toUpperCase()}
-                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-600">Order ID</span>
+                <span className="font-mono text-xs text-gray-500">#{result.id.slice(0, 8).toUpperCase()}</span>
                 <button 
                   onClick={() => {
                     if (navigator.clipboard?.writeText) {
-                      navigator.clipboard.writeText(result.id.slice(0, 8).toUpperCase()).catch(() => {});
+                      void navigator.clipboard.writeText(result.id.slice(0, 8).toUpperCase()).catch(() => {});
                     }
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}
-                  className="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors"
+                  className="text-gray-400 hover:text-[#112338] transition-colors p-1"
                   title="Copy Order ID"
                 >
-                  {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                  {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Placed on {new Date(result.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} at {new Date(result.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-              </p>
+              <h2 className="text-xl sm:text-2xl font-black text-[#112338] mt-1">
+                {result.customer_name}
+              </h2>
             </div>
-
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs sm:text-sm font-bold ${statusInfo.bg} ${statusInfo.border} ${statusInfo.color} shrink-0`}>
+            
+            <div className={`px-4 py-2 rounded-full border ${statusInfo.bg} ${statusInfo.border} ${statusInfo.color} flex items-center gap-2 text-xs font-black uppercase tracking-wider shadow-xs`}>
               <StatusIcon size={16} />
               <span>{statusInfo.label}</span>
             </div>
           </div>
 
-          {/* Progress Timeline Stepper */}
-          {result.status !== 'cancelled' && (
-            <div className="p-5 sm:p-7 border-b border-gray-100 bg-white">
-              <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block mb-4">
-                Fulfillment Progress
-              </span>
-              <div className="grid grid-cols-4 gap-2 text-center relative">
-                {/* Connecting Bar */}
-                <div className="absolute top-4 left-6 right-6 h-0.5 bg-gray-200 -z-0">
-                  <div 
-                    className="h-full bg-emerald-600 transition-all duration-500" 
-                    style={{ width: progressWidth }}
-                  />
-                </div>
+          {/* Progress Bar & Tracker */}
+          <div className="p-6 sm:p-8 border-b border-gray-100">
+            <div className="relative mb-8 mt-2">
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-700 ease-out rounded-full"
+                  style={{ width: progressWidth }}
+                />
+              </div>
 
-                {/* Step 1 */}
-                <div className="flex flex-col items-center relative z-10">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 1 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-400'}`}>
-                    ✓
-                  </div>
-                  <span className="text-[10.5px] sm:text-xs font-semibold text-[#112338] mt-2">Received</span>
-                </div>
-
-                {/* Step 2 */}
-                <div className="flex flex-col items-center relative z-10">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 2 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-400'}`}>
-                    {currentStep >= 2 ? '✓' : '2'}
-                  </div>
-                  <span className="text-[10.5px] sm:text-xs font-semibold text-[#112338] mt-2">Processing</span>
-                </div>
-
-                {/* Step 3 */}
-                <div className="flex flex-col items-center relative z-10">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 3 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-400'}`}>
-                    {currentStep >= 3 ? '✓' : '3'}
-                  </div>
-                  <span className="text-[10.5px] sm:text-xs font-semibold text-[#112338] mt-2">Dispatched</span>
-                </div>
-
-                {/* Step 4 */}
-                <div className="flex flex-col items-center relative z-10">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 4 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-400'}`}>
-                    {currentStep >= 4 ? '✓' : '4'}
-                  </div>
-                  <span className="text-[10.5px] sm:text-xs font-semibold text-[#112338] mt-2">Delivered</span>
-                </div>
+              <div className="flex justify-between mt-3 text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+                <span className={currentStep >= 1 ? 'text-primary font-black' : ''}>1. Received</span>
+                <span className={currentStep >= 2 ? 'text-primary font-black' : ''}>2. Processing</span>
+                <span className={currentStep >= 3 ? 'text-primary font-black' : ''}>3. Shipped</span>
+                <span className={currentStep >= 4 ? 'text-primary font-black' : ''}>4. Delivered</span>
               </div>
             </div>
-          )}
 
-          {/* Customer & Shipping Summary */}
-          <div className="p-5 sm:p-7 border-b border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div>
-              <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Customer Details</span>
-              <p className="text-sm font-bold text-[#112338] mt-0.5">{result.customer_name || 'Valued Customer'}</p>
-              {result.customer_phone && <p className="text-xs text-gray-600 mt-0.5">{result.customer_phone}</p>}
-              {result.customer_email && <p className="text-xs text-gray-400 mt-0.5">{result.customer_email}</p>}
+            {/* Quick Details Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+              <div className="bg-[#fbfaf8] p-4 rounded-xl border border-gray-100">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600 block mb-1">Date</span>
+                <span className="text-sm font-semibold text-[#112338]">
+                  {new Date(result.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+
+              <div className="bg-[#fbfaf8] p-4 rounded-xl border border-gray-100">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600 block mb-1">Payment</span>
+                <span className="text-sm font-semibold text-[#112338]">
+                  {result.payment_method || 'Cash on Delivery'}
+                </span>
+              </div>
+
+              <div className="bg-[#fbfaf8] p-4 rounded-xl border border-gray-100">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600 block mb-1">Shipping</span>
+                <span className="text-sm font-semibold text-[#112338]">
+                  {result.shipping_method || 'Standard'}
+                </span>
+              </div>
+
+              <div className="bg-[#fbfaf8] p-4 rounded-xl border border-gray-100">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600 block mb-1">Total</span>
+                <span className="text-sm font-black text-primary">
+                  Rs {totalAmount.toLocaleString()}
+                </span>
+              </div>
             </div>
+          </div>
 
-            <div>
-              <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Delivery Method</span>
-              <p className="text-sm font-bold text-[#112338] mt-0.5">{result.shipping_method || 'Standard Delivery'}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Payment: {result.payment_method || 'Cash on Delivery'}</p>
-            </div>
-
+          {/* Delivery & Items Details */}
+          <div className="p-6 sm:p-8 space-y-6">
             {result.customer_address && (
-              <div className="sm:col-span-2 md:col-span-1">
-                <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider block">Delivery Destination</span>
-                <p className="text-xs sm:text-sm text-gray-700 mt-0.5 flex items-start gap-1">
-                  <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
-                  <span>{result.customer_address}</span>
-                </p>
+              <div className="flex items-start gap-3 bg-amber-50/60 p-4 rounded-xl border border-amber-100/80">
+                <MapPin className="text-amber-600 shrink-0 mt-0.5" size={18} />
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block mb-0.5">Shipping Address</span>
+                  <p className="text-sm text-gray-700 font-medium whitespace-pre-line">{result.customer_address}</p>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Bulk Order Banner (if applicable) */}
-          {(result.order_type?.includes('Bulk') || (Array.isArray(result.items) && result.items.some(i => i.isBulk))) && (
-            <div className="mx-5 sm:mx-7 mt-4 p-4 rounded-xl bg-[#fcfbf9] border border-amber-300 shadow-2xs flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0 text-amber-800 mt-0.5">
-                <PackageCheck size={18} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-bold text-xs sm:text-sm text-[#112338]">Bulk Order Request</h4>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
-                    B2B Special Rates
-                  </span>
-                </div>
-                <p className="text-[11.5px] text-[#64748b] leading-relaxed">
-                  This order includes wholesale / bulk request items. Special pricing & quantities are verified with our sales desk on WhatsApp.
-                </p>
-                {Array.isArray(result.items) && result.items
-                  .filter((i) => i.isBulk && (i.bulkDetails || i.admin_message))
-                  .map((i) => (
-                    <div key={`${i.name}-${i.size || 'std'}-${i.gsm || '0'}`} className="mt-2 text-xs bg-white border border-[#e2ddd3] rounded-lg p-2 text-[#112338]">
-                      <span className="font-bold text-amber-800">{i.name}:</span> {i.bulkDetails || i.admin_message}
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-3 flex items-center gap-2">
+                <PackageCheck size={16} /> Ordered Items ({Array.isArray(result.items) ? result.items.length : 0})
+              </h3>
+              
+              <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+                {Array.isArray(result.items) && result.items.map((item, idx) => {
+                  const hasColor = isColorVariation(item.size);
+                  const showSpec = !hasColor && !isMeaninglessVariation(item.size);
+                  const itemKey = item.id ? `${item.id}-${idx}` : `${item.name}-${item.size || ''}-${idx}`;
+
+                  return (
+                    <div key={itemKey} className="p-3.5 sm:p-4 flex items-center justify-between gap-4 bg-white hover:bg-gray-50/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                          {item.quantity}x
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#112338] line-clamp-1">{item.name}</p>
+                          <p className="text-xs text-gray-500 font-medium">
+                            {showSpec ? item.size : ''} {item.gsm ? `• ${item.gsm}g` : ''} {item.packingType ? `• ${item.packingType}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right shrink-0">
+                        <span className="text-sm font-bold text-[#112338]">
+                          Rs {(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
-                  ))}
+                  );
+                })}
               </div>
             </div>
-          )}
-
-          {/* Purchased Items List */}
-          <div className="p-5 sm:p-7">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 mb-3.5 flex items-center gap-1.5">
-              <ShoppingBag size={14} /> Items in Order ({Array.isArray(result.items) ? result.items.length : 0})
-            </h3>
-            
-            <div className="divide-y divide-gray-100 border border-[#e5e1d7] rounded-xl overflow-hidden bg-white mb-6">
-              {Array.isArray(result.items) && result.items.map((item) => (
-                <div key={item.id ? `${item.id}-${item.size || ''}-${item.gsm || ''}` : `${item.name || 'item'}-${item.size || 'std'}-${item.gsm || '0'}-${item.quantity || 1}`} className="p-3.5 sm:p-4 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <h4 className="font-bold text-sm text-[#112338] truncate">{item.name}</h4>
-                    <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-0.5">
-                      {!isMeaninglessVariation(item.size) && (
-                        <span>{isColorVariation(item.size) ? `Color: ${item.size}` : `Size: ${item.size}`}</span>
-                      )}
-                      {item.gsm && <span>• {item.gsm}g</span>}
-                      <span>• Qty: {item.quantity} {item.packingType || ''}</span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="font-bold text-sm text-[#112338]">
-                      Rs. {Number((item.price || 0) * (item.quantity || 1)).toLocaleString()}
-                    </span>
-                    {item.price && (
-                      <p className="text-[10.5px] text-gray-400">
-                        Rs. {Number(item.price).toLocaleString()} each
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Total Footer */}
-            <div className="bg-[#fbfaf8] border border-[#e5e1d7] rounded-xl p-4 flex items-center justify-between">
-              <span className="font-bold text-sm text-gray-600">Total Order Amount</span>
-              <span className="text-xl sm:text-2xl font-black text-primary">
-                Rs. {totalAmount.toLocaleString()}
-              </span>
-            </div>
-          </div>
-
-          {/* Need Assistance Bar */}
-          <div className="p-4 bg-gray-50 border-t border-gray-100 text-center">
-            <p className="text-xs text-gray-500">
-              Need assistance with this order? Call Nazir &amp; Sons at <a href="tel:+923202220001" className="font-semibold text-secondary hover:underline">+92 320 2220001</a> or visit our store in Lahore.
-            </p>
           </div>
         </motion.div>
       )}
@@ -409,35 +442,28 @@ const TrackOrder = () => {
       {/* Not Found View */}
       {notFound && (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white p-6 sm:p-8 rounded-[24px] border border-gray-200 text-center shadow-sm"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white p-8 rounded-[24px] sm:rounded-[28px] border border-[#e5e1d7] shadow-sm text-center max-w-lg mx-auto"
         >
-          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
-            <Search size={22} />
+          <div className="w-14 h-14 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-500 mx-auto mb-4">
+            <XCircle size={28} />
           </div>
-          <h3 className="font-bold text-lg text-secondary mb-1">No Order Found</h3>
-          <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto mb-5 leading-relaxed">
-            We couldn't find an order matching <strong className="text-secondary font-mono">"{trackingId}"</strong>. Please verify that you entered the 8-character Order ID (like 6B7BD55B) or the phone number used during checkout.
+          <h3 className="text-lg font-black text-[#112338] mb-1">No Matching Order Found</h3>
+          <p className="text-sm text-gray-500 mb-6">
+            We could not find an order matching <span className="font-semibold text-gray-700">"{trackingId}"</span>. Please check your 8-digit Order ID or 11-digit phone number and try again.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button 
-              type="button" 
-              onClick={() => { setTrackingId(''); setNotFound(false); }}
-              className="text-xs font-bold text-secondary bg-gray-100 hover:bg-gray-200 px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Try Another Number
-            </button>
-            <Link 
-              to="/shop"
-              className="text-xs font-bold text-white bg-primary hover:bg-primary/90 px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Continue Shopping
-            </Link>
-          </div>
+          <button
+            onClick={() => {
+              setTrackingId('');
+              setNotFound(false);
+            }}
+            className="text-xs font-bold uppercase tracking-widest text-primary hover:underline cursor-pointer"
+          >
+            Clear and Try Again
+          </button>
         </motion.div>
       )}
-
     </main>
   );
 };
