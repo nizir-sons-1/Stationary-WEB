@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Maximize, Layers, Copy, HelpCircle, ArrowLeft } from 'lucide-react';
 // Pre-digested at build time from products.json by scripts/build-calculator-data.cjs.
-import categories from '../data/calculator-rates.json';
+import { useCalculatorRates } from '../hooks/useSupabase';
 import { usePageSeo } from '../lib/seo';
 import { howToSchema, faqSchema } from '../lib/schema';
 import { FAQS } from '../data/seo-content';
@@ -49,22 +49,36 @@ const CustomCalculator = () => {
     extraNodes: [CALCULATOR_HOWTO, faqSchema(CALCULATOR_FAQS)],
   });
 
-  const [category, setCategory] = useState(categories.length > 0 ? categories[0].name : '');
+  const { categories, loading: isRatesLoading } = useCalculatorRates();
+
+  const [category, setCategory] = useState('');
   const [brand, setBrand] = useState('');
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
   const [gsm, setGsm] = useState('');
   const [sheets, setSheets] = useState('100');
 
-  const selectedCatObj = useMemo(() => categories.find((c) => c.name === category), [category]);
+  React.useEffect(() => {
+    if (!category && categories.length > 0) {
+      setCategory(categories[0].name);
+    }
+  }, [category, categories]);
+
+  const selectedCatObj = useMemo(
+    () => categories.find((c) => c.name === category) || categories[0],
+    [category, categories]
+  );
 
   React.useEffect(() => {
     if (selectedCatObj?.brands?.length > 0) {
-      setBrand(selectedCatObj.brands[0].name);
+      const exists = selectedCatObj.brands.some((b) => b.name === brand);
+      if (!exists) {
+        setBrand(selectedCatObj.brands[0].name);
+      }
     } else {
       setBrand('');
     }
-  }, [category, selectedCatObj]);
+  }, [selectedCatObj, brand]);
 
   const selectedBrandObj = useMemo(() => {
     if (!selectedCatObj?.brands) return null;
@@ -358,7 +372,10 @@ const CustomCalculator = () => {
             <div className="flex flex-col gap-3">
               {/* Current Live Rate: Crisp White Text */}
               <div className="flex items-center justify-between border-b border-white/10 pb-2.5 text-[12.5px] sm:text-[13px]">
-                <span className="text-white/90 font-medium">Current Live Rate</span>
+                <div className="flex items-center gap-1.5 text-white/90 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Live Market Rate</span>
+                </div>
                 <span className="font-bold text-white tracking-tight">
                   Rs. {selectedRate} <span className="text-white/65 font-normal text-[11px]">/ kg</span>
                 </span>

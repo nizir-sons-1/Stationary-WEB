@@ -81,6 +81,78 @@ async function verifyAndSanitizeItems(items: any[], supabase: any) {
   return { sanitizedItems, verifiedTotal };
 }
 
+async function fetchDeliveryFee(
+  shippingMethod: string | undefined,
+  verifiedTotal: number,
+  supabase: any
+): Promise<number> {
+  const isStandardDelivery =
+    shippingMethod?.toLowerCase().includes("standard") || shippingMethod === "standard_delivery";
+  if (!isStandardDelivery) {
+    return 0;
+  }
+
+  try {
+    const { data: storeSettings } = await supabase
+      .from("store_settings")
+      .select("standard_delivery_fee, free_shipping_threshold, is_free_shipping_enabled")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (storeSettings) {
+      const isFreeEnabled = Boolean(storeSettings.is_free_shipping_enabled);
+      const freeThreshold =
+        typeof storeSettings.free_shipping_threshold === "number"
+          ? storeSettings.free_shipping_threshold
+          : null;
+
+      if (isFreeEnabled && freeThreshold !== null && verifiedTotal >= freeThreshold) {
+        return 0;
+      }
+
+      if (typeof storeSettings.standard_delivery_fee === "number") {
+        return storeSettings.standard_delivery_fee;
+      }
+    }
+  } catch {
+    // Fallback to default fee on error
+  }
+
+  return 200;
+}
+
+function buildOrderRecord(
+  payload: any,
+  cleanPhone: string,
+  cleanWhatsapp: string,
+  sanitizedItems: any[],
+  finalTotal: number
+) {
+  const customerName =
+    typeof payload.customer_name === "string" ? payload.customer_name.trim().slice(0, 100) : "";
+  const customerEmail = payload.customer_email
+    ? String(payload.customer_email).trim().slice(0, 100)
+    : null;
+  const customerAddress = payload.customer_address
+    ? String(payload.customer_address).trim().slice(0, 500)
+    : null;
+
+  return {
+    customer_name: customerName,
+    customer_phone: cleanPhone,
+    whatsapp_number: cleanWhatsapp,
+    customer_email: customerEmail,
+    customer_address: customerAddress,
+    shipping_method: payload.shipping_method || "Standard Delivery",
+    payment_method: payload.payment_method || "Cash on Delivery (COD)",
+    order_type: payload.order_type || "B2C",
+    items: sanitizedItems,
+    total_amount: finalTotal,
+    total_price: finalTotal,
+    status: "pending",
+  };
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -103,46 +175,26 @@ serve(async (req: Request) => {
       });
     }
 
-    const {
-      customer_name,
-      customer_phone,
-      whatsapp_number,
-      customer_email,
-      customer_address,
-      shipping_method,
-      payment_method,
-      order_type,
-      items,
-    } = payload;
-
-    const cleanPhone = normalizePhone(customer_phone);
-    const cleanWhatsapp = whatsapp_number ? normalizePhone(whatsapp_number) : cleanPhone;
+    const cleanPhone = normalizePhone(payload.customer_phone);
+    const cleanWhatsapp = payload.whatsapp_number
+      ? normalizePhone(payload.whatsapp_number)
+      : cleanPhone;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { sanitizedItems, verifiedTotal } = await verifyAndSanitizeItems(items, supabase);
+    const { sanitizedItems, verifiedTotal } = await verifyAndSanitizeItems(payload.items, supabase);
+    const deliveryFee = await fetchDeliveryFee(payload.shipping_method, verifiedTotal, supabase);
+    const calculatedFinalTotal = verifiedTotal + deliveryFee;
 
-    let calculatedFinalTotal = verifiedTotal;
-    if (shipping_method?.toLowerCase().includes("standard") || shipping_method === "standard_delivery") {
-      calculatedFinalTotal += 200;
-    }
-
-    const finalOrderRecord = {
-      customer_name: customer_name.trim().slice(0, 100),
-      customer_phone: cleanPhone,
-      whatsapp_number: cleanWhatsapp,
-      customer_email: customer_email ? String(customer_email).trim().slice(0, 100) : null,
-      customer_address: customer_address ? String(customer_address).trim().slice(0, 500) : null,
-      shipping_method: shipping_method || "Standard Delivery",
-      payment_method: payment_method || "Cash on Delivery (COD)",
-      order_type: order_type || "B2C",
-      items: sanitizedItems,
-      total_amount: calculatedFinalTotal,
-      total_price: calculatedFinalTotal,
-      status: "pending",
-    };
+    const finalOrderRecord = buildOrderRecord(
+      payload,
+      cleanPhone,
+      cleanWhatsapp,
+      sanitizedItems,
+      calculatedFinalTotal
+    );
 
     const { data: insertedOrder, error: insertErr } = await supabase
       .from("orders")

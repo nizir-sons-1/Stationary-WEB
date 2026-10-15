@@ -117,29 +117,48 @@ const ProductGroupCard = React.memo(function ProductGroupCard({
           p.LENGTH_INCH && p.WIDTH_INCH
             ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}`
             : p.Display_Size || 'N/A';
+        return p.GSM === selectedGsm && pSize === selectedSize && Number(p.CALCULATED_PRICE_RS) > 0;
+      }) ||
+      variations.find((p) => {
+        const pSize =
+          p.LENGTH_INCH && p.WIDTH_INCH
+            ? `${p.LENGTH_INCH}x${p.WIDTH_INCH}`
+            : p.Display_Size || 'N/A';
         return p.GSM === selectedGsm && pSize === selectedSize;
-      }) || variations[0]
+      }) ||
+      variations[0]
     );
   }, [variations, selectedGsm, selectedSize]);
 
-  const inStock = Number(currentVariation.Stock) > 0;
+  const variationPrice = Number(currentVariation?.CALCULATED_PRICE_RS || 0);
+  const hasValidPrice = variationPrice > 0;
+  const inStock = Number(currentVariation?.Stock || 0) > 0;
 
   let buttonStyle = 'bg-gray-100 text-gray-400 cursor-not-allowed';
+  let buttonContent = <span className="text-[9px] font-bold uppercase">Out</span>;
+  let buttonTitle = 'Out of stock';
+
   if (isAdded) {
     buttonStyle = 'bg-emerald-600 text-white';
-  } else if (inStock) {
-    buttonStyle = 'bg-[#112338] text-white hover:bg-[#1a3654] active:scale-95';
-  }
-
-  let buttonContent = <span className="text-[9px] font-bold uppercase">Out</span>;
-  if (isAdded) {
+    buttonTitle = 'Item added';
     buttonContent = (
       <>
         <Check size={13} className="stroke-[2.5]" />
         <span className="hidden sm:inline">Added</span>
       </>
     );
+  } else if (!hasValidPrice) {
+    buttonStyle = 'bg-[#112338] text-white hover:bg-[#1a3654] active:scale-95 cursor-pointer';
+    buttonTitle = 'Call / WhatsApp for current rate';
+    buttonContent = (
+      <>
+        <ShoppingBag size={13} />
+        <span className="hidden sm:inline">Add</span>
+      </>
+    );
   } else if (inStock) {
+    buttonStyle = 'bg-[#112338] text-white hover:bg-[#1a3654] active:scale-95';
+    buttonTitle = 'Add to cart';
     buttonContent = (
       <>
         <ShoppingBag size={13} />
@@ -274,14 +293,26 @@ const ProductGroupCard = React.memo(function ProductGroupCard({
             <span className="text-[8px] md:text-[9px] font-semibold tracking-wider text-[#64748b] uppercase mb-0.5 line-clamp-1">
               Rs / {currentVariation?.PACKING_TYPE || 'ream'}
             </span>
-            <span className="font-serif font-bold text-[#112338] text-[15px] sm:text-[17px] leading-tight whitespace-nowrap">
-              Rs. {formatPrice(currentVariation?.CALCULATED_PRICE_RS || 0)}
-            </span>
+            {hasValidPrice ? (
+              <span className="font-serif font-bold text-[#112338] text-[15px] sm:text-[17px] leading-tight whitespace-nowrap">
+                Rs. {formatPrice(variationPrice)}
+              </span>
+            ) : (
+              <span className="font-serif font-bold text-[#112338] text-[13px] sm:text-[14px] leading-tight whitespace-nowrap">
+                Rate on Request
+              </span>
+            )}
           </div>
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault();
+              if (!hasValidPrice) {
+                const specText = selectedSize ? `${selectedSize}, ${selectedGsm}g` : '';
+                const msg = encodeURIComponent(`Assalam-o-Alaikum, mujhe "${currentVariation.PRODUCT_NAME}" (${specText}) ka current wholesale rate chahiye.`);
+                window.open(`https://wa.me/923202220001?text=${msg}`, '_blank');
+                return;
+              }
               if (inStock) {
                 if (isInstallment) {
                   setShowTerms(true);
@@ -294,7 +325,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({
                       name: currentVariation.PRODUCT_NAME,
                       gsm: currentVariation.GSM,
                       size: selectedSize,
-                      price: Number(currentVariation.CALCULATED_PRICE_RS) || 0,
+                      price: variationPrice,
                       image: currentVariation.IMAGE_URL || PLACEHOLDER_IMAGE,
                       packingType: currentVariation.PACKING_TYPE || 'ream',
                       category: currentVariation.Category,
@@ -311,6 +342,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({
             }}
             ref={btnRef}
             className={`${buttonStyle} h-8 md:h-9 px-2.5 sm:px-3 rounded-[3px] font-semibold text-[11px] sm:text-[12px] flex items-center justify-center gap-1.5 transition-all duration-200 shrink-0 shadow-sm`}
+            title={buttonTitle}
           >
             {buttonContent}
           </button>

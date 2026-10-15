@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { supabase } from '../lib/supabase';
+import FALLBACK_CALCULATOR_RATES from '../data/calculator-rates.json';
 
 /*
  * A tiny module-level store shared by every consumer.
@@ -19,6 +20,9 @@ const CATALOG_KEY = 'products:all';
 const entries = new Map(); // key -> { data, loading, error } (immutable snapshots)
 const listeners = new Map(); // key -> Set<() => void>
 const inflight = new Set(); // keys currently being fetched
+const timestamps = new Map(); // key -> timestamp of last successful fetch
+const loaders = new Map(); // key -> loader function for revalidation
+const CACHE_TTL_MS = 10000; // 10 seconds stale-while-revalidate threshold
 
 const PENDING = Object.freeze({ data: EMPTY, loading: true, error: null });
 const IDLE = Object.freeze({ data: EMPTY, loading: false, error: null });
@@ -48,20 +52,47 @@ function subscribeTo(key, notify) {
 
 /**
  * Runs `loader` once per key and shares the result. Concurrent callers join the
- * in-flight request instead of firing a duplicate.
+ * in-flight request instead of firing a duplicate. Supports stale-while-revalidate
+ * and background revalidation on window focus.
  */
-function load(key, loader) {
-  if (entries.has(key) || inflight.has(key)) return;
+function load(key, loader, force = false) {
+  loaders.set(key, loader);
+
+  const existing = entries.get(key);
+  const isStale = !timestamps.has(key) || Date.now() - (timestamps.get(key) || 0) > CACHE_TTL_MS;
+
+  if (existing && !isStale && !force) return;
+  if (inflight.has(key)) return;
   inflight.add(key);
 
   loader()
-    .then((data) => write(key, { data: data || EMPTY, loading: false, error: null }))
+    .then((data) => {
+      timestamps.set(key, Date.now());
+      write(key, { data: data || EMPTY, loading: false, error: null });
+    })
     .catch((err) => {
       console.error(`[supabase] failed to load "${key}"`, err);
-      // Surface the failure instead of leaving the UI spinning forever.
-      write(key, { data: EMPTY, loading: false, error: err.message || 'Request failed' });
+      if (!existing) {
+        write(key, { data: EMPTY, loading: false, error: err.message || 'Request failed' });
+      }
     })
     .finally(() => inflight.delete(key));
+}
+
+// Automatically revalidate active queries when switching back from admin tab to storefront
+if (typeof window !== 'undefined') {
+  const handleWindowFocus = () => {
+    for (const [key, loaderFn] of loaders.entries()) {
+      const subs = listeners.get(key);
+      if (subs && subs.size > 0) {
+        load(key, loaderFn, true);
+      }
+    }
+  };
+  window.addEventListener('focus', handleWindowFocus);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') handleWindowFocus();
+  });
 }
 
 // `image_url` on the variation is what lets a single product show a different
@@ -88,12 +119,15 @@ const PRODUCT_FIELDS = `
  */
 export function useProducts(category = null, enabled = true) {
   // Sorted so ['A','B'] and ['B','A'] share one cache entry and one request.
-  const names =
-    category == null
-      ? []
-      : (Array.isArray(category) ? category : [category])
-          .filter(Boolean)
-          .sort((a, b) => a.localeCompare(b));
+  let categoryList = [];
+  if (Array.isArray(category)) {
+    categoryList = category;
+  } else if (category != null) {
+    categoryList = [category];
+  }
+  const names = categoryList
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
   const cacheKey = `products:${names.length ? names.join('|') : 'all'}`;
 
   const subscribe = useCallback((notify) => subscribeTo(cacheKey, notify), [cacheKey]);
@@ -417,4 +451,145 @@ export async function submitReview({ name, rating, text }) {
   }
 
   return data;
+}
+
+const SETTINGS_KEY = 'store-settings';
+export const DEFAULT_STORE_SETTINGS = Object.freeze({
+  standard_delivery_fee: 200,
+  goods_transport_min_fee: 350,
+  free_shipping_threshold: null,
+  is_free_shipping_enabled: false,
+  contact_phone: '0320 2220001',
+  contact_whatsapp: '923202220001',
+  announcement_text: '',
+  is_announcement_enabled: false,
+});
+
+export function useStoreSettings() {
+  const subscribe = useCallback((notify) => subscribeTo(SETTINGS_KEY, notify), []);
+  const getSnapshot = useCallback(() => read(SETTINGS_KEY), []);
+
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  useEffect(() => {
+    load(SETTINGS_KEY, async () => {
+      const { data, error } = await supabase
+        .from('store_settings')
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.code === '42P01') {
+          return DEFAULT_STORE_SETTINGS;
+        }
+        console.warn('[useStoreSettings] error fetching store_settings:', error.message);
+        return DEFAULT_STORE_SETTINGS;
+      }
+      return data || DEFAULT_STORE_SETTINGS;
+    });
+  }, []);
+
+  const data = snapshot.loading || snapshot.error || snapshot.data === EMPTY ? DEFAULT_STORE_SETTINGS : snapshot.data;
+
+  return {
+    settings: data,
+    loading: snapshot.loading,
+    error: snapshot.error,
+  };
+}
+
+const CALCULATOR_RATES_KEY = 'calculator-rates';
+
+function parseStringList(val) {
+  if (Array.isArray(val)) {
+    return val.map(String);
+  }
+  if (typeof val === 'string' && val.trim()) {
+    return val
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+export function transformDbRatesToCategories(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return FALLBACK_CALCULATOR_RATES;
+  }
+  const map = new Map();
+
+  for (const row of rows) {
+    if (row.is_active === false) {
+      continue;
+    }
+    const cat = row.paper_type || 'General';
+    if (!map.has(cat)) {
+      map.set(cat, []);
+    }
+
+    map.get(cat).push({
+      id: row.id,
+      name: row.brand_name || cat,
+      rate: Number(row.rate_per_unit) || 0,
+      gsms: parseStringList(row.gsm),
+      lengths: parseStringList(row.lengths),
+      widths: parseStringList(row.widths),
+    });
+  }
+
+  const result = [];
+  for (const [name, brands] of map.entries()) {
+    brands.sort((a, b) => a.name.localeCompare(b.name));
+    result.push({ name, brands });
+  }
+  result.sort((a, b) => a.name.localeCompare(b.name));
+
+  if (result.length > 0) {
+    return result;
+  }
+  return FALLBACK_CALCULATOR_RATES;
+}
+
+export function useCalculatorRates() {
+  const subscribe = useCallback((notify) => subscribeTo(CALCULATOR_RATES_KEY, notify), []);
+  const getSnapshot = useCallback(() => read(CALCULATOR_RATES_KEY), []);
+
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  useEffect(() => {
+    load(CALCULATOR_RATES_KEY, async () => {
+      const { data, error } = await supabase
+        .from('calculator_rates')
+        .select('*')
+        .eq('is_active', true)
+        .order('paper_type', { ascending: true })
+        .order('brand_name', { ascending: true });
+
+      if (error) {
+        if (error.code !== 'PGRST205' && error.code !== '42P01') {
+          console.warn('[useCalculatorRates] error fetching calculator_rates:', error.message);
+        }
+        return FALLBACK_CALCULATOR_RATES;
+      }
+
+      if (!data || data.length === 0) {
+        return FALLBACK_CALCULATOR_RATES;
+      }
+
+      return transformDbRatesToCategories(data);
+    });
+  }, []);
+
+  let categories = FALLBACK_CALCULATOR_RATES;
+  if (!snapshot.loading && !snapshot.error && snapshot.data !== EMPTY && snapshot.data) {
+    categories = snapshot.data;
+  }
+
+  return {
+    categories,
+    loading: snapshot.loading,
+    error: snapshot.error,
+  };
 }

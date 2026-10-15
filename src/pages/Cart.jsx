@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
+import { useStoreSettings } from '../hooks/useSupabase';
+import { supabase } from '../lib/supabase';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { usePageSeo } from '../lib/seo';
@@ -25,11 +27,59 @@ import CartItemsList from '../components/cart/CartItemsList';
 import CheckoutForm from '../components/cart/CheckoutForm';
 import OrderSummary from '../components/cart/OrderSummary';
 
+function getOrCreateIdempotencyKey() {
+  let key = localStorage.getItem('paperWeb_order_idempotency');
+  if (!key) {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      key = `ord_${crypto.randomUUID()}`;
+    } else if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const arr = new Uint32Array(2);
+      crypto.getRandomValues(arr);
+      key = `ord_${arr[0].toString(36)}_${arr[1].toString(36)}`;
+    } else {
+      key = `ord_${Date.now().toString(36)}`;
+    }
+    localStorage.setItem('paperWeb_order_idempotency', key);
+  }
+  return key;
+}
+
+async function placeOrderViaApi(payloadBody, idempotencyKey, fallbackPayload) {
+  try {
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-idempotency-key': idempotencyKey,
+      },
+      body: JSON.stringify(payloadBody),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { order: data.order, finalTotal: data.finalTotal };
+    }
+    const errJson = await res.json().catch(() => ({}));
+    throw new Error(errJson.error || 'Server error placing order');
+  } catch (apiErr) {
+    console.warn('[checkout] API endpoint unavailable, fallback to direct Supabase insert:', apiErr.message);
+    const { data: insertedOrder, error: insertError } = await supabase
+      .from('orders')
+      .insert(fallbackPayload)
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+    return { order: insertedOrder, finalTotal: fallbackPayload.total_amount };
+  }
+}
+
 const Cart = () => {
   usePageSeo('/cart');
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
+  const { settings } = useStoreSettings();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const isCheckoutRequested =
@@ -128,6 +178,12 @@ const Cart = () => {
     e?.preventDefault();
     if (cartItems.length === 0) return;
 
+    const hasUnpricedItem = cartItems.some(i => !i.isBulk && Number(i.price || 0) <= 0);
+    if (hasUnpricedItem) {
+      alert('Your cart contains items without a confirmed price. Please remove them or contact us on WhatsApp for rate finalization.');
+      return;
+    }
+
     const check = validateCheckoutInput({ checkoutPhase, fullName, phone, address, isB2B, shippingMethod });
     if (!check.valid) {
       alert(check.message);
@@ -140,7 +196,7 @@ const Cart = () => {
     setIsCheckingOut(true);
     try {
       const orderConfig = buildOrderPayload({
-        cartItems, fullName, phone, email, address, shippingMethod, paymentMethod, isB2B, cartTotal
+        cartItems, fullName, phone, email, address, shippingMethod, paymentMethod, isB2B, cartTotal, settings
       });
 
       const idempotencyKey = getOrCreateIdempotencyKey();
@@ -192,7 +248,7 @@ const Cart = () => {
     return <EmptyCartView />;
   }
 
-  const shippingFeeText = getShippingFeeText(shippingMethod);
+  const shippingFeeText = getShippingFeeText(shippingMethod, settings, cartTotal);
 
   return (
     <main className="flex-grow pt-4 sm:pt-6 md:pt-8 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max w-full mx-auto">
@@ -267,6 +323,8 @@ const Cart = () => {
                 onClearDetails={handleClearDetails}
                 hasAutoFilled={hasAutoFilled}
                 hasPaperAndCanvas={hasPaperAndCanvas}
+                settings={settings}
+                cartTotal={cartTotal}
               />
             )}
           </AnimatePresence>
@@ -282,6 +340,7 @@ const Cart = () => {
             checkoutPhase={checkoutPhase}
             setCheckoutPhase={setCheckoutPhase}
             isCheckingOut={isCheckingOut}
+            settings={settings}
           />
         </div>
       </div>

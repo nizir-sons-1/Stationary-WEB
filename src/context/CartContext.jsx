@@ -21,6 +21,12 @@ export const CartProvider = ({ children }) => {
   }, [cartItems]);
 
   const addToCart = useCallback((product, quantity = 1, isBulk = false, bulkDetails = null, isInstallment = false, installmentPlan = null) => {
+    // Guard against adding unquoted / zero-priced items to cart
+    if (!isBulk && Number(product?.price || 0) <= 0) {
+      console.warn('Blocked adding item with zero or unquoted price to cart:', product?.name);
+      return false;
+    }
+
     setCartItems(prev => {
       // Check if item already exists with exact same bulk/installment status
       const existingItemIndex = prev.findIndex(item =>

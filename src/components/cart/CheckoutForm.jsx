@@ -162,7 +162,27 @@ function CustomerInfoFields({
   );
 }
 
-function ShippingMethodSelector({ isB2B, shippingMethod, setShippingMethod, hasPaperAndCanvas }) {
+function ShippingMethodSelector({
+  isB2B,
+  shippingMethod,
+  setShippingMethod,
+  hasPaperAndCanvas,
+  settings = null,
+  cartTotal = 0,
+}) {
+  const standardFee =
+    typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+  const goodsTransportMin =
+    typeof settings?.goods_transport_min_fee === 'number' ? settings.goods_transport_min_fee : 350;
+  const threshold =
+    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
+      ? settings.free_shipping_threshold
+      : null;
+  const isFree = threshold !== null && cartTotal >= threshold;
+
+  const standardSubtitle = isFree ? 'FREE (Threshold Met)' : `Rs ${standardFee} Flat Rate`;
+  const openSubtitle = `Min Rs ${goodsTransportMin}`;
+
   return (
     <div className="flex flex-col gap-5">
       <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Shipping Method</h3>
@@ -185,7 +205,7 @@ function ShippingMethodSelector({ isB2B, shippingMethod, setShippingMethod, hasP
               onChange={() => setShippingMethod('delivery_open')}
               icon={Truck}
               title="Delivery - Open"
-              subtitle="Min Rs 350"
+              subtitle={openSubtitle}
             />
             {hasPaperAndCanvas && (
               <RadioOptionCard
@@ -207,7 +227,7 @@ function ShippingMethodSelector({ isB2B, shippingMethod, setShippingMethod, hasP
             onChange={() => setShippingMethod('standard_delivery')}
             icon={Truck}
             title="Standard Delivery"
-            subtitle="Rs 200 Flat Rate"
+            subtitle={standardSubtitle}
             colSpan
           />
         )}
@@ -291,6 +311,8 @@ export function CheckoutForm({
   onClearDetails,
   hasAutoFilled,
   hasPaperAndCanvas,
+  settings = null,
+  cartTotal = 0,
 }) {
   const hasBulk = Array.isArray(cartItems) && cartItems.some((item) => item.isBulk);
 
@@ -343,6 +365,8 @@ export function CheckoutForm({
         shippingMethod={shippingMethod}
         setShippingMethod={setShippingMethod}
         hasPaperAndCanvas={hasPaperAndCanvas}
+        settings={settings}
+        cartTotal={cartTotal}
       />
       <PaymentMethodSelector
         isB2B={isB2B}

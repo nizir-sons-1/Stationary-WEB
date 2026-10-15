@@ -10,7 +10,20 @@ export function OrderSummary({
   checkoutPhase,
   setCheckoutPhase,
   isCheckingOut,
+  settings = null,
 }) {
+  const standardFee =
+    typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+  const threshold =
+    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
+      ? settings.free_shipping_threshold
+      : null;
+  const isFreeShipping = threshold !== null && cartTotal >= threshold;
+  let deliveryCharge = 0;
+  if (shippingMethod === 'standard_delivery' && !isFreeShipping) {
+    deliveryCharge = standardFee;
+  }
+
   return (
     <div className="bg-gray-50/50 border border-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-6 lg:p-8 rounded-[32px] sticky top-32 transition-all duration-300">
       <h2 className="font-headline-md text-xl font-bold text-secondary border-b border-gray-200 pb-4 mb-6">Order Summary</h2>
@@ -35,7 +48,7 @@ export function OrderSummary({
       <div className="flex justify-between items-end mb-8">
         <span className="text-xl font-bold text-secondary">Total</span>
         <span className="text-2xl font-black text-blue-900 leading-none">
-          Rs. {(cartTotal + (shippingMethod === 'standard_delivery' ? 200 : 0)).toLocaleString()}
+          Rs. {(cartTotal + deliveryCharge).toLocaleString()}
         </span>
       </div>
 
@@ -70,10 +83,15 @@ export function OrderSummary({
         <button
           type="button"
           onClick={() => {
+            const hasUnpriced = cartItems.some(i => !i.isBulk && Number(i.price || 0) <= 0);
+            if (hasUnpriced) {
+              alert('Some items in your cart do not have a confirmed price. Please remove them or contact us on WhatsApp for a custom quotation.');
+              return;
+            }
             setCheckoutPhase('checkout');
             window.scrollTo({ top: 0, behavior: 'instant' });
           }}
-          className="w-full text-white bg-[#111111] hover:bg-primary hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 py-5 font-bold text-sm uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full text-white bg-[#111111] hover:bg-primary hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 py-4 font-bold text-sm uppercase tracking-widest rounded-xl transition-all duration-300 shadow-md flex items-center justify-center gap-2 cursor-pointer"
         >
           Proceed to Checkout <ArrowRight size={18} />
         </button>

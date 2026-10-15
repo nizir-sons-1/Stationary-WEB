@@ -56,39 +56,36 @@ export function generateFallbackOrderId() {
   return `ORD-${Date.now().toString(36).toUpperCase()}`;
 }
 
-export function getShippingFeeText(shippingMethod) {
+export function getShippingFeeText(shippingMethod, settings = null, cartTotal = 0) {
   if (shippingMethod === 'self_pickup') return 'FREE';
-  if (shippingMethod === 'standard_delivery') return 'Rs 200';
+  if (shippingMethod === 'standard_delivery') {
+    const threshold =
+      settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
+        ? settings.free_shipping_threshold
+        : null;
+    if (threshold !== null && cartTotal >= threshold) return 'FREE';
+    const fee = typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+    return `Rs ${fee}`;
+  }
   return 'TBD';
 }
 
-export function buildOrderPayload({
-  cartItems,
-  fullName,
-  phone,
-  email,
-  address,
-  shippingMethod,
-  paymentMethod,
-  isB2B,
-  cartTotal,
-}) {
-  const shipMap = {
-    self_pickup: 'Self Pickup (FREE)',
-    delivery_open: 'Delivery - Open (Min Rs 350)',
-    delivery_bundle: 'Delivery - Bundle (Only for Adda)',
-    standard_delivery: 'Standard Delivery (Rs 200)',
-  };
-  const payMap = {
-    shop: 'Pay at Shop (Pay when collecting)',
-    bank: 'Bank Transfer',
-    cod: 'Cash on Delivery (COD)',
-    online: 'Online Transfer',
-  };
+function resolveStandardDeliveryFee(shippingMethod, cartTotal, settings) {
+  if (shippingMethod !== 'standard_delivery') {
+    return 0;
+  }
+  const threshold =
+    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
+      ? settings.free_shipping_threshold
+      : null;
+  const isFreeShipping = threshold !== null && cartTotal >= threshold;
+  if (isFreeShipping) {
+    return 0;
+  }
+  return typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+}
 
-  let finalTotal = cartTotal;
-  if (shippingMethod === 'standard_delivery') finalTotal += 200;
-
+function formatBulkAddressAndType(address, cartItems, isB2B) {
   const hasBulk = cartItems.some((item) => item.isBulk);
   const bulkNotesList = cartItems
     .filter((item) => item.isBulk && item.bulkDetails)
@@ -107,7 +104,11 @@ export function buildOrderPayload({
       : `[BULK ORDER NOTE]: ${bulkNotesText}`;
   }
 
-  const items = cartItems.map((item) => {
+  return { hasBulk, bulkNotesText, calculatedOrderType, formattedAddress };
+}
+
+function mapOrderItems(cartItems) {
+  return cartItems.map((item) => {
     let adminMsg = null;
     if (item.bulkDetails) {
       adminMsg = `[BULK ORDER NOTE]: ${item.bulkDetails}`;
@@ -130,7 +131,50 @@ export function buildOrderPayload({
       installmentPlan: item.installmentPlan || null,
     };
   });
+}
 
+export function buildOrderPayload({
+  cartItems,
+  fullName,
+  phone,
+  email,
+  address,
+  shippingMethod,
+  paymentMethod,
+  isB2B,
+  cartTotal,
+  settings = null,
+}) {
+  const standardFee =
+    typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+  const goodsTransportMin =
+    typeof settings?.goods_transport_min_fee === 'number' ? settings.goods_transport_min_fee : 350;
+  const threshold =
+    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
+      ? settings.free_shipping_threshold
+      : null;
+  const isFreeShipping = threshold !== null && cartTotal >= threshold;
+
+  const shipMap = {
+    self_pickup: 'Self Pickup (FREE)',
+    delivery_open: `Delivery - Open (Min Rs ${goodsTransportMin})`,
+    delivery_bundle: 'Delivery - Bundle (Only for Adda)',
+    standard_delivery: isFreeShipping ? 'Standard Delivery (FREE)' : `Standard Delivery (Rs ${standardFee})`,
+  };
+  const payMap = {
+    shop: 'Pay at Shop (Pay when collecting)',
+    bank: 'Bank Transfer',
+    cod: 'Cash on Delivery (COD)',
+    online: 'Online Transfer',
+  };
+
+  const deliveryFee = resolveStandardDeliveryFee(shippingMethod, cartTotal, settings);
+  const finalTotal = cartTotal + deliveryFee;
+
+  const { hasBulk, bulkNotesText, calculatedOrderType, formattedAddress } =
+    formatBulkAddressAndType(address, cartItems, isB2B);
+
+  const items = mapOrderItems(cartItems);
   const cleanPhone = normalizePakistaniPhone(phone);
 
   return {

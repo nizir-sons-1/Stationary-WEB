@@ -170,12 +170,15 @@ function buildVerifiedOrderRecord({
   isB2B,
   finalTotal,
   verifiedItems,
+  standardFee = 200,
+  goodsTransportMin = 350,
+  isFreeShipping = false,
 }) {
   const shipMap = {
     self_pickup: 'Self Pickup (FREE)',
-    delivery_open: 'Delivery - Open (Min Rs 350)',
+    delivery_open: `Delivery - Open (Min Rs ${goodsTransportMin})`,
     delivery_bundle: 'Delivery - Bundle (Only for Adda)',
-    standard_delivery: 'Standard Delivery (Rs 200)',
+    standard_delivery: isFreeShipping ? 'Standard Delivery (FREE)' : `Standard Delivery (Rs ${standardFee})`,
   };
 
   const payMap = {
@@ -199,6 +202,19 @@ function buildVerifiedOrderRecord({
     order_type: isB2B ? 'B2B' : 'B2C',
     items: verifiedItems,
   };
+}
+
+async function fetchStoreSettings(supabase) {
+  try {
+    const { data } = await supabase
+      .from('store_settings')
+      .select('standard_delivery_fee, goods_transport_min_fee, free_shipping_threshold, is_free_shipping_enabled')
+      .eq('id', 1)
+      .maybeSingle();
+    return data || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function validateAndBuildOrderPayload(body, supabase) {
@@ -235,7 +251,22 @@ export async function validateAndBuildOrderPayload(body, supabase) {
     shippingMethod === 'standard_delivery' ||
     String(shippingMethod).toLowerCase().includes('standard');
 
-  const finalTotal = isStandardDelivery ? itemsCheck.verifiedSubtotal + 200 : itemsCheck.verifiedSubtotal;
+  const settings = await fetchStoreSettings(supabase);
+  const standardFee =
+    typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+  const goodsTransportMin =
+    typeof settings?.goods_transport_min_fee === 'number' ? settings.goods_transport_min_fee : 350;
+  const threshold =
+    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
+      ? settings.free_shipping_threshold
+      : null;
+  const isFreeShipping = threshold !== null && itemsCheck.verifiedSubtotal >= threshold;
+
+  let deliveryFee = 0;
+  if (isStandardDelivery && !isFreeShipping) {
+    deliveryFee = standardFee;
+  }
+  const finalTotal = itemsCheck.verifiedSubtotal + deliveryFee;
 
   const orderPayload = buildVerifiedOrderRecord({
     fullName,
@@ -247,6 +278,9 @@ export async function validateAndBuildOrderPayload(body, supabase) {
     isB2B,
     finalTotal,
     verifiedItems: itemsCheck.verifiedItems,
+    standardFee,
+    goodsTransportMin,
+    isFreeShipping,
   });
 
   return {
