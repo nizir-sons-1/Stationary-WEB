@@ -29,18 +29,21 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 import NotFound from './pages/NotFound';
 
 import PageTransition from './components/PageTransition';
+import { useSettings } from './hooks/useSettings';
 
 /** Minimal placeholder while a lazy chunk loads — keeps layout stable. */
 const LazyFallback = () => <div className="min-h-[60vh]" aria-hidden="true" />;
 
 function App() {
+  const { hasAnnouncement } = useSettings();
+
   return (
     <ErrorBoundary>
       <Router>
         <ScrollToTop />
         <div className="flex flex-col min-h-screen bg-background">
           <Navbar />
-          <main className="flex-grow pt-[64px] md:pt-[68px]">
+          <main className={`flex-grow transition-all duration-300 ${hasAnnouncement ? 'pt-[96px] md:pt-[100px]' : 'pt-[64px] md:pt-[68px]'}`}>
             <RouteErrorBoundary>
               <PageTransition>
                 <Routes>

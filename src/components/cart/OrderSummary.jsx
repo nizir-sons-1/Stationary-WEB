@@ -13,10 +13,12 @@ export function OrderSummary({
   settings = null,
 }) {
   const standardFee =
-    typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+    Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
+      ? Number.parseFloat(settings.standard_delivery_fee)
+      : 200;
   const threshold =
-    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
-      ? settings.free_shipping_threshold
+    settings?.is_free_shipping_enabled && Number.isFinite(Number.parseFloat(settings?.free_shipping_threshold))
+      ? Number.parseFloat(settings.free_shipping_threshold)
       : null;
   const isFreeShipping = threshold !== null && cartTotal >= threshold;
   let deliveryCharge = 0;

@@ -60,11 +60,13 @@ export function getShippingFeeText(shippingMethod, settings = null, cartTotal = 
   if (shippingMethod === 'self_pickup') return 'FREE';
   if (shippingMethod === 'standard_delivery') {
     const threshold =
-      settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
-        ? settings.free_shipping_threshold
+      settings?.is_free_shipping_enabled && Number.isFinite(Number.parseFloat(settings?.free_shipping_threshold))
+        ? Number.parseFloat(settings.free_shipping_threshold)
         : null;
     if (threshold !== null && cartTotal >= threshold) return 'FREE';
-    const fee = typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+    const fee = Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
+      ? Number.parseFloat(settings.standard_delivery_fee)
+      : 200;
     return `Rs ${fee}`;
   }
   return 'TBD';
@@ -75,14 +77,16 @@ function resolveStandardDeliveryFee(shippingMethod, cartTotal, settings) {
     return 0;
   }
   const threshold =
-    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
-      ? settings.free_shipping_threshold
+    settings?.is_free_shipping_enabled && Number.isFinite(Number.parseFloat(settings?.free_shipping_threshold))
+      ? Number.parseFloat(settings.free_shipping_threshold)
       : null;
   const isFreeShipping = threshold !== null && cartTotal >= threshold;
   if (isFreeShipping) {
     return 0;
   }
-  return typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+  return Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
+    ? Number.parseFloat(settings.standard_delivery_fee)
+    : 200;
 }
 
 function formatBulkAddressAndType(address, cartItems, isB2B) {
@@ -146,12 +150,16 @@ export function buildOrderPayload({
   settings = null,
 }) {
   const standardFee =
-    typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+    Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
+      ? Number.parseFloat(settings.standard_delivery_fee)
+      : 200;
   const goodsTransportMin =
-    typeof settings?.goods_transport_min_fee === 'number' ? settings.goods_transport_min_fee : 350;
+    Number.isFinite(Number.parseFloat(settings?.goods_transport_min_fee))
+      ? Number.parseFloat(settings.goods_transport_min_fee)
+      : 350;
   const threshold =
-    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
-      ? settings.free_shipping_threshold
+    settings?.is_free_shipping_enabled && Number.isFinite(Number.parseFloat(settings?.free_shipping_threshold))
+      ? Number.parseFloat(settings.free_shipping_threshold)
       : null;
   const isFreeShipping = threshold !== null && cartTotal >= threshold;
 

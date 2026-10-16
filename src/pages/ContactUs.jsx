@@ -4,9 +4,11 @@ import { Mail, MapPin, Phone, MessageCircle, Clock, ExternalLink, ArrowLeft, Sen
 import { usePageSeo } from '../lib/seo';
 import { supabase } from '../lib/supabase';
 import { normalizePakistaniPhone } from '../lib/phone';
+import { useSettings } from '../hooks/useSettings';
 
 const ContactUs = () => {
   usePageSeo('/contact', { pageType: 'ContactPage' });
+  const { contactPhone, phoneE164, whatsappUrl } = useSettings();
 
   const [formState, setFormState] = useState({
     name: '',
@@ -179,11 +181,11 @@ const ContactUs = () => {
                   Phone &amp; WhatsApp
                 </h3>
                 <p className="text-[#64748b] text-[12.5px] sm:text-[13px] leading-relaxed flex flex-col gap-0.5">
-                  <a href="tel:+923202220001" className="font-semibold text-[#112338] hover:text-primary transition-colors">
-                    +92 320 2220001
+                  <a href={`tel:${phoneE164}`} className="font-semibold text-[#112338] hover:text-primary transition-colors">
+                    {contactPhone}
                   </a>
                   <a
-                    href="https://wa.me/923202220001"
+                    href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[11.5px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
@@ -271,7 +273,7 @@ const ContactUs = () => {
                   <RefreshCw size={14} /> Send Another Message
                 </button>
                 <a
-                  href="https://wa.me/923202220001"
+                  href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 text-[12px] font-bold tracking-wider uppercase transition-all flex items-center gap-2"

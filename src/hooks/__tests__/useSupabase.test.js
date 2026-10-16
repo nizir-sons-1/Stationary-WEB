@@ -227,3 +227,80 @@ describe('mergeProductRows (useProduct logic)', () => {
     expect(result.image_url).toBe('fallback.jpg');
   });
 });
+
+// ── Calculator rate & dimensions helpers ─────────────────────────────
+import {
+  parseDimensions,
+  deriveRatePerKg,
+  transformProductsToCalculatorCategories,
+} from '../useSupabase.js';
+
+describe('parseDimensions', () => {
+  it('parses standard dimension strings correctly', () => {
+    expect(parseDimensions('25x36')).toEqual({ length: 25, width: 36 });
+    expect(parseDimensions('20 x 30')).toEqual({ length: 20, width: 30 });
+    expect(parseDimensions('8.5x13.5')).toEqual({ length: 8.5, width: 13.5 });
+  });
+
+  it('returns null for non-dimensional strings', () => {
+    expect(parseDimensions('Standard')).toBeNull();
+    expect(parseDimensions('')).toBeNull();
+    expect(parseDimensions(null)).toBeNull();
+  });
+});
+
+describe('deriveRatePerKg', () => {
+  it('uses direct rate_per_kg if available', () => {
+    const rate = deriveRatePerKg(5000, 25, 36, 300, 312);
+    expect(rate).toBe(312);
+  });
+
+  it('derives rate for 100-sheet packets when rate_per_kg is null', () => {
+    // 25x36, 300 GSM, 100 sheets wt = (25*36*300*100)/1550000 = 17.41935 kg
+    // If rate is 255/kg -> price = 4441.94
+    const rate = deriveRatePerKg(4441.94, 25, 36, 300, null);
+    expect(rate).toBe(255);
+  });
+
+  it('detects 500-sheet reams when rate100 > 750', () => {
+    // Offset Paper: 23x36, 100 GSM, 500 sheets wt = 26.7096 kg. At 350/kg -> price = 9348.39
+    const rate = deriveRatePerKg(9348.39, 23, 36, 100, null);
+    expect(rate).toBe(350);
+  });
+});
+
+describe('transformProductsToCalculatorCategories', () => {
+  it('groups products by category and builds brand options', () => {
+    const products = [
+      {
+        id: 'prod-1',
+        product_name: 'NimboStar Art Card',
+        category: 'Art Cards',
+        department: 'Paper & Canvas',
+        product_variations: [
+          { id: 'v1', size: '20x30', gsm: '210', price: 2420, rate_per_kg: 312 },
+          { id: 'v2', size: '25x36', gsm: '300', price: 4441, rate_per_kg: 312 },
+        ],
+      },
+      {
+        id: 'prod-2',
+        product_name: 'Ignored Retail Pack',
+        category: 'Photo Paper',
+        department: 'Paper & Canvas',
+        product_variations: [
+          { id: 'v3', size: 'Standard', gsm: 'N/A', price: 1500 },
+        ],
+      },
+    ];
+
+    const result = transformProductsToCalculatorCategories(products);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Art Card');
+    expect(result[0].brands).toHaveLength(1);
+    expect(result[0].brands[0].name).toBe('NimboStar Art Card');
+    expect(result[0].brands[0].rate).toBe(312);
+    expect(result[0].brands[0].lengths).toEqual(['20', '25']);
+    expect(result[0].brands[0].widths).toEqual(['30', '36']);
+    expect(result[0].brands[0].gsms).toEqual(['210', '300']);
+  });
+});

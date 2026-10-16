@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Maximize, Layers, Copy, HelpCircle, ArrowLeft } from 'lucide-react';
-// Pre-digested at build time from products.json by scripts/build-calculator-data.cjs.
+// Live rates fetched directly from "Paper & Canvas" products in Supabase.
 import { useCalculatorRates } from '../hooks/useSupabase';
 import { usePageSeo } from '../lib/seo';
 import { howToSchema, faqSchema } from '../lib/schema';
@@ -85,7 +85,15 @@ const CustomCalculator = () => {
     return selectedCatObj.brands.find((b) => b.name === brand) || selectedCatObj.brands[0];
   }, [selectedCatObj, brand]);
 
-  const selectedRate = selectedBrandObj ? selectedBrandObj.rate : 0;
+  // If the brand has specific rates for different GSMs, dynamically use it; otherwise fallback to brand base rate
+  const selectedRate = useMemo(() => {
+    if (!selectedBrandObj) return 0;
+    if (gsm && selectedBrandObj.gsmRates && selectedBrandObj.gsmRates[String(gsm)]) {
+      return selectedBrandObj.gsmRates[String(gsm)];
+    }
+    return selectedBrandObj.rate || 0;
+  }, [selectedBrandObj, gsm]);
+
   const categoryData = selectedBrandObj || EMPTY_OPTIONS;
 
   const results = useMemo(() => {
@@ -170,13 +178,18 @@ const CustomCalculator = () => {
                     setWidth('');
                     setGsm('');
                   }}
+                  disabled={isRatesLoading && categories.length === 0}
                   className="w-full bg-[#faf8f5] border border-[#dcd7cb] text-[#112338] font-bold text-[12.5px] sm:text-[13px] h-9 sm:h-9.5 px-3 rounded-lg outline-none focus:border-primary appearance-none cursor-pointer shadow-2xs hover:border-gray-400 transition-colors"
                 >
-                  {categories.map((c) => (
-                    <option key={c.name} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
+                  {categories.length === 0 ? (
+                    <option value="">{isRatesLoading ? 'Loading categories...' : 'No categories available'}</option>
+                  ) : (
+                    categories.map((c) => (
+                      <option key={c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                   <svg

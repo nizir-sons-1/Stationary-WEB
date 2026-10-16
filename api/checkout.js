@@ -253,12 +253,16 @@ export async function validateAndBuildOrderPayload(body, supabase) {
 
   const settings = await fetchStoreSettings(supabase);
   const standardFee =
-    typeof settings?.standard_delivery_fee === 'number' ? settings.standard_delivery_fee : 200;
+    Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
+      ? Number.parseFloat(settings.standard_delivery_fee)
+      : 200;
   const goodsTransportMin =
-    typeof settings?.goods_transport_min_fee === 'number' ? settings.goods_transport_min_fee : 350;
+    Number.isFinite(Number.parseFloat(settings?.goods_transport_min_fee))
+      ? Number.parseFloat(settings.goods_transport_min_fee)
+      : 350;
   const threshold =
-    settings?.is_free_shipping_enabled && typeof settings?.free_shipping_threshold === 'number'
-      ? settings.free_shipping_threshold
+    settings?.is_free_shipping_enabled && Number.isFinite(Number.parseFloat(settings?.free_shipping_threshold))
+      ? Number.parseFloat(settings.free_shipping_threshold)
       : null;
   const isFreeShipping = threshold !== null && itemsCheck.verifiedSubtotal >= threshold;
 

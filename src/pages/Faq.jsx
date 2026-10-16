@@ -1,14 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FAQS, ROUTES } from '../data/seo-content';
-import { BUSINESS } from '../lib/site';
 import { usePageSeo } from '../lib/seo';
 import { faqSchema } from '../lib/schema';
+import { useSettings } from '../hooks/useSettings';
 
 const seo = ROUTES['/faq'];
 
 const Faq = () => {
   usePageSeo('/faq', { extraNodes: [faqSchema(FAQS)] });
+  const { contactPhone, phoneE164, whatsappUrl } = useSettings();
 
   return (
     <main className="flex-grow pt-14 md:pt-20 pb-16 px-4 sm:px-6 max-w-4xl w-full mx-auto font-sans">
@@ -63,7 +64,7 @@ const Faq = () => {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <a
-            href={BUSINESS.whatsapp}
+            href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center bg-[#112338] hover:bg-[#1a3654] text-white text-sm font-semibold px-6 py-2.5 rounded transition-colors cursor-pointer"
@@ -71,10 +72,10 @@ const Faq = () => {
             WhatsApp us
           </a>
           <a
-            href={`tel:${BUSINESS.phoneE164}`}
+            href={`tel:${phoneE164}`}
             className="inline-flex items-center justify-center border border-gray-300 hover:border-gray-400 text-gray-700 text-sm font-semibold px-6 py-2.5 rounded transition-colors cursor-pointer"
           >
-            Call {BUSINESS.phone}
+            Call {contactPhone}
           </a>
         </div>
       </div>

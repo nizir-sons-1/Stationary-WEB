@@ -12,7 +12,6 @@ React 19 + Vite 8 + Tailwind, backed by Supabase, deployed on Vercel.
 | `npm run prerender` | Prerender over an existing `dist/` (safe to re-run) |
 | `npm run preview` | Serve the production build locally |
 | `npm run lint` | Oxlint |
-| `npm run build:data` | Regenerate `src/data/calculator-rates.json` from `products.json` |
 | `npm run og` | Rebuild `public/og-image.png` from the logo artwork (rarely needed) |
 
 ## Environment

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, ShoppingBag } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
+import { useSettings } from '../../hooks/useSettings';
 import TermsModal from '../TermsModal';
 import { PLACEHOLDER_IMAGE, fallbackOnError, thumb, thumbSrcSet } from '../../lib/images';
 import { flyToCart } from '../../lib/cartAnimation';
@@ -33,6 +34,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({
   variations,
 }) {
   const { addToCart } = useCart();
+  const { contactWhatsapp } = useSettings();
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedGsm, setSelectedGsm] = useState('');
   const [isInstallment, setIsInstallment] = useState(false);
@@ -310,7 +312,7 @@ const ProductGroupCard = React.memo(function ProductGroupCard({
               if (!hasValidPrice) {
                 const specText = selectedSize ? `${selectedSize}, ${selectedGsm}g` : '';
                 const msg = encodeURIComponent(`Assalam-o-Alaikum, mujhe "${currentVariation.PRODUCT_NAME}" (${specText}) ka current wholesale rate chahiye.`);
-                window.open(`https://wa.me/923202220001?text=${msg}`, '_blank');
+                window.open(`https://wa.me/${contactWhatsapp}?text=${msg}`, '_blank');
                 return;
               }
               if (inStock) {

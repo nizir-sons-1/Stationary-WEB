@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { supabase } from '../lib/supabase';
-import FALLBACK_CALCULATOR_RATES from '../data/calculator-rates.json';
 
 /*
  * A tiny module-level store shared by every consumer.
@@ -455,6 +454,7 @@ export async function submitReview({ name, rating, text }) {
 
 const SETTINGS_KEY = 'store-settings';
 export const DEFAULT_STORE_SETTINGS = Object.freeze({
+  id: 1,
   standard_delivery_fee: 200,
   goods_transport_min_fee: 350,
   free_shipping_threshold: null,
@@ -464,6 +464,29 @@ export const DEFAULT_STORE_SETTINGS = Object.freeze({
   announcement_text: '',
   is_announcement_enabled: false,
 });
+
+export function normalizeStoreSettings(data) {
+  if (!data) return DEFAULT_STORE_SETTINGS;
+  const isFreeEnabled = Boolean(data.is_free_shipping_enabled);
+  const thresholdVal = Number.parseFloat(data.free_shipping_threshold);
+  return {
+    id: data.id || 1,
+    standard_delivery_fee: Number.isFinite(Number.parseFloat(data.standard_delivery_fee))
+      ? Number.parseFloat(data.standard_delivery_fee)
+      : 200,
+    goods_transport_min_fee: Number.isFinite(Number.parseFloat(data.goods_transport_min_fee))
+      ? Number.parseFloat(data.goods_transport_min_fee)
+      : 350,
+    free_shipping_threshold: isFreeEnabled && Number.isFinite(thresholdVal) ? thresholdVal : null,
+    is_free_shipping_enabled: isFreeEnabled,
+    contact_phone: (data.contact_phone || '0320 2220001').trim(),
+    contact_whatsapp: (data.contact_whatsapp || '923202220001').trim(),
+    announcement_text: (data.announcement_text || '').trim(),
+    is_announcement_enabled: Boolean(data.is_announcement_enabled),
+    extra_configs: data.extra_configs || {},
+    updated_at: data.updated_at || null,
+  };
+}
 
 export function useStoreSettings() {
   const subscribe = useCallback((notify) => subscribeTo(SETTINGS_KEY, notify), []);
@@ -486,11 +509,14 @@ export function useStoreSettings() {
         console.warn('[useStoreSettings] error fetching store_settings:', error.message);
         return DEFAULT_STORE_SETTINGS;
       }
-      return data || DEFAULT_STORE_SETTINGS;
+      return normalizeStoreSettings(data);
     });
   }, []);
 
-  const data = snapshot.loading || snapshot.error || snapshot.data === EMPTY ? DEFAULT_STORE_SETTINGS : snapshot.data;
+  const data =
+    snapshot.loading || snapshot.error || snapshot.data === EMPTY
+      ? DEFAULT_STORE_SETTINGS
+      : snapshot.data;
 
   return {
     settings: data,
@@ -499,44 +525,153 @@ export function useStoreSettings() {
   };
 }
 
-const CALCULATOR_RATES_KEY = 'calculator-rates';
+export function useSettings() {
+  const { settings, loading, error } = useStoreSettings();
 
-function parseStringList(val) {
-  if (Array.isArray(val)) {
-    return val.map(String);
+  const standardDeliveryFee = settings.standard_delivery_fee;
+  const goodsTransportMinFee = settings.goods_transport_min_fee;
+  const isFreeShippingEnabled = settings.is_free_shipping_enabled;
+  const freeShippingThreshold = settings.free_shipping_threshold;
+
+  const contactPhone = settings.contact_phone || '0320 2220001';
+  let phoneE164 = contactPhone.startsWith('+')
+    ? contactPhone.replace(/\s+/g, '')
+    : '+92' + contactPhone.replace(/\D/g, '').replace(/^0/, '');
+  if (!phoneE164.startsWith('+92')) phoneE164 = '+923202220001';
+
+  let rawWa = (settings.contact_whatsapp || '923202220001').replace(/\D/g, '');
+  if (rawWa.startsWith('03') && rawWa.length === 11) {
+    rawWa = '92' + rawWa.slice(1);
   }
-  if (typeof val === 'string' && val.trim()) {
-    return val
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [];
+  const contactWhatsapp = rawWa || '923202220001';
+  const whatsappUrl = `https://wa.me/${contactWhatsapp}`;
+
+  const isAnnouncementEnabled = settings.is_announcement_enabled;
+  const announcementText = settings.announcement_text;
+  const hasAnnouncement = isAnnouncementEnabled && announcementText.length > 0;
+
+  return {
+    settings,
+    loading,
+    error,
+    standardDeliveryFee,
+    goodsTransportMinFee,
+    isFreeShippingEnabled,
+    freeShippingThreshold,
+    contactPhone,
+    phoneE164,
+    contactWhatsapp,
+    whatsappUrl,
+    isAnnouncementEnabled,
+    announcementText,
+    hasAnnouncement,
+  };
 }
 
-export function transformDbRatesToCategories(rows) {
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return FALLBACK_CALCULATOR_RATES;
+const CALCULATOR_RATES_KEY = 'calculator-rates:products';
+
+export function parseDimensions(sizeStr) {
+  if (!sizeStr || typeof sizeStr !== 'string') return null;
+  const parts = sizeStr.toLowerCase().split(/[x×]/).map((s) => s.trim());
+  if (parts.length === 2) {
+    const l = Number.parseFloat(parts[0]);
+    const w = Number.parseFloat(parts[1]);
+    if (Number.isFinite(l) && Number.isFinite(w) && l > 0 && w > 0) {
+      return { length: l, width: w };
+    }
+  }
+  return null;
+}
+
+export function deriveRatePerKg(price, length, width, gsm, ratePerKg) {
+  const directRate = Number(ratePerKg);
+  if (Number.isFinite(directRate) && directRate > 0) {
+    return directRate;
+  }
+  const p = Number(price);
+  const l = Number(length);
+  const w = Number(width);
+  const g = Number(gsm);
+  if (!p || !l || !w || !g) return 0;
+
+  // Standard paper weight formula: (length * width * GSM * sheets) / 1,550,000
+  const wt100 = (l * w * g * 100) / 1550000;
+  if (wt100 <= 0) return 0;
+  const rate100 = p / wt100;
+
+  // Paper in Pakistan trades at ~150-550 PKR/KG. If rate100 > 750, price was for a 500-sheet ream.
+  const is500Sheets = rate100 > 750;
+  const rate = is500Sheets ? rate100 / 5 : rate100;
+  return Math.round(rate);
+}
+
+function normalizePaperCategory(cat) {
+  if (!cat || typeof cat !== 'string') return 'General';
+  const c = cat.trim();
+  if (c === 'Art Cards') return 'Art Card';
+  if (c === 'Color Cards') return 'Color Card';
+  return c;
+}
+
+function extractBrandCalculatorData(prod) {
+  const categoryName = normalizePaperCategory(prod.category);
+  const brandName = prod.product_name?.trim() || categoryName;
+  const variations = prod.product_variations || [];
+
+  const validRates = [];
+  const gsmsSet = new Set();
+  const lengthsSet = new Set();
+  const widthsSet = new Set();
+  const gsmRates = {};
+
+  for (const v of variations) {
+    const dim = parseDimensions(v.size);
+    const gsmNum = Number.parseFloat(v.gsm);
+    const priceNum = Number.parseFloat(v.price);
+    if (!dim || !Number.isFinite(gsmNum) || gsmNum <= 0) continue;
+
+    const rate = deriveRatePerKg(priceNum, dim.length, dim.width, gsmNum, v.rate_per_kg);
+    if (rate > 0) {
+      gsmRates[String(gsmNum)] = rate;
+      validRates.push(rate);
+    }
+
+    lengthsSet.add(dim.length);
+    widthsSet.add(dim.width);
+    gsmsSet.add(gsmNum);
+  }
+
+  if (validRates.length === 0) return null;
+
+  return {
+    categoryName,
+    brandObj: {
+      id: prod.id,
+      name: brandName,
+      rate: Math.max(...validRates),
+      gsmRates,
+      gsms: Array.from(gsmsSet).sort((a, b) => a - b).map(String),
+      lengths: Array.from(lengthsSet).sort((a, b) => a - b).map(String),
+      widths: Array.from(widthsSet).sort((a, b) => a - b).map(String),
+    },
+  };
+}
+
+export function transformProductsToCalculatorCategories(products) {
+  if (!Array.isArray(products) || products.length === 0) {
+    return EMPTY;
   }
   const map = new Map();
 
-  for (const row of rows) {
-    if (row.is_active === false) {
-      continue;
-    }
-    const cat = row.paper_type || 'General';
-    if (!map.has(cat)) {
-      map.set(cat, []);
-    }
+  for (const prod of products) {
+    const parsed = extractBrandCalculatorData(prod);
+    if (!parsed) continue;
 
-    map.get(cat).push({
-      id: row.id,
-      name: row.brand_name || cat,
-      rate: Number(row.rate_per_unit) || 0,
-      gsms: parseStringList(row.gsm),
-      lengths: parseStringList(row.lengths),
-      widths: parseStringList(row.widths),
-    });
+    const { categoryName, brandObj } = parsed;
+    if (!map.has(categoryName)) {
+      map.set(categoryName, []);
+    }
+    map.get(categoryName).push(brandObj);
   }
 
   const result = [];
@@ -546,10 +681,7 @@ export function transformDbRatesToCategories(rows) {
   }
   result.sort((a, b) => a.name.localeCompare(b.name));
 
-  if (result.length > 0) {
-    return result;
-  }
-  return FALLBACK_CALCULATOR_RATES;
+  return result.length > 0 ? result : EMPTY;
 }
 
 export function useCalculatorRates() {
@@ -560,32 +692,65 @@ export function useCalculatorRates() {
 
   useEffect(() => {
     load(CALCULATOR_RATES_KEY, async () => {
-      const { data, error } = await supabase
-        .from('calculator_rates')
-        .select('*')
-        .eq('is_active', true)
-        .order('paper_type', { ascending: true })
-        .order('brand_name', { ascending: true });
+      // Query Paper & Canvas products with their variations
+      // First attempt includes rate_per_kg column from product_variations
+      let { data, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          product_name,
+          category,
+          department,
+          product_variations (
+            id,
+            size,
+            gsm,
+            price,
+            packing_type,
+            rate_per_kg
+          )
+        `)
+        .eq('department', 'Paper & Canvas')
+        .order('category', { ascending: true })
+        .order('product_name', { ascending: true });
+
+      // If rate_per_kg column has not yet been added to Postgres (code 42703), retry query without it
+      if (error && (error.code === '42703' || /rate_per_kg/i.test(error.message || ''))) {
+        const fallback = await supabase
+          .from('products')
+          .select(`
+            id,
+            product_name,
+            category,
+            department,
+            product_variations (
+              id,
+              size,
+              gsm,
+              price,
+              packing_type
+            )
+          `)
+          .eq('department', 'Paper & Canvas')
+          .order('category', { ascending: true })
+          .order('product_name', { ascending: true });
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) {
-        if (error.code !== 'PGRST205' && error.code !== '42P01') {
-          console.warn('[useCalculatorRates] error fetching calculator_rates:', error.message);
-        }
-        return FALLBACK_CALCULATOR_RATES;
+        console.warn('[useCalculatorRates] error fetching paper products:', error.message);
+        throw error;
       }
 
-      if (!data || data.length === 0) {
-        return FALLBACK_CALCULATOR_RATES;
-      }
-
-      return transformDbRatesToCategories(data);
+      return transformProductsToCalculatorCategories(data || []);
     });
   }, []);
 
-  let categories = FALLBACK_CALCULATOR_RATES;
-  if (!snapshot.loading && !snapshot.error && snapshot.data !== EMPTY && snapshot.data) {
-    categories = snapshot.data;
-  }
+  const categories =
+    !snapshot.loading && !snapshot.error && snapshot.data !== EMPTY && Array.isArray(snapshot.data)
+      ? snapshot.data
+      : EMPTY;
 
   return {
     categories,

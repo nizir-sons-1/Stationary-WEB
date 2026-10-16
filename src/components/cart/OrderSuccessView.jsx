@@ -12,8 +12,10 @@ import {
   Copy,
 } from 'lucide-react';
 import VariationBadge from './VariationBadge';
+import { useSettings } from '../../hooks/useSettings';
 
 export default function OrderSuccessView({ placedOrder, copied, onCopy }) {
+  const { contactPhone, phoneE164 } = useSettings();
   return (
     <div className="flex-grow pt-4 sm:pt-6 md:pt-8 pb-stack-lg px-margin-mobile md:px-gutter max-w-4xl w-full mx-auto">
       {/* Standard Unified Back Button */}
@@ -197,7 +199,7 @@ export default function OrderSuccessView({ placedOrder, copied, onCopy }) {
         {/* Customer Support Notice */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-400">
-            Need assistance? Contact Nazir &amp; Sons at <a href="tel:+923202220001" className="text-gray-600 hover:text-primary font-semibold underline">+92 320 2220001</a> or visit our store in Lahore.
+            Need assistance? Contact Nazir &amp; Sons at <a href={`tel:${phoneE164}`} className="text-gray-600 hover:text-primary font-semibold underline">{contactPhone}</a> or visit our store in Lahore.
           </p>
         </div>
       </motion.div>

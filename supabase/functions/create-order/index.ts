@@ -101,17 +101,16 @@ async function fetchDeliveryFee(
 
     if (storeSettings) {
       const isFreeEnabled = Boolean(storeSettings.is_free_shipping_enabled);
-      const freeThreshold =
-        typeof storeSettings.free_shipping_threshold === "number"
-          ? storeSettings.free_shipping_threshold
-          : null;
+      const rawThreshold = Number.parseFloat(String(storeSettings.free_shipping_threshold ?? ''));
+      const freeThreshold = Number.isFinite(rawThreshold) ? rawThreshold : null;
 
       if (isFreeEnabled && freeThreshold !== null && verifiedTotal >= freeThreshold) {
         return 0;
       }
 
-      if (typeof storeSettings.standard_delivery_fee === "number") {
-        return storeSettings.standard_delivery_fee;
+      const rawFee = Number.parseFloat(String(storeSettings.standard_delivery_fee ?? ''));
+      if (Number.isFinite(rawFee)) {
+        return rawFee;
       }
     }
   } catch {

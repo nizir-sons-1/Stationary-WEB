@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Search, ShoppingBag, ShoppingCart, Menu, X, ChevronRight, Phone } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
+import { useSettings } from '../hooks/useSettings';
 import { categoryPath } from '../lib/site';
 import SearchModal from './SearchModal';
+import AnnouncementBanner from './AnnouncementBanner';
 
 const LEFT_LINKS = [
   { label: 'Shop', path: '/shop' },
@@ -38,6 +40,7 @@ const getNavLinkClass = (active, isTransparent) => {
 const Navbar = () => {
   const location = useLocation();
   const { cartCount } = useCart();
+  const { hasAnnouncement, whatsappUrl, contactPhone } = useSettings();
   const isActive = (path) => location.pathname === path;
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -67,7 +70,7 @@ const Navbar = () => {
     const handleScroll = () => {
       const hero = document.getElementById('hero-section');
       if (hero) {
-        const navbarHeight = window.innerWidth >= 768 ? 68 : 64;
+        const navbarHeight = (window.innerWidth >= 768 ? 68 : 64) + (hasAnnouncement ? 32 : 0);
         setIsScrolled(hero.getBoundingClientRect().bottom <= navbarHeight);
       } else {
         setIsScrolled(window.scrollY > 25);
@@ -118,13 +121,15 @@ const Navbar = () => {
 
   return (
     <>
-      <header
-        className={`fixed top-0 left-0 w-full z-50 h-[64px] md:h-[68px] flex items-center font-sans transition-all duration-300 antialiased ${
-          isTransparent
-            ? 'bg-gradient-to-b from-[#faf9f6]/50 via-[#faf9f6]/20 to-transparent border-b border-transparent shadow-none'
-            : 'bg-[#faf9f6]/95 backdrop-blur-md border-b border-[#e5e1d7]/70 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
-        }`}
-      >
+      <div className="fixed top-0 left-0 w-full z-50">
+        <AnnouncementBanner />
+        <header
+          className={`w-full h-[64px] md:h-[68px] flex items-center font-sans transition-all duration-300 antialiased ${
+            isTransparent
+              ? 'bg-gradient-to-b from-[#faf9f6]/50 via-[#faf9f6]/20 to-transparent border-b border-transparent shadow-none'
+              : 'bg-[#faf9f6]/95 backdrop-blur-md border-b border-[#e5e1d7]/70 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
+          }`}
+        >
         <div className="relative w-full max-w-container-max mx-auto px-4 md:px-gutter flex items-center justify-between">
           
           {/* Left Links (Desktop) */}
@@ -283,7 +288,8 @@ const Navbar = () => {
           </div>
 
         </div>
-      </header>
+        </header>
+      </div>
 
       {/* ── Luxury Top-Down Animated Search Takeover (LV Style) ── */}
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
@@ -399,13 +405,13 @@ const Navbar = () => {
             {/* Drawer Footer with Quick WhatsApp Contact */}
             <div className="p-4 bg-white border-t border-[#e5e1d7]/70 mt-auto">
               <a
-                href="https://wa.me/923202220001"
+                href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-[3px] bg-[#112338] text-white text-[12.5px] font-semibold hover:bg-[#1a3654] transition-colors shadow-sm"
               >
                 <Phone size={14} />
-                <span>WhatsApp: 0320 2220001</span>
+                <span>WhatsApp: {contactPhone}</span>
               </a>
             </div>
           </aside>
