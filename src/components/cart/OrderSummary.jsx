@@ -69,7 +69,7 @@ export function OrderSummary({
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] text-gray-500">{item.quantity} × Rs. {(item.price * item.quantity).toLocaleString()} (Rs. {item.price.toLocaleString()}/{item.packingType})</span>
+                <span className="text-[11px] text-gray-500">{item.quantity} × Rs. {(item.price * item.quantity).toLocaleString()}{item.packingType ? ` (Rs. ${item.price.toLocaleString()}/${item.packingType})` : ''}</span>
                 {item.bulkDetails && (
                   <span className="text-[10px] text-blue-900 bg-blue-50/70 rounded px-1.5 py-0.5 mt-1 border border-blue-200/60 italic line-clamp-2">
                     {item.bulkDetails}

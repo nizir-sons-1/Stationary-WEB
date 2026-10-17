@@ -192,12 +192,16 @@ function extractValidProduct(p) {
   if (!img) return null;
 
   return {
-    id: p.id,
+    id: firstVar?.id || p.id,
+    productId: p.id,
     name: p.product_name,
-    price: Math.round(price),
+    price: price,
     image: img,
     category: p.category,
     department: departmentOf(p.category) || 'Stationery',
+    size: firstVar?.size || '',
+    gsm: firstVar?.gsm ? String(firstVar.gsm) : '',
+    packingType: firstVar?.packing_type || 'unit',
   };
 }
 
@@ -284,9 +288,15 @@ const CategoryCards = () => {
     addToCart(
       {
         id: product.id,
+        productId: product.productId,
         name: product.name,
         price: product.price,
         image: product.image,
+        category: product.category || 'General',
+        department: product.department || 'Stationery',
+        packingType: product.packingType || 'unit',
+        size: product.size || '',
+        gsm: product.gsm || '',
       },
       1
     );

@@ -5,6 +5,15 @@ import { departmentOf, PAPER_AND_CANVAS } from '../../data/categories';
 import { thumb, fallbackOnError } from '../../lib/images';
 import VariationBadge from './VariationBadge';
 
+function formatItemRate(item, short = false) {
+  if (item.isBulk) {
+    return short ? 'WhatsApp final' : 'Rates on WhatsApp';
+  }
+  const formattedPrice = item.price.toLocaleString();
+  const unitSuffix = item.packingType ? (short ? `/${item.packingType}` : ` / ${item.packingType}`) : '';
+  return `Rs. ${formattedPrice}${unitSuffix}`;
+}
+
 export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
   return (
     <motion.div 
@@ -29,9 +38,9 @@ export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
           <div className="hidden md:grid md:grid-cols-12 gap-3 items-center">
             {/* Col 1: Product Info */}
             <div className="col-span-5 flex gap-3 items-center min-w-0">
-              <div className="w-14 h-14 shrink-0 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden p-1 flex items-center justify-center">
+              <div className="w-14 h-14 min-w-[56px] min-h-[56px] max-w-[56px] max-h-[56px] shrink-0 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden p-1 flex items-center justify-center">
                 <img
-                  className="w-full h-full object-contain rounded mix-blend-multiply"
+                  className="w-full h-full max-w-full max-h-full object-contain rounded mix-blend-multiply"
                   src={thumb(item.image, 120)}
                   alt={item.name}
                   width={56}
@@ -44,7 +53,7 @@ export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
               <div className="min-w-0">
                 <h3 className="font-headline-md text-sm font-bold text-on-surface truncate">{item.name}</h3>
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  {departmentOf(item.category) === PAPER_AND_CANVAS && (
+                  {departmentOf(item.category) === PAPER_AND_CANVAS && Boolean(item.gsm) && (
                     <span className="bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-primary border border-orange-100 rounded">
                       {item.gsm}g
                     </span>
@@ -104,7 +113,7 @@ export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
                   Rs. {(item.price * item.quantity).toLocaleString()}
                 </span>
                 <span className="text-[10px] font-bold text-gray-400">
-                  {item.isBulk ? 'Rates on WhatsApp' : `Rs. ${item.price.toLocaleString()} / ${item.packingType}`}
+                  {formatItemRate(item, false)}
                 </span>
               </div>
               <button 
@@ -123,13 +132,13 @@ export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
           <div className="flex md:hidden flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex gap-2.5 items-center min-w-0">
-                <div className="w-13 h-13 shrink-0 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden p-1 flex items-center justify-center">
+                <div className="w-14 h-14 min-w-[56px] min-h-[56px] max-w-[56px] max-h-[56px] shrink-0 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden p-1 flex items-center justify-center">
                   <img
-                    className="w-full h-full object-contain rounded mix-blend-multiply"
+                    className="w-full h-full max-w-full max-h-full object-contain rounded mix-blend-multiply"
                     src={thumb(item.image, 120)}
                     alt={item.name}
-                    width={52}
-                    height={52}
+                    width={56}
+                    height={56}
                     loading="lazy"
                     decoding="async"
                     onError={fallbackOnError}
@@ -138,7 +147,7 @@ export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
                 <div className="min-w-0">
                   <h3 className="font-headline-md text-sm font-bold text-on-surface truncate">{item.name}</h3>
                   <div className="flex flex-wrap gap-1 mt-0.5">
-                    {departmentOf(item.category) === PAPER_AND_CANVAS && (
+                    {departmentOf(item.category) === PAPER_AND_CANVAS && Boolean(item.gsm) && (
                       <span className="bg-orange-50 px-1.5 py-0.5 text-[9.5px] font-bold text-primary border border-orange-100 rounded">
                         {item.gsm}g
                       </span>
@@ -194,7 +203,7 @@ export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
                   Rs. {(item.price * item.quantity).toLocaleString()}
                 </span>
                 <span className="text-[9.5px] font-medium text-gray-400 block -mt-0.5">
-                  {item.isBulk ? 'WhatsApp final' : `Rs. ${item.price.toLocaleString()}/${item.packingType}`}
+                  {formatItemRate(item, true)}
                 </span>
               </div>
             </div>

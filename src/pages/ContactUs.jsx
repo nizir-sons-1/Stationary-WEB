@@ -396,12 +396,12 @@ const ContactUs = () => {
 
         {/* Map Section */}
         <div className="lg:col-span-12 bg-white rounded-xl sm:rounded-2xl border border-[#e5e1d7] overflow-hidden shadow-xs mt-2">
-          <div className="p-3 sm:p-4 border-b border-[#e5e1d7] bg-[#faf8f5] flex items-center justify-between">
+          <div className="p-3 sm:p-4 border-b border-[#e5e1d7] bg-[#faf8f5] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div>
               <h3 className="font-serif text-[15px] sm:text-[16px] font-bold text-[#112338]">
                 Store Location Map
               </h3>
-              <p className="text-[11.5px] text-[#64748b]">
+              <p className="text-[11.5px] text-[#64748b] leading-relaxed">
                 Lahore Paper Market, Abkari Road, Anarkali Bazaar, Lahore
               </p>
             </div>
@@ -409,7 +409,7 @@ const ContactUs = () => {
               href="https://maps.google.com?q=Nazir%20and%20Sons%20Paper,%20Lahore%20paper%20market,%20Abkari%20Road,%20Anarkali%20Bazaar%20Lahore"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11.5px] font-bold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+              className="text-[11.5px] font-bold text-primary hover:underline inline-flex items-center gap-1 shrink-0 self-start sm:self-auto"
             >
               <span>Open in Google Maps</span>
               <ExternalLink size={12} />

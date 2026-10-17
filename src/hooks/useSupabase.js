@@ -174,7 +174,7 @@ export function useProductIndex(enabled = true) {
     load(cacheKey, async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, product_name, category, image_url, product_variations(id, price)')
+        .select('id, product_name, category, image_url, product_variations(id, price, size, gsm, packing_type)')
         .eq('is_hidden', false);
       if (error) throw error;
       return data.filter(p => p.product_variations && p.product_variations.length > 0);
