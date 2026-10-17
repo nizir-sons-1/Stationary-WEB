@@ -283,13 +283,14 @@ const ProductDetails = () => {
               <Heart size={14} className={isMainLiked ? 'text-rose-500 fill-rose-500' : ''} />
             </button>
 
-            {/* Main Product Image */}
+            {/* Main Product Image (LCP on Product Details page) */}
             <img
               src={thumb(currentVariation.IMAGE_URL || currentProduct?.image_url, 800)}
               srcSet={thumbSrcSet(currentVariation.IMAGE_URL || currentProduct?.image_url, [400, 600, 800, 1200])}
               sizes="(min-width: 1024px) 500px, 100vw"
               alt={decodedName}
               fetchPriority="high"
+              loading="eager"
               decoding="async"
               className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300 relative z-1 mix-blend-multiply"
               onError={(e) => {
@@ -321,9 +322,8 @@ const ProductDetails = () => {
           {/* Compact Description (Short on both desktop & mobile with Read more toggle) */}
           <div className="mb-3 sm:mb-4">
             <p
-              className={`text-[#64748b] text-[12px] sm:text-[13px] leading-relaxed transition-all ${
-                isDescExpanded ? '' : 'line-clamp-2'
-              }`}
+              className={`text-[#64748b] text-[12px] sm:text-[13px] leading-relaxed transition-all ${isDescExpanded ? '' : 'line-clamp-2'
+                }`}
             >
               {formattedDescription}
             </p>
@@ -356,11 +356,10 @@ const ProductDetails = () => {
 
             {/* Bulk Order Card */}
             <div
-              className={`p-3.5 sm:p-4 rounded-xl border transition-all duration-200 mb-3 ${
-                isBulk
+              className={`p-3.5 sm:p-4 rounded-xl border transition-all duration-200 mb-3 ${isBulk
                   ? 'bg-white border-[#e2ddd3] shadow-2xs'
                   : 'bg-[#faf9f6] border-[#e8e4dc] hover:border-[#dcd7cb]'
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5 flex-1">

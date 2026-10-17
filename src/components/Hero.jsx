@@ -23,7 +23,7 @@ const Hero = () => {
         <source srcSet="/images/hero-banner.avif" type="image/avif" />
         <source srcSet="/images/hero-banner.webp" type="image/webp" />
         <img
-          src="/images/hero-banner.jpeg"
+          src="/images/hero-banner.webp"
           alt="Everything for paper, print & creativity - Nazir & Sons"
           width={1600}
           height={900}

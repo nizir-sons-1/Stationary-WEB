@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import VariationBadge from './VariationBadge';
 import { useSettings } from '../../hooks/useSettings';
+import { thumb, fallbackOnError } from '../../lib/images';
 
 export default function OrderSuccessView({ placedOrder, copied, onCopy }) {
   const { contactPhone, phoneE164 } = useSettings();
@@ -160,7 +161,16 @@ export default function OrderSuccessView({ placedOrder, copied, onCopy }) {
                 <div className="flex items-center gap-3">
                   {item.image && (
                     <div className="w-10 h-10 bg-gray-50 rounded-lg p-1 shrink-0 border border-gray-100 overflow-hidden">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover mix-blend-multiply" />
+                      <img
+                        src={thumb(item.image, 80)}
+                        alt={item.name}
+                        width={40}
+                        height={40}
+                        loading="lazy"
+                        decoding="async"
+                        onError={fallbackOnError}
+                        className="w-full h-full object-cover mix-blend-multiply"
+                      />
                     </div>
                   )}
                   <div>

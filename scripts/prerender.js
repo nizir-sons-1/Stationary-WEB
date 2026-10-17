@@ -66,13 +66,13 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 const esc = (value) =>
   String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 
 /** JSON-LD sits in a <script>, where the only sequence that can break out is "</". */
-const escJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
+const escJson = (value) => JSON.stringify(value).replaceAll('<', String.raw`\u003c`);
 
 const money = (n) => `Rs. ${Number(n).toLocaleString('en-PK')}`;
 
@@ -180,7 +180,7 @@ async function fetchTaxonomyImages() {
  * Reuses groupCategories from src/data/categories.js rather than reimplementing
  * the merge, so the URLs written here are byte-identical to the ones the app links to.
  */
-function buildTree(rows, categoryOverrides = {}, hiddenCategories = {}) {
+function extractCategoryMeta(rows) {
   const counts = {};
   const images = {};
   for (const row of rows) {
@@ -188,20 +188,18 @@ function buildTree(rows, categoryOverrides = {}, hiddenCategories = {}) {
     counts[row.category] = (counts[row.category] || 0) + 1;
     if (row.image_url && !images[row.category]) images[row.category] = row.image_url;
   }
+  return { counts, images };
+}
 
-  const grouped = groupCategories(counts, images, categoryOverrides);
-
-  // Hidden categories are dropped once, here, so every consumer below — the
-  // static pages, the sitemap and llms.txt — is working from the same list and
-  // none of them can reintroduce a shelf the others left out.
+function filterVisibleDepartments(grouped, hiddenCategories) {
   const byDepartment = {};
   for (const [department, cards] of Object.entries(grouped)) {
     byDepartment[department] = cards.filter((card) => !hiddenCategories[card.name]);
   }
+  return byDepartment;
+}
 
-  // Product name -> every row and variation carrying that name. The catalogue
-  // has 23 duplicate names across categories, and /product/:name shows them as
-  // one page, so they are merged here the same way.
+function mergeProductsByName(rows) {
   const products = new Map();
   for (const row of rows) {
     const name = row.product_name;
@@ -229,16 +227,10 @@ function buildTree(rows, categoryOverrides = {}, hiddenCategories = {}) {
     }
     if (!entry.image && row.image_url) entry.image = row.image_url;
   }
+  return products;
+}
 
-  /*
-   * Which products sit on which category card.
-   *
-   * Built from the rows rather than from the merged `products` map above: 23
-   * product names appear in more than one category, and the shop lists such a
-   * product under each of them. Walking the merged map instead would file each
-   * one under whichever category happened to be seen first, and the category
-   * page would then claim fewer products than the live grid shows.
-   */
+function buildProductsByCategory(rows, products) {
   const productsByCategory = new Map();
   for (const row of rows) {
     if (!row.product_name) continue;
@@ -253,6 +245,22 @@ function buildTree(rows, categoryOverrides = {}, hiddenCategories = {}) {
   for (const list of productsByCategory.values()) {
     list.sort((a, b) => a.name.localeCompare(b.name));
   }
+  return productsByCategory;
+}
+
+/**
+ * Folds the raw rows into the same shape the shop renders: departments holding
+ * merged category cards, and one entry per distinct product name.
+ *
+ * Reuses groupCategories from src/data/categories.js rather than reimplementing
+ * the merge, so the URLs written here are byte-identical to the ones the app links to.
+ */
+function buildTree(rows, categoryOverrides = {}, hiddenCategories = {}) {
+  const { counts, images } = extractCategoryMeta(rows);
+  const grouped = groupCategories(counts, images, categoryOverrides);
+  const byDepartment = filterVisibleDepartments(grouped, hiddenCategories);
+  const products = mergeProductsByName(rows);
+  const productsByCategory = buildProductsByCategory(rows, products);
 
   return { byDepartment, products, productsByCategory };
 }
@@ -268,7 +276,7 @@ function buildTree(rows, categoryOverrides = {}, hiddenCategories = {}) {
  */
 const SHELL_CSS = `
 html.js-enabled #prerender{display:none !important}
-html.js-enabled body{background-color:#0a0a0a}
+html.js-enabled body{background-color:#f4f4f5}
 #prerender{max-width:1200px;margin:0 auto;padding:24px 20px 64px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#111;line-height:1.6}
 #prerender a{color:#ea580c;text-decoration:none}
 #prerender a:hover{text-decoration:underline}
@@ -454,13 +462,17 @@ function staticPage(routePath) {
   if (isFaq) nodes.push(faqSchema(FAQS));
   if (routePath === '/calculator') nodes.push(calculatorHowTo());
 
+  const bulletsHtml = seo.bullets
+    ? `<ul>${seo.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`
+    : '';
+
   const body = `
 ${shellHeader()}
 <main>
   ${routePath === '/' ? '' : crumbs(trail)}
   <h1>${esc(seo.h1)}</h1>
   <p class="lede">${esc(seo.summary)}</p>
-  ${seo.bullets ? `<ul>${seo.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}
+  ${bulletsHtml}
   ${isFaq ? faqBody(FAQS) : ''}
   ${routePath === '/' || routePath === '/shop' ? departmentLinks() : ''}
 </main>
@@ -600,10 +612,23 @@ ${shellFooter()}`,
   });
 }
 
+function formatGsmFact(department, gsms) {
+  if (department !== 'Paper & Canvas' || !gsms.length) return null;
+  const range = gsms[0] === gsms.at(-1) ? gsms[0] : `${gsms[0]}–${gsms.at(-1)}`;
+  return `GSM: ${range}`;
+}
+
+function renderGsmCell(isPaperCanvas, gsm) {
+  if (!isPaperCanvas) return '';
+  const label = gsm ? `${esc(gsm)} gsm` : '—';
+  return `<td>${label}</td>`;
+}
+
 function productPage(product) {
   const routePath = productPath(product.name);
   const displayCategory = displayNameOf(product.category);
   const department = departmentOf(product.category);
+  const isPaperAndCanvas = department === 'Paper & Canvas';
 
   const sizes = [...new Set(product.variations.map((v) => v.size).filter(Boolean))];
   const gsms = [...new Set(product.variations.map((v) => Number(v.gsm)).filter((n) => n > 0))].sort(
@@ -613,13 +638,16 @@ function productPage(product) {
 
   const facts = [
     sizes.length ? `Sizes: ${sizes.slice(0, 4).join(', ')}` : null,
-    (department === 'Paper & Canvas' && gsms.length) ? `GSM: ${gsms[0] === gsms.at(-1) ? gsms[0] : `${gsms[0]}–${gsms.at(-1)}`}` : null,
+    formatGsmFact(department, gsms),
     prices.length ? `From ${money(Math.min(...prices))}` : null,
   ].filter(Boolean);
 
-  const title = `${product.name}${displayCategory ? ` — ${displayCategory}` : ''} | Nazir & Sons`;
+  const categorySuffix = displayCategory ? ` — ${displayCategory}` : '';
+  const title = `${product.name}${categorySuffix} | Nazir & Sons`;
+
+  const categoryParenthesis = displayCategory ? ` (${displayCategory})` : '';
   const description = [
-    `Buy ${product.name}${displayCategory ? ` (${displayCategory})` : ''} from Nazir & Sons, Lahore.`,
+    `Buy ${product.name}${categoryParenthesis} from Nazir & Sons, Lahore.`,
     facts.join('. ') + (facts.length ? '.' : ''),
     'Wholesale and retail, delivered across Pakistan.',
   ]
@@ -640,12 +668,22 @@ function productPage(product) {
     .map(
       (v) => `<tr>
         <td>${esc(v.size || '—')}</td>
-        ${department === 'Paper & Canvas' ? `<td>${v.gsm ? `${esc(v.gsm)} gsm` : '—'}</td>` : ''}
+        ${renderGsmCell(isPaperAndCanvas, v.gsm)}
         <td>${esc(money(v.price))}</td>
         <td>${v.stock > 0 ? 'In stock' : 'Out of stock'}</td>
       </tr>`
     )
     .join('');
+
+  const gsmHeader = isPaperAndCanvas ? '<th>GSM</th>' : '';
+  const variationTable = rows
+    ? `<h2>Sizes, weights and prices</h2>
+  <table>
+    <thead><tr><th>Size</th>${gsmHeader}<th>Price</th><th>Availability</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p>Prices are in Pakistani rupees and follow the live per-kilogram rate for the stock, which is why the same sheet size costs more at a higher GSM. For a size not listed, use the <a href="/calculator">paper calculator</a> or ask on <a href="${BUSINESS.whatsapp}">WhatsApp</a>.</p>`
+    : '';
 
   write(routePath, {
     title,
@@ -674,16 +712,7 @@ ${shellHeader()}
     (product.description || `${product.name} from Nazir & Sons, Lahore`).replace(/\.?$/, '.')
   )}${facts.length ? ` ${esc(facts.join('. '))}.` : ''}</p>
   ${product.image ? `<p><img src="${esc(product.image)}" alt="${esc(product.name)}" width="320" loading="lazy" /></p>` : ''}
-  ${
-    rows
-      ? `<h2>Sizes, weights and prices</h2>
-  <table>
-    <thead><tr><th>Size</th>${department === 'Paper & Canvas' ? '<th>GSM</th>' : ''}<th>Price</th><th>Availability</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <p>Prices are in Pakistani rupees and follow the live per-kilogram rate for the stock, which is why the same sheet size costs more at a higher GSM. For a size not listed, use the <a href="/calculator">paper calculator</a> or ask on <a href="${BUSINESS.whatsapp}">WhatsApp</a>.</p>`
-      : ''
-  }
+  ${variationTable}
   <p>Category: <a href="${categoryPath(department, displayCategory)}">${esc(displayCategory)}</a> · Department: <a href="${categoryPath(department)}">${esc(department)}</a></p>
 </main>
 ${shellFooter()}`,
@@ -779,6 +808,49 @@ function writeSitemap(urls) {
 // `departments` is the visible list, not the full one — llms.txt is a public
 // description of the catalogue, so a hidden shelf has no more business here
 // than it has on the sitemap.
+function formatVariationSummary(v) {
+  const gsmText = v.gsm ? ` ${v.gsm}gsm` : '';
+  const stockText = v.stock > 0 ? '' : ' (out of stock)';
+  return `${v.size || 'standard'}${gsmText} — ${money(v.price)}${stockText}`;
+}
+
+function formatProductLlmsLine(product) {
+  const priced = product.variations.filter((v) => v.price > 0);
+  const detail = priced.length
+    ? priced.slice(0, 12).map(formatVariationSummary).join('; ')
+    : 'price on request';
+  const descText = product.description ? ` — ${product.description}` : '';
+  return `- **${product.name}**${descText}. ${detail}. ${SITE_URL}${productPath(product.name)}`;
+}
+
+function writeLlmsFullTxt({ byDepartment, productsByCategory, departments }) {
+  const full = [
+    `# ${SITE_NAME} — full catalogue`,
+    '',
+    `Generated ${TODAY} from the live catalogue at ${SITE_URL}.`,
+    `All prices in ${BUSINESS.currency}. ${BUSINESS.openingHoursText}`,
+    `Contact: ${BUSINESS.phone} · ${BUSINESS.email} · ${BUSINESS.street}, ${BUSINESS.city}.`,
+    '',
+  ];
+
+  for (const department of departments) {
+    const cards = byDepartment[department.name] || [];
+    if (!cards.length) continue;
+    full.push(`## ${department.name}`, '');
+    for (const card of cards) {
+      const products = productsByCategory.get(card.name) || [];
+      if (!products.length) continue;
+      full.push(`### ${card.name}`, '');
+      for (const product of products) {
+        full.push(formatProductLlmsLine(product));
+      }
+      full.push('');
+    }
+  }
+
+  fs.writeFileSync(path.join(DIST, 'llms-full.txt'), full.join('\n'), 'utf8');
+}
+
 function writeLlmsTxt({ byDepartment, productsByCategory, departments = DEPARTMENTS }) {
   const home = ROUTES['/'];
 
@@ -816,9 +888,6 @@ function writeLlmsTxt({ byDepartment, productsByCategory, departments = DEPARTME
     if (!cards.length) continue;
     sections.push(`### ${department.name}`, '');
     for (const card of cards) {
-      // The number of product pages, not the number of database rows: a product
-      // sold in six sizes is one page, and the count has to match what the
-      // category page actually lists.
       const listed = (productsByCategory.get(card.name) || []).length;
       sections.push(
         `- [${card.name}](${SITE_URL}${categoryPath(department.name, card.name)}): ${listed} products`
@@ -833,50 +902,50 @@ function writeLlmsTxt({ byDepartment, productsByCategory, departments = DEPARTME
   }
 
   fs.writeFileSync(path.join(DIST, 'llms.txt'), sections.join('\n'), 'utf8');
-
-  // The long form: every product, with its sizes, GSM and price, as plain text.
-  const full = [
-    `# ${SITE_NAME} — full catalogue`,
-    '',
-    `Generated ${TODAY} from the live catalogue at ${SITE_URL}.`,
-    `All prices in ${BUSINESS.currency}. ${BUSINESS.openingHoursText}`,
-    `Contact: ${BUSINESS.phone} · ${BUSINESS.email} · ${BUSINESS.street}, ${BUSINESS.city}.`,
-    '',
-  ];
-
-  for (const department of departments) {
-    const cards = byDepartment[department.name] || [];
-    if (!cards.length) continue;
-    full.push(`## ${department.name}`, '');
-    for (const card of cards) {
-      const products = productsByCategory.get(card.name) || [];
-      if (!products.length) continue;
-      full.push(`### ${card.name}`, '');
-      for (const product of products) {
-        const priced = product.variations.filter((v) => v.price > 0);
-        const detail = priced.length
-          ? priced
-              .slice(0, 12)
-              .map(
-                (v) =>
-                  `${v.size || 'standard'}${v.gsm ? ` ${v.gsm}gsm` : ''} — ${money(v.price)}${
-                    v.stock > 0 ? '' : ' (out of stock)'
-                  }`
-              )
-              .join('; ')
-          : 'price on request';
-        full.push(
-          `- **${product.name}**${product.description ? ` — ${product.description}` : ''}. ${detail}. ${SITE_URL}${productPath(product.name)}`
-        );
-      }
-      full.push('');
-    }
-  }
-
-  fs.writeFileSync(path.join(DIST, 'llms-full.txt'), full.join('\n'), 'utf8');
+  writeLlmsFullTxt({ byDepartment, productsByCategory, departments });
 }
 
 /* ── main ─────────────────────────────────────────────────────────────────── */
+
+function prerenderStaticRoutes(sitemap) {
+  for (const [routePath, seo] of Object.entries(ROUTES)) {
+    staticPage(routePath);
+    if (!seo.noindex) {
+      sitemap.push({
+        loc: routePath,
+        priority: seo.priority ?? 0.5,
+        changefreq: seo.changefreq || 'monthly',
+      });
+    }
+  }
+}
+
+function prerenderDepartmentsAndCategories(departments, byDepartment, productsByCategory, sitemap) {
+  for (const department of departments) {
+    const cards = byDepartment[department.name] || [];
+    if (!cards.length) continue;
+
+    departmentPage(department, cards);
+    sitemap.push({ loc: categoryPath(department.name), priority: 0.8, changefreq: 'weekly' });
+
+    for (const card of cards) {
+      const list = productsByCategory.get(card.name) || [];
+      categoryPage(department.name, card, list);
+      sitemap.push({
+        loc: categoryPath(department.name, card.name),
+        priority: 0.7,
+        changefreq: 'weekly',
+      });
+    }
+  }
+}
+
+function prerenderProducts(products, sitemap) {
+  for (const product of products.values()) {
+    productPage(product);
+    sitemap.push({ loc: productPath(product.name), priority: 0.6, changefreq: 'weekly' });
+  }
+}
 
 async function main() {
   loadEnv();
@@ -898,48 +967,12 @@ async function main() {
     taxonomyImages.hidden.category
   );
 
-  // Hidden departments never reach a page, a sitemap entry or llms.txt. Computed
-  // once and reused so the three writers below cannot disagree.
   const visibleDepartments = DEPARTMENTS.filter((d) => !taxonomyImages.hidden.department[d.name]);
-
   const sitemap = [];
 
-  // Static routes.
-  for (const [routePath, seo] of Object.entries(ROUTES)) {
-    staticPage(routePath);
-    if (!seo.noindex) {
-      sitemap.push({
-        loc: routePath,
-        priority: seo.priority ?? 0.5,
-        changefreq: seo.changefreq || 'monthly',
-      });
-    }
-  }
-
-  // Departments and categories.
-  for (const department of visibleDepartments) {
-    const cards = byDepartment[department.name] || [];
-    if (!cards.length) continue;
-
-    departmentPage(department, cards);
-    sitemap.push({ loc: categoryPath(department.name), priority: 0.8, changefreq: 'weekly' });
-
-    for (const card of cards) {
-      const list = productsByCategory.get(card.name) || [];
-      categoryPage(department.name, card, list);
-      sitemap.push({
-        loc: categoryPath(department.name, card.name),
-        priority: 0.7,
-        changefreq: 'weekly',
-      });
-    }
-  }
-
-  // Products.
-  for (const product of products.values()) {
-    productPage(product);
-    sitemap.push({ loc: productPath(product.name), priority: 0.6, changefreq: 'weekly' });
-  }
+  prerenderStaticRoutes(sitemap);
+  prerenderDepartmentsAndCategories(visibleDepartments, byDepartment, productsByCategory, sitemap);
+  prerenderProducts(products, sitemap);
 
   writeRobots();
   writeSitemap(sitemap);
@@ -972,7 +1005,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+try {
+  await main();
+} catch (err) {
   console.error('[prerender] failed:', err);
   process.exit(1);
-});
+}

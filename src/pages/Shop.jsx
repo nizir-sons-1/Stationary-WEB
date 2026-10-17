@@ -138,9 +138,8 @@ const computeShopSeo = ({
     const count = groupedProducts.length;
     return {
       title: `${categoryHeading} — Price & Sizes in Lahore | Nazir & Sons`,
-      description: `Buy ${categoryHeading} from Nazir & Sons, Lahore. ${
-        count ? `${count} products` : 'Stock'
-      } listed by size and GSM with live prices in PKR — wholesale and retail, delivered across Pakistan.`,
+      description: `Buy ${categoryHeading} from Nazir & Sons, Lahore. ${count ? `${count} products` : 'Stock'
+        } listed by size and GSM with live prices in PKR — wholesale and retail, delivered across Pakistan.`,
       trail: [
         { name: 'Home', path: '/' },
         { name: 'Shop', path: '/shop' },
@@ -149,12 +148,12 @@ const computeShopSeo = ({
       ],
       extraNodes: groupedProducts.length
         ? [
-            itemListSchema({
-              name: categoryHeading,
-              path: canonicalPath,
-              items: groupedProducts.map((g) => ({ name: g.name, path: productPath(g.name) })),
-            }),
-          ]
+          itemListSchema({
+            name: categoryHeading,
+            path: canonicalPath,
+            items: groupedProducts.map((g) => ({ name: g.name, path: productPath(g.name) })),
+          }),
+        ]
         : [],
     };
   }
@@ -162,9 +161,8 @@ const computeShopSeo = ({
   if (selectedMainCategory) {
     return {
       title: `${selectedMainCategory} — Buy Online in Pakistan | Nazir & Sons`,
-      description: `Browse ${
-        dynamicCategories.length ? `${dynamicCategories.length} categories of ` : ''
-      }${selectedMainCategory} at Nazir & Sons, Lahore. Live prices in PKR, wholesale and retail, delivered nationwide.`,
+      description: `Browse ${dynamicCategories.length ? `${dynamicCategories.length} categories of ` : ''
+        }${selectedMainCategory} at Nazir & Sons, Lahore. Live prices in PKR, wholesale and retail, delivered nationwide.`,
       trail: [
         { name: 'Home', path: '/' },
         { name: 'Shop', path: '/shop' },
@@ -172,15 +170,15 @@ const computeShopSeo = ({
       ],
       extraNodes: dynamicCategories.length
         ? [
-            itemListSchema({
-              name: selectedMainCategory,
-              path: canonicalPath,
-              items: dynamicCategories.map((c) => ({
-                name: c.name,
-                path: categoryPath(selectedMainCategory, c.name),
-              })),
-            }),
-          ]
+          itemListSchema({
+            name: selectedMainCategory,
+            path: canonicalPath,
+            items: dynamicCategories.map((c) => ({
+              name: c.name,
+              path: categoryPath(selectedMainCategory, c.name),
+            })),
+          }),
+        ]
         : [],
     };
   }
@@ -441,9 +439,8 @@ const Shop = () => {
                 key={cat.name}
                 to={categoryPath(cat.name)}
                 aria-label={`${cat.name} — ${cat.categoryCount} categories`}
-                className={`group cursor-pointer w-full h-full flex flex-col bg-white rounded-[4px] border border-[#e5e1d7] hover:border-[#112338]/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
-                  isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'
-                }`}
+                className={`group cursor-pointer w-full h-full flex flex-col bg-white rounded-[4px] border border-[#e5e1d7] hover:border-[#112338]/30 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden ${isFeatured ? 'col-span-2 row-span-1 md:row-span-2' : 'col-span-1 row-span-1'
+                  }`}
               >
                 {/* Clean Image Area without Dark Overlays */}
                 <div className="w-full flex-1 relative overflow-hidden bg-[#fbfaf8]">
@@ -458,9 +455,8 @@ const Shop = () => {
 
                 {/* Bottom Panel with Title & Next Arrow */}
                 <div className="w-full bg-white p-3 sm:p-3.5 border-t border-[#e5e1d7]/70 flex items-center justify-between gap-2 z-10 shrink-0">
-                  <h3 className={`font-serif font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1.5 ${
-                    isFeatured ? 'text-[16px] sm:text-[18px] md:text-[22px]' : 'text-[13px] sm:text-[14px] md:text-[15px]'
-                  }`}>
+                  <h3 className={`font-serif font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1.5 ${isFeatured ? 'text-[16px] sm:text-[18px] md:text-[22px]' : 'text-[13px] sm:text-[14px] md:text-[15px]'
+                    }`}>
                     <span>{cat.name}</span>
                     <span className="text-[13px] md:text-[14px] text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all">
                       &rarr;
@@ -602,12 +598,12 @@ const Shop = () => {
     productGridContent = (
       <section ref={productsGridRef} className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-5">
         {groupedProducts.map((group) => (
-          <ProductGroupCard 
-            key={group.name} 
-            productName={group.name} 
+          <ProductGroupCard
+            key={group.name}
+            productName={group.name}
             installmentHidden={group.installmentHidden}
             isCategoryInstallmentDisabled={hiddenInstallmentCategories[selectedSubCategory]}
-            variations={group.variations} 
+            variations={group.variations}
           />
         ))}
       </section>
@@ -633,15 +629,13 @@ const Shop = () => {
                 key={cat.name}
                 to={categoryPath(selectedMainCategory, cat.name)}
                 aria-current={isSelected ? 'page' : undefined}
-                className={`flex items-center gap-3 p-2.5 rounded-[3px] text-left transition-all duration-200 ${
-                  isSelected
+                className={`flex items-center gap-3 p-2.5 rounded-[3px] text-left transition-all duration-200 ${isSelected
                     ? 'bg-[#faf8f5] shadow-[0_1px_3px_rgba(0,0,0,0.02)] border border-[#e5e1d7]'
                     : 'hover:bg-gray-50/70 border border-transparent'
-                }`}
+                  }`}
               >
-                <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center transition-colors duration-200 ${
-                  isSelected ? 'bg-[#112338] text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
-                }`}>
+                <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center transition-colors duration-200 ${isSelected ? 'bg-[#112338] text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                  }`}>
                   <cat.icon size={15} strokeWidth={2} />
                 </div>
                 <span className={`text-[13px] font-medium ${isSelected ? 'text-[#112338] font-semibold' : 'text-[#64748b]'}`}>{cat.name}</span>

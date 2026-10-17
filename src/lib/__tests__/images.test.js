@@ -43,7 +43,7 @@ describe('thumbSrcSet', () => {
     expect(thumbSrcSet(42)).toBeUndefined();
   });
 
-  it('returns undefined for non-Shopify URLs', () => {
+  it('returns undefined for unsupported hosts', () => {
     expect(thumbSrcSet('https://example.com/photo.jpg')).toBeUndefined();
   });
 

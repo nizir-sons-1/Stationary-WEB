@@ -4,8 +4,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
 import { useSettings } from '../hooks/useSettings';
 import { categoryPath } from '../lib/site';
-import SearchModal from './SearchModal';
 import AnnouncementBanner from './AnnouncementBanner';
+
+const SearchModal = React.lazy(() => import('./SearchModal'));
 
 const LEFT_LINKS = [
   { label: 'Shop', path: '/shop' },
@@ -292,7 +293,11 @@ const Navbar = () => {
       </div>
 
       {/* ── Luxury Top-Down Animated Search Takeover (LV Style) ── */}
-      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      {isSearchOpen && (
+        <React.Suspense fallback={null}>
+          <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+        </React.Suspense>
+      )}
 
       {/* Mobile Menu Drawer (Louis Vuitton Luxury Style) */}
       {isMobileMenuOpen && (

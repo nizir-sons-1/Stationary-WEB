@@ -8,13 +8,13 @@ import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 
-// Core shopping flow — static imports for instant route transitions.
-import Shop from './pages/Shop';
-import Cart from './pages/Cart';
-import ProductDetails from './pages/ProductDetails';
+// Shopping flow — lazy-loaded for minimal initial bundle & faster first paint
+const Shop = lazy(() => import('./pages/Shop'));
+const Cart = lazy(() => import('./pages/Cart'));
+const ProductDetails = lazy(() => import('./pages/ProductDetails'));
 
-// Secondary pages — lazy-loaded so the initial bundle stays under 800 kB.
-// Each produces a small chunk (~5–20 kB) fetched on first navigation.
+// Secondary pages — lazy-loaded so the initial bundle stays small.
+// Each produces a small chunk fetched on navigation.
 const CustomCalculator = lazy(() => import('./pages/CustomCalculator'));
 const Reviews = lazy(() => import('./pages/Reviews'));
 const Faq = lazy(() => import('./pages/Faq'));
@@ -48,11 +48,11 @@ function App() {
               <PageTransition>
                 <Routes>
                   <Route path="/" element={<Home />} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/shop/:deptSlug" element={<Shop />} />
-                  <Route path="/shop/:deptSlug/:categorySlug" element={<Shop />} />
-                  <Route path="/product/:name" element={<ProductDetails />} />
-                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/shop" element={<Suspense fallback={<LazyFallback />}><Shop /></Suspense>} />
+                  <Route path="/shop/:deptSlug" element={<Suspense fallback={<LazyFallback />}><Shop /></Suspense>} />
+                  <Route path="/shop/:deptSlug/:categorySlug" element={<Suspense fallback={<LazyFallback />}><Shop /></Suspense>} />
+                  <Route path="/product/:name" element={<Suspense fallback={<LazyFallback />}><ProductDetails /></Suspense>} />
+                  <Route path="/cart" element={<Suspense fallback={<LazyFallback />}><Cart /></Suspense>} />
                   <Route path="/calculator" element={<Suspense fallback={<LazyFallback />}><CustomCalculator /></Suspense>} />
                   <Route path="/reviews" element={<Suspense fallback={<LazyFallback />}><Reviews /></Suspense>} />
                   <Route path="/faq" element={<Suspense fallback={<LazyFallback />}><Faq /></Suspense>} />

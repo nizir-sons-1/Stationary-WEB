@@ -35,8 +35,14 @@ const OurStory = () => {
         >
           <div className="glass-panel bg-white p-2 rounded-[32px] shadow-glass border border-white/60 transform rotate-y-[-5deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-700 ease-out">
             <img 
-              src="https://images.unsplash.com/photo-1572044162444-ad60f128bdea?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
+              src="https://images.unsplash.com/photo-1572044162444-ad60f128bdea?auto=format&fit=crop&w=600&q=80" 
+              srcSet="https://images.unsplash.com/photo-1572044162444-ad60f128bdea?auto=format&fit=crop&w=400&q=80 400w, https://images.unsplash.com/photo-1572044162444-ad60f128bdea?auto=format&fit=crop&w=600&q=80 600w, https://images.unsplash.com/photo-1572044162444-ad60f128bdea?auto=format&fit=crop&w=800&q=80 800w"
+              sizes="(min-width: 1024px) 500px, 100vw"
               alt="Historic paper craft" 
+              width={600}
+              height={450}
+              loading="lazy"
+              decoding="async"
               className="w-full h-auto rounded-[28px] object-cover aspect-[4/3] mix-blend-multiply"
             />
           </div>

@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -18,20 +19,38 @@ export default defineConfig(({ mode }) => {
       {
         name: 'html-transform',
         transformIndexHtml(html) {
-          return html.replace(/%VITE_SUPABASE_URL%/g, supabaseUrl);
+          return html.replaceAll('%VITE_SUPABASE_URL%', supabaseUrl);
         },
       },
       {
         name: 'serve-public-alias',
         configureServer(server) {
           server.middlewares.use((req, res, next) => {
-            if (req.url && req.url.startsWith('/public/')) {
+            if (req.url?.startsWith('/public/')) {
               req.url = req.url.replace('/public/', '/');
             }
             next();
           });
         },
       },
+      {
+        name: 'async-css-transform',
+        apply: 'build',
+        enforce: 'post',
+        transformIndexHtml(html) {
+          // Convert render-blocking stylesheet link into non-blocking async load with noscript fallback
+          return html.replace(
+            /<link\s+rel="stylesheet"\s+crossorigin\s+href="([^"]+)">/gi,
+            '<link rel="stylesheet" href="$1" media="print" onload="this.media=\'all\'">\n    <noscript><link rel="stylesheet" href="$1"></noscript>'
+          );
+        },
+      },
+      visualizer({
+        filename: 'dist/stats.html',
+        open: false,
+        gzipSize: true,
+        brotliSize: true,
+      }),
     ],
     build: {
       target: 'es2020',
@@ -39,6 +58,40 @@ export default defineConfig(({ mode }) => {
       assetsInlineLimit: 0,
       sourcemap: false,
       reportCompressedSize: false,
+      modulePreload: {
+        resolveDependencies(filename, deps, { hostType }) {
+          if (hostType === 'html') {
+            // Keep heavy animation/secondary libraries off initial page preload
+            return deps.filter(
+              (dep) => !dep.includes('vendor-framer') && !dep.includes('vendor-gsap')
+            );
+          }
+          return deps;
+        },
+      },
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react/') || id.includes('react-dom') || id.includes('react-router-dom')) {
+                return 'vendor-react';
+              }
+              if (id.includes('framer-motion')) {
+                return 'vendor-framer';
+              }
+              if (id.includes('gsap')) {
+                return 'vendor-gsap';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+            }
+          },
+        },
+      },
     },
     server: {
       watch: {

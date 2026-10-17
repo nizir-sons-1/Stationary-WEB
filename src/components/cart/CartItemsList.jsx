@@ -2,6 +2,7 @@ import React from 'react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { departmentOf, PAPER_AND_CANVAS } from '../../data/categories';
+import { thumb, fallbackOnError } from '../../lib/images';
 import VariationBadge from './VariationBadge';
 
 export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
@@ -29,7 +30,16 @@ export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
             {/* Col 1: Product Info */}
             <div className="col-span-5 flex gap-3 items-center min-w-0">
               <div className="w-14 h-14 shrink-0 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden p-1 flex items-center justify-center">
-                <img className="w-full h-full object-contain rounded mix-blend-multiply" src={item.image} alt={item.name} />
+                <img
+                  className="w-full h-full object-contain rounded mix-blend-multiply"
+                  src={thumb(item.image, 120)}
+                  alt={item.name}
+                  width={56}
+                  height={56}
+                  loading="lazy"
+                  decoding="async"
+                  onError={fallbackOnError}
+                />
               </div>
               <div className="min-w-0">
                 <h3 className="font-headline-md text-sm font-bold text-on-surface truncate">{item.name}</h3>
@@ -114,7 +124,16 @@ export function CartItemsList({ cartItems, updateQuantity, removeFromCart }) {
             <div className="flex items-start justify-between gap-2">
               <div className="flex gap-2.5 items-center min-w-0">
                 <div className="w-13 h-13 shrink-0 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden p-1 flex items-center justify-center">
-                  <img className="w-full h-full object-contain rounded mix-blend-multiply" src={item.image} alt={item.name} />
+                  <img
+                    className="w-full h-full object-contain rounded mix-blend-multiply"
+                    src={thumb(item.image, 120)}
+                    alt={item.name}
+                    width={52}
+                    height={52}
+                    loading="lazy"
+                    decoding="async"
+                    onError={fallbackOnError}
+                  />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-headline-md text-sm font-bold text-on-surface truncate">{item.name}</h3>

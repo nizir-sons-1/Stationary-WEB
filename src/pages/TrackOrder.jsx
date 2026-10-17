@@ -242,7 +242,7 @@ const TrackOrder = () => {
       </div>
 
       {/* Page Heading */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -268,23 +268,22 @@ const TrackOrder = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-grow">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value)}
-                placeholder="Enter Order ID (e.g. 6B7BD55B) or 11-digit Phone (03001234567)" 
+                placeholder="Enter Order ID (e.g. 6B7BD55B) or 11-digit Phone (03001234567)"
                 className="w-full bg-[#fbfaf8] border border-gray-200 rounded-xl py-3.5 pl-11 pr-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-[#112338] font-medium text-sm"
                 required
               />
             </div>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={isSearching || cooldownSec > 0}
-              className={`bg-[#111111] text-white px-7 py-3.5 rounded-xl font-bold tracking-widest uppercase text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md ${
-                isSearching || cooldownSec > 0
+              className={`bg-[#111111] text-white px-7 py-3.5 rounded-xl font-bold tracking-widest uppercase text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md ${isSearching || cooldownSec > 0
                   ? 'opacity-70 cursor-not-allowed bg-gray-400'
                   : 'hover:bg-primary hover:shadow-primary/30 hover:-translate-y-0.5 cursor-pointer'
-              }`}
+                }`}
             >
               {renderButtonContent()}
             </button>
@@ -301,7 +300,7 @@ const TrackOrder = () => {
 
       {/* Result Section */}
       {result && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.35 }}
@@ -313,10 +312,10 @@ const TrackOrder = () => {
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-gray-600">Order ID</span>
                 <span className="font-mono text-xs text-gray-500">#{result.id.slice(0, 8).toUpperCase()}</span>
-                <button 
+                <button
                   onClick={() => {
                     if (navigator.clipboard?.writeText) {
-                      void navigator.clipboard.writeText(result.id.slice(0, 8).toUpperCase()).catch(() => {});
+                      void navigator.clipboard.writeText(result.id.slice(0, 8).toUpperCase()).catch(() => { });
                     }
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
@@ -331,7 +330,7 @@ const TrackOrder = () => {
                 {result.customer_name}
               </h2>
             </div>
-            
+
             <div className={`px-4 py-2 rounded-full border ${statusInfo.bg} ${statusInfo.border} ${statusInfo.color} flex items-center gap-2 text-xs font-black uppercase tracking-wider shadow-xs`}>
               <StatusIcon size={16} />
               <span>{statusInfo.label}</span>
@@ -342,7 +341,7 @@ const TrackOrder = () => {
           <div className="p-6 sm:p-8 border-b border-gray-100">
             <div className="relative mb-8 mt-2">
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-primary transition-all duration-700 ease-out rounded-full"
                   style={{ width: progressWidth }}
                 />
@@ -404,7 +403,7 @@ const TrackOrder = () => {
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-3 flex items-center gap-2">
                 <PackageCheck size={16} /> Ordered Items ({Array.isArray(result.items) ? result.items.length : 0})
               </h3>
-              
+
               <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                 {Array.isArray(result.items) && result.items.map((item, idx) => {
                   const hasColor = isColorVariation(item.size);
@@ -424,7 +423,7 @@ const TrackOrder = () => {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="text-right shrink-0">
                         <span className="text-sm font-bold text-[#112338]">
                           Rs {(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString()}
@@ -441,7 +440,7 @@ const TrackOrder = () => {
 
       {/* Not Found View */}
       {notFound && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white p-8 rounded-[24px] sm:rounded-[28px] border border-[#e5e1d7] shadow-sm text-center max-w-lg mx-auto"

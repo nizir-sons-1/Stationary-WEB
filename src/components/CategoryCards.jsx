@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 import { categoryPath } from '../lib/site';
-import { useProducts, useTaxonomyImages } from '../hooks/useSupabase';
+import { useProductIndex, useTaxonomyImages } from '../hooks/useSupabase';
 import { departmentOf } from '../data/categories';
 import { flyToCart } from '../lib/cartAnimation';
 
@@ -55,7 +55,7 @@ const FALLBACK_POPULAR = [
     id: 'fb-1',
     name: 'F4 Premium Copy Paper (80 GSM)',
     price: 1300,
-    image: 'https://i.postimg.cc/BnPdYMnV/ezgif-com-video-to-gif-converter.gif',
+    image: '/images/copy_paper.webp',
     category: 'Copy Paper',
     department: 'Paper & Canvas',
   },
@@ -63,7 +63,7 @@ const FALLBACK_POPULAR = [
     id: 'fb-2',
     name: 'Pindo Art Card (Gloss Finish)',
     price: 2390,
-    image: 'https://i.postimg.cc/dtkc3mPB/image.png',
+    image: '/images/art_card.webp',
     category: 'Art Card',
     department: 'Paper & Canvas',
   },
@@ -71,7 +71,7 @@ const FALLBACK_POPULAR = [
     id: 'fb-3',
     name: 'KINMARI Art Paper (Smooth White)',
     price: 7375,
-    image: 'https://i.postimg.cc/jdPwNfyd/image.png',
+    image: '/images/art_paper.webp',
     category: 'Art Paper',
     department: 'Paper & Canvas',
   },
@@ -79,7 +79,7 @@ const FALLBACK_POPULAR = [
     id: 'fb-4',
     name: 'IK Premium Offset Paper',
     price: 7011,
-    image: 'https://i.postimg.cc/76PnGnsx/23-36-70.png',
+    image: '/images/offset_paper.webp',
     category: 'Offset Paper',
     department: 'Paper & Canvas',
   },
@@ -87,7 +87,7 @@ const FALLBACK_POPULAR = [
     id: 'fb-5',
     name: 'Al Baster Ivory Card',
     price: 2897,
-    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSf2Olx5mpxGPgRWoe2r5bQG1slsdWwIRkpHxeFA6eKfvk0Ayo1nvyyqk07alM&s',
+    image: '/images/ivory_card.webp',
     category: 'Ivory Card',
     department: 'Paper & Canvas',
   },
@@ -95,7 +95,7 @@ const FALLBACK_POPULAR = [
     id: 'fb-6',
     name: 'Polo Heavy Duty BoxBoard',
     price: 4231,
-    image: 'https://i.postimg.cc/N0NNXXRq/image.png',
+    image: '/images/color_card.webp',
     category: 'BoxBoard',
     department: 'Paper & Canvas',
   },
@@ -103,7 +103,7 @@ const FALLBACK_POPULAR = [
     id: 'fb-7',
     name: 'Ningbo Premium Bleach Card',
     price: 3019,
-    image: 'https://i.postimg.cc/LX10RvZM/image.png',
+    image: '/images/matte_paper.webp',
     category: 'Bleach Card',
     department: 'Paper & Canvas',
   },
@@ -111,7 +111,7 @@ const FALLBACK_POPULAR = [
     id: 'fb-8',
     name: 'Impression Carbonless Paper Ream',
     price: 5950,
-    image: 'https://i.postimg.cc/sXmdMsRW/Capture1.jpg',
+    image: '/images/carbonless.webp',
     category: 'Carbonless',
     department: 'Paper & Canvas',
   },
@@ -141,40 +141,16 @@ const TRUST_FEATURES = [
 ];
 
 const VideoSection = () => {
-  const [isInView, setIsInView] = useState(false);
-  const containerRef = useRef(null);
   const videoRef = useRef(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1, rootMargin: '150px' }
-    );
-
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
     }
-
-    return () => observer.disconnect();
   }, []);
-
-  useEffect(() => {
-    if (isInView && videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Autoplay handling
-      });
-    }
-  }, [isInView]);
 
   return (
     <section
-      ref={containerRef}
       className="w-full mb-8 md:mb-10 overflow-hidden rounded-[4px] border border-[#e5e1d7] shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
       aria-label="Art and Paper Craft Showcase"
     >
@@ -185,19 +161,19 @@ const VideoSection = () => {
           loop
           playsInline
           autoPlay
-          controls={false}
-          preload="metadata"
+          preload="auto"
           poster="/videos/section-video-poster.webp"
           className="w-full h-full object-cover"
         >
-          {isInView && (
-            <>
-              <source src="/videos/section-video.webm" type="video/webm" />
-              <source src="/videos/section-video.mp4" type="video/mp4" />
-              <source src="/public/videos/section-video.webm" type="video/webm" />
-              <source src="/public/videos/section-video.mp4" type="video/mp4" />
-            </>
-          )}
+          <source src="/videos/section-video.webm" type="video/webm" />
+          <source src="/videos/section-video.mp4" type="video/mp4" />
+          <track
+            kind="captions"
+            src="/videos/section-video-captions.vtt"
+            srcLang="en"
+            label="English"
+            default
+          />
           Your browser does not support the video tag.
         </video>
       </div>
@@ -205,77 +181,84 @@ const VideoSection = () => {
   );
 };
 
+const DEPARTMENTS_LIST = ['Paper & Canvas', 'Fine Arts', 'Stationery', 'Accessories', 'Notebooks'];
+
+function extractValidProduct(p) {
+  const firstVar = p.product_variations?.[0];
+  const price = Number(firstVar?.price) || 0;
+  if (price <= 0) return null;
+
+  const img = p.image_url || firstVar?.image_url;
+  if (!img) return null;
+
+  return {
+    id: p.id,
+    name: p.product_name,
+    price: Math.round(price),
+    image: img,
+    category: p.category,
+    department: departmentOf(p.category) || 'Stationery',
+  };
+}
+
+function interleaveDepartmentBuckets(buckets) {
+  const interleaved = [];
+  for (let idx = 0; idx < 8; idx++) {
+    for (const d of DEPARTMENTS_LIST) {
+      const item = buckets[d]?.[idx];
+      if (item) {
+        interleaved.push(item);
+        if (interleaved.length >= 32) return interleaved;
+      }
+    }
+  }
+  return interleaved;
+}
+
+function buildAvailablePicks(dbProducts) {
+  if (!dbProducts || dbProducts.length === 0) {
+    return FALLBACK_POPULAR;
+  }
+
+  const buckets = {
+    'Paper & Canvas': [],
+    'Fine Arts': [],
+    'Stationery': [],
+    'Accessories': [],
+    'Notebooks': [],
+  };
+
+  // Single-pass filter, map, and bucket with cap to avoid blocking main thread
+  for (const p of dbProducts) {
+    const item = extractValidProduct(p);
+    if (!item) continue;
+
+    const bucket = buckets[item.department] || buckets['Stationery'];
+    if (bucket.length < 8) {
+      bucket.push(item);
+    }
+  }
+
+  const picks = interleaveDepartmentBuckets(buckets);
+  return picks.length > 0 ? picks : FALLBACK_POPULAR;
+}
+
 const CategoryCards = () => {
   const { addToCart } = useCart();
   const { departmentImages } = useTaxonomyImages();
-  const { products: dbProducts } = useProducts(null);
+  const { products: dbProducts } = useProductIndex();
   const [wishlist, setWishlist] = useState({});
   const [addedItems, setAddedItems] = useState({});
   const [isExpanded, setIsExpanded] = useState(false);
   const [shuffleOffset, setShuffleOffset] = useState(0);
 
-  // Filter and round-robin distinct real products across all departments
-  const allAvailablePicks = useMemo(() => {
-    if (!dbProducts || dbProducts.length === 0) {
-      return FALLBACK_POPULAR;
-    }
-
-    const valid = dbProducts
-      .filter((p) => {
-        const hasImg = Boolean(p.image_url || p.product_variations?.[0]?.image_url);
-        const hasPrice = Number(p.product_variations?.[0]?.price) > 0;
-        return hasImg && hasPrice;
-      })
-      .map((p) => {
-        const firstVar = p.product_variations?.[0];
-        const price = Number(firstVar?.price) || 0;
-        const img = p.image_url || firstVar?.image_url || '/images/copy_paper.webp';
-        const dept = departmentOf(p.category) || 'Stationery';
-        return {
-          id: p.id,
-          name: p.product_name,
-          price: Math.round(price),
-          image: img,
-          category: p.category,
-          department: dept,
-        };
-      });
-
-    if (valid.length === 0) return FALLBACK_POPULAR;
-
-    // Group into department buckets so we can sample diverse products across departments
-    const departmentsList = ['Paper & Canvas', 'Fine Arts', 'Stationery', 'Accessories', 'Notebooks'];
-    const buckets = {};
-    for (const d of departmentsList) buckets[d] = [];
-
-    for (const item of valid) {
-      const d = item.department || 'Stationery';
-      if (!buckets[d]) buckets[d] = [];
-      buckets[d].push(item);
-    }
-
-    // Interleave across departments so adjacent cards are always from different departments/categories
-    const interleaved = [];
-    let added = true;
-    let index = 0;
-    while (added && interleaved.length < 32) {
-      added = false;
-      for (const d of departmentsList) {
-        if (buckets[d]?.[index]) {
-          interleaved.push(buckets[d][index]);
-          added = true;
-        }
-      }
-      index++;
-    }
-
-    return interleaved.length > 0 ? interleaved : valid;
-  }, [dbProducts]);
+  // Single-pass filter and round-robin distinct real products across all departments
+  const allAvailablePicks = useMemo(() => buildAvailablePicks(dbProducts), [dbProducts]);
 
   const displayedProducts = useMemo(() => {
     const total = allAvailablePicks.length;
     if (total === 0) return [];
-    
+
     // Rotate items by shuffleOffset
     const offset = shuffleOffset % total;
     const rotated = [
@@ -316,8 +299,9 @@ const CategoryCards = () => {
 
   return (
     <section id="departments" className="scroll-mt-24 w-full py-4 md:py-6 font-sans">
-      
+
       {/* ── 1. Compact 5-Department Showcase Grid ─────────────────────── */}
+      <h2 className="sr-only">Browse by Department</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5 mb-8 md:mb-10">
         {DEPARTMENTS.map((dept) => {
           const deptImage = departmentImages?.[dept.name] || dept.image;
@@ -346,11 +330,11 @@ const CategoryCards = () => {
               <div className="p-2.5 sm:p-3 flex flex-col flex-1">
                 <h3 className="font-serif text-[13.5px] sm:text-[14px] font-medium text-[#112338] group-hover:text-primary transition-colors flex items-center gap-1">
                   <span>{dept.name}</span>
-                  <span className="text-[12px] text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all">
+                  <span className="text-[12px] text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all" aria-hidden="true">
                     &rarr;
                   </span>
                 </h3>
-                <p className="text-[10.5px] sm:text-[11px] text-[#64748b] mt-0.5 line-clamp-2 leading-relaxed">
+                <p className="text-[10.5px] sm:text-[11px] text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
                   {dept.desc}
                 </p>
               </div>
@@ -364,7 +348,7 @@ const CategoryCards = () => {
 
       {/* ── 2. Featured Products Section: "Popular Picks" (Compact) ─────── */}
       <div className="w-full">
-        
+
         {/* Section Header */}
         <div className="flex items-end justify-between mb-4 md:mb-5 pb-2.5 border-b border-gray-100 gap-2">
           <div>
@@ -433,7 +417,7 @@ const CategoryCards = () => {
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out"
                     />
                   </Link>
-                  
+
                   {/* Heart Wishlist Button */}
                   <button
                     type="button"
@@ -467,11 +451,10 @@ const CategoryCards = () => {
                 <button
                   type="button"
                   onClick={(e) => handleAddToCart(product, e)}
-                  className={`w-full py-1.5 sm:py-2 px-2.5 rounded-[3px] font-semibold text-[11.5px] sm:text-[12px] flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer ${
-                    isAdded
+                  className={`w-full py-1.5 sm:py-2 px-2.5 rounded-[3px] font-semibold text-[11.5px] sm:text-[12px] flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer ${isAdded
                       ? 'bg-emerald-600 text-white'
                       : 'bg-[#112338] hover:bg-[#1a3654] text-white active:scale-[0.99] shadow-sm'
-                  }`}
+                    }`}
                 >
                   {isAdded ? (
                     <>
@@ -502,11 +485,9 @@ const CategoryCards = () => {
             return (
               <div
                 key={feat.title}
-                className={`flex flex-col items-center text-center py-3 px-2 sm:py-3.5 sm:px-3 ${
-                  !isLastColMobile ? 'border-r border-[#e8e4dc]' : ''
-                } ${isFirstRowMobile ? 'border-b md:border-b-0 border-[#e8e4dc]' : ''} ${
-                  !isLastDesktop ? 'md:border-r md:border-[#e8e4dc]' : 'md:border-r-0'
-                }`}
+                className={`flex flex-col items-center text-center py-3 px-2 sm:py-3.5 sm:px-3 ${!isLastColMobile ? 'border-r border-[#e8e4dc]' : ''
+                  } ${isFirstRowMobile ? 'border-b md:border-b-0 border-[#e8e4dc]' : ''} ${!isLastDesktop ? 'md:border-r md:border-[#e8e4dc]' : 'md:border-r-0'
+                  }`}
               >
                 <div className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-[#112338] mb-1.5">
                   <Icon size={20} strokeWidth={1.65} />
@@ -525,7 +506,7 @@ const CategoryCards = () => {
 
       {/* ── 4. Promotional & Smart Tool Banners ─────────────────────────── */}
       <div className="w-full mt-6 md:mt-8 space-y-4">
-        
+
         {/* Banner 1: Custom Paper Size Calculator (Full HD Background) */}
         <div className="w-full bg-[#faf8f5] border border-[#e5e1d7] rounded-[3px] overflow-hidden relative shadow-[0_1px_3px_rgba(0,0,0,0.02)] min-h-[220px] sm:min-h-[240px] flex items-center">
           {/* Full High-Resolution Background Image */}
@@ -533,12 +514,16 @@ const CategoryCards = () => {
             <source srcSet="/images/calculator-banner-hd.avif" type="image/avif" />
             <source srcSet="/images/calculator-banner-hd.webp" type="image/webp" />
             <img
-              src="/images/calculator-banner-hd.jpg"
+              src="/images/calculator-banner-hd.webp"
               alt="Paper size calculator and drafting desk"
+              width={1200}
+              height={300}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover object-right sm:object-center"
             />
           </picture>
-          
+
           {/* Subtle Mobile Readability Gradient (Only on small screens) */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#faf8f5]/95 via-[#faf8f5]/70 to-transparent sm:from-[#faf8f5]/50 sm:to-transparent pointer-events-none" />
 
@@ -571,8 +556,12 @@ const CategoryCards = () => {
               <source srcSet="/images/wholesale-boxes-hd.avif" type="image/avif" />
               <source srcSet="/images/wholesale-boxes-hd.webp" type="image/webp" />
               <img
-                src="/images/wholesale-boxes-hd.jpg"
+                src="/images/wholesale-boxes-hd.webp"
                 alt="Wholesale and bulk packaging supplies"
+                width={400}
+                height={300}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover object-center"
               />
             </picture>

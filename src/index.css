@@ -19,10 +19,10 @@
     *,
     *::before,
     *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
+      animation-duration: 0.01ms;
+      animation-iteration-count: 1;
+      transition-duration: 0.01ms;
+      scroll-behavior: auto;
     }
   }
 }
@@ -150,4 +150,19 @@
    *    On a category page that is one layer per tile plus one per product
    *    photo, all of it resident GPU memory, for no decoding benefit.
    */
+
+  @keyframes pageFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-page-transition {
+    animation: pageFadeIn 0.25s ease-out forwards;
+  }
 }

@@ -88,10 +88,8 @@ const CustomCalculator = () => {
   // If the brand has specific rates for different GSMs, dynamically use it; otherwise fallback to brand base rate
   const selectedRate = useMemo(() => {
     if (!selectedBrandObj) return 0;
-    if (gsm && selectedBrandObj.gsmRates && selectedBrandObj.gsmRates[String(gsm)]) {
-      return selectedBrandObj.gsmRates[String(gsm)];
-    }
-    return selectedBrandObj.rate || 0;
+    const gsmRate = gsm ? selectedBrandObj.gsmRates?.[String(gsm)] : undefined;
+    return gsmRate || selectedBrandObj.rate || 0;
   }, [selectedBrandObj, gsm]);
 
   const categoryData = selectedBrandObj || EMPTY_OPTIONS;
@@ -130,12 +128,17 @@ const CustomCalculator = () => {
       <div className="w-full rounded-xl sm:rounded-2xl overflow-hidden border border-[#e5e1d7] shadow-xs mb-3.5 sm:mb-5 bg-[#fcfbfa] relative">
         <div className="w-full aspect-[2.3/1] sm:aspect-[2.8/1] max-h-[190px] sm:max-h-[230px] overflow-hidden">
           <picture className="w-full h-full">
+            <source srcSet="/images/calculator-banner-hd.avif" type="image/avif" />
             <source srcSet="/images/calculator-banner-hd.webp" type="image/webp" />
             <img
-              src="/images/calculator-banner-hd.jpg"
+              src="/images/calculator-banner-hd.webp"
               alt="Custom Size Paper Calculator Banner"
+              width={1200}
+              height={430}
               className="w-full h-full object-cover object-[65%_center] sm:object-center"
               fetchPriority="high"
+              loading="eager"
+              decoding="async"
             />
           </picture>
         </div>
@@ -201,6 +204,7 @@ const CustomCalculator = () => {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    aria-hidden="true"
                   >
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
@@ -242,6 +246,7 @@ const CustomCalculator = () => {
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      aria-hidden="true"
                     >
                       <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
@@ -271,11 +276,10 @@ const CustomCalculator = () => {
                         key={l}
                         type="button"
                         onClick={() => setLength(l)}
-                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${
-                          length === l
+                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${length === l
                             ? 'bg-[#112338] text-white border-[#112338]'
                             : 'bg-[#f5f3ee] text-gray-600 border-[#e0dbcf] hover:border-gray-400'
-                        }`}
+                          }`}
                       >
                         {l}&quot;
                       </button>
@@ -303,11 +307,10 @@ const CustomCalculator = () => {
                         key={w}
                         type="button"
                         onClick={() => setWidth(w)}
-                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${
-                          width === w
+                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${width === w
                             ? 'bg-[#112338] text-white border-[#112338]'
                             : 'bg-[#f5f3ee] text-gray-600 border-[#e0dbcf] hover:border-gray-400'
-                        }`}
+                          }`}
                       >
                         {w}&quot;
                       </button>
@@ -338,11 +341,10 @@ const CustomCalculator = () => {
                         key={g}
                         type="button"
                         onClick={() => setGsm(g)}
-                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${
-                          gsm === g
+                        className={`text-[9.5px] px-1.5 py-0.5 rounded-[4px] font-semibold border transition-all cursor-pointer ${gsm === g
                             ? 'bg-[#112338] text-white border-[#112338]'
                             : 'bg-[#f5f3ee] text-gray-600 border-[#e0dbcf] hover:border-gray-400'
-                        }`}
+                          }`}
                       >
                         {g}g
                       </button>
