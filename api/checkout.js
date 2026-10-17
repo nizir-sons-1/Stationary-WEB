@@ -55,27 +55,31 @@ function validateInputBasics(fullName, phone, cartItems) {
   return { valid: true };
 }
 
-async function checkDuplicateOrder(supabase, cleanPhone, idempotencyKey) {
-  if (!idempotencyKey) return null;
+export async function checkDuplicateOrder(supabase, cleanPhone, idempotencyKey) {
+  if (!idempotencyKey || !cleanPhone) return null;
 
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const { data: existingOrders } = await supabase
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const { data: existingOrders, error } = await supabase
     .from('orders')
-    .select('id, created_at, total_amount, status, customer_name, customer_phone')
+    .select('*')
     .eq('customer_phone', cleanPhone)
-    .gte('created_at', tenMinutesAgo)
+    .eq('idempotency_key', String(idempotencyKey).trim())
+    .gte('created_at', thirtyMinutesAgo)
     .order('created_at', { ascending: false })
-    .limit(3);
+    .limit(1);
 
-  const duplicate = (existingOrders || []).find(
-    (ord) => ord.items?.idempotencyKey === idempotencyKey
-  );
+  if (error) {
+    console.warn('[checkout] Duplicate check error:', error.message);
+    return null;
+  }
+
+  const duplicate = existingOrders && existingOrders.length > 0 ? existingOrders[0] : null;
 
   if (duplicate) {
     return {
       valid: true,
       isDuplicate: true,
-      orderId: duplicate.id.slice(0, 8).toUpperCase(),
+      orderId: String(duplicate.id || '').slice(0, 8).toUpperCase(),
       order: duplicate,
     };
   }
@@ -160,7 +164,7 @@ async function verifyCartItems(cartItems, supabase) {
   return { valid: true, verifiedSubtotal, verifiedItems };
 }
 
-function buildVerifiedOrderRecord({
+export function buildVerifiedOrderRecord({
   fullName,
   cleanPhone,
   email,
@@ -170,6 +174,7 @@ function buildVerifiedOrderRecord({
   isB2B,
   finalTotal,
   verifiedItems,
+  idempotencyKey,
   standardFee = 200,
   goodsTransportMin = 350,
   isFreeShipping = false,
@@ -201,6 +206,7 @@ function buildVerifiedOrderRecord({
     status: 'pending',
     order_type: isB2B ? 'B2B' : 'B2C',
     items: verifiedItems,
+    idempotency_key: idempotencyKey ? String(idempotencyKey).trim() : null,
   };
 }
 
@@ -282,6 +288,7 @@ export async function validateAndBuildOrderPayload(body, supabase) {
     isB2B,
     finalTotal,
     verifiedItems: itemsCheck.verifiedItems,
+    idempotencyKey,
     standardFee,
     goodsTransportMin,
     isFreeShipping,
@@ -322,6 +329,7 @@ export default async function handler(req, res) {
         isDuplicate: true,
         orderId: validationResult.orderId,
         order: validationResult.order,
+        finalTotal: validationResult.order?.total_amount || validationResult.order?.total_price,
       });
     }
 
@@ -332,6 +340,29 @@ export default async function handler(req, res) {
       .single();
 
     if (insertError) {
+      // Defense-in-depth: If unique constraint (23505) is violated due to concurrent requests,
+      // return existing duplicate order rather than 500
+      if (insertError.code === '23505' && idempotencyKey) {
+        const { data: existingOrder } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('customer_phone', validationResult.cleanPhone)
+          .eq('idempotency_key', String(idempotencyKey).trim())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingOrder) {
+          return res.status(200).json({
+            success: true,
+            isDuplicate: true,
+            orderId: String(existingOrder.id || '').slice(0, 8).toUpperCase(),
+            order: existingOrder,
+            finalTotal: existingOrder.total_amount || existingOrder.total_price,
+          });
+        }
+      }
+
       return res.status(500).json({
         error: 'Database error placing order',
         details: insertError.message,

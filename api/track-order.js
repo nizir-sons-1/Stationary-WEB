@@ -12,9 +12,9 @@ const supabaseKey =
   '';
 
 // In-memory sliding window rate limiter per IP: max 10 requests / 1 hour
-const rateLimitMap = new Map();
+export const rateLimitMap = new Map();
 
-function isRateLimited(ip) {
+export function isRateLimited(ip) {
   const now = Date.now();
   const windowMs = 60 * 60 * 1000; // 1 hour
   const maxAttempts = 10;
@@ -40,6 +40,62 @@ function isRateLimited(ip) {
   }
 
   return false;
+}
+
+const DEFAULT_TRUSTED_PROXIES = new Set(['127.0.0.1', '::1']);
+
+function getTrustedProxies() {
+  const envProxies = process.env.TRUSTED_PROXIES;
+  if (!envProxies) return DEFAULT_TRUSTED_PROXIES;
+
+  const set = new Set(DEFAULT_TRUSTED_PROXIES);
+  envProxies.split(',').forEach((p) => {
+    const trimmed = p.trim();
+    if (trimmed) set.add(trimmed);
+  });
+  return set;
+}
+
+function getHeaderIp(headers, headerName) {
+  const val = headers?.[headerName];
+  if (typeof val === 'string' && val.trim().length > 0) {
+    return val.split(',')[0].trim();
+  }
+  return null;
+}
+
+function getVercelIp(headers) {
+  return getHeaderIp(headers, 'x-vercel-forwarded-for') || getHeaderIp(headers, 'x-real-ip');
+}
+
+function getProxyForwardedIp(headers) {
+  return getHeaderIp(headers, 'x-forwarded-for') || getHeaderIp(headers, 'x-real-ip');
+}
+
+export function getClientIp(req) {
+  // 1. Direct connecting socket address (unspoofable by client HTTP header injection)
+  const rawSocket = req.socket?.remoteAddress || req.connection?.remoteAddress || '127.0.0.1';
+  const socketIp = rawSocket.startsWith('::ffff:') ? rawSocket.slice(7) : rawSocket;
+
+  // 2. Vercel deployment check:
+  // Vercel edge strips incoming client 'x-vercel-forwarded-for' and overwrites it with
+  // the genuine connecting IP. It cannot be forged by external clients.
+  const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV);
+  if (isVercel) {
+    const vercelIp = getVercelIp(req.headers);
+    if (vercelIp) return vercelIp;
+  }
+
+  // 3. Trusted Proxy Allowlist:
+  // Only trust X-Forwarded-For if connecting socket IP is an explicitly trusted proxy
+  const trustedSet = getTrustedProxies();
+  if (trustedSet.has(socketIp)) {
+    const forwardedIp = getProxyForwardedIp(req.headers);
+    if (forwardedIp) return forwardedIp;
+  }
+
+  // 4. Default: ignore all headers, use verified socket IP
+  return socketIp || '127.0.0.1';
 }
 
 function normalizePhone(raw) {
@@ -69,22 +125,20 @@ function isValidPakistaniPhone(raw) {
 const ORDER_FIELDS =
   'id, status, created_at, total_amount, total_price, customer_name, customer_phone, customer_email, customer_address, payment_method, shipping_method, items';
 
+const GENERIC_ERROR_MESSAGE = 'Order not found or invalid request';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const clientIp =
-    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-    req.headers['x-real-ip'] ||
-    req.socket?.remoteAddress ||
-    '127.0.0.1';
+  const clientIp = getClientIp(req);
 
   // 1. Server-Side Rate Limiting (10 reqs / hour / IP)
+  // Generic 429 response: reveals no IP, window, or attempt details to attacker
   if (isRateLimited(clientIp)) {
     return res.status(429).json({
-      error: 'Too many tracking attempts from this IP. Please wait an hour before trying again.',
-      rateLimited: true,
+      error: GENERIC_ERROR_MESSAGE,
     });
   }
 
@@ -92,7 +146,7 @@ export default async function handler(req, res) {
   const clean = String(queryRaw || '').trim().replace(/^#/, '');
 
   if (!clean || clean.length < 3) {
-    return res.status(400).json({ error: 'Valid tracking ID or phone number required.' });
+    return res.status(400).json({ error: GENERIC_ERROR_MESSAGE, order: null });
   }
 
   try {
@@ -161,13 +215,21 @@ export default async function handler(req, res) {
       matchedOrder = data;
     }
 
-    // Partial phone prefixes or invalid formats return null (anti-enumeration)
+    if (matchedOrder) {
+      return res.status(200).json({
+        success: true,
+        order: matchedOrder,
+      });
+    }
+
+    // Generic error response for non-existent / unmatched order
     return res.status(200).json({
-      success: true,
-      order: matchedOrder || null,
+      success: false,
+      error: GENERIC_ERROR_MESSAGE,
+      order: null,
     });
   } catch (err) {
     console.error('Tracking API error:', err);
-    return res.status(500).json({ error: 'Internal tracking error' });
+    return res.status(500).json({ error: GENERIC_ERROR_MESSAGE, order: null });
   }
 }
