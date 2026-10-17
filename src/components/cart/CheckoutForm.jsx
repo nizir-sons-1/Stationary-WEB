@@ -24,23 +24,11 @@ function RadioOptionCard({ name, value, checked, onChange, icon: Icon, title, su
   );
 }
 
-function getAddressFieldConfig({ shippingMethod, isB2B, hasPaperAndCanvas }) {
-  if (shippingMethod === 'delivery_bundle') {
+function getAddressFieldConfig({ shippingMethod }) {
+  if (shippingMethod === 'delivery_bundle' || shippingMethod === 'delivery_open') {
     return {
       label: 'Goods Transport / Adda Address *',
       placeholder: 'Enter your city and goods transport / adda details',
-    };
-  }
-  if (isB2B) {
-    if (hasPaperAndCanvas) {
-      return {
-        label: 'Delivery / Adda / City Address *',
-        placeholder: 'Enter your city, shop name, or goods transport / adda details',
-      };
-    }
-    return {
-      label: 'Delivery / Shop / City Address *',
-      placeholder: 'Enter your city, shop, or delivery address',
     };
   }
   return {
@@ -68,7 +56,7 @@ function CustomerInfoFields({
   hasPaperAndCanvas,
 }) {
   const phoneBorderClass = getPhoneInputBorderClass(phone, isPhoneValid);
-  const addressConfig = getAddressFieldConfig({ shippingMethod, isB2B, hasPaperAndCanvas });
+  const addressConfig = getAddressFieldConfig({ shippingMethod });
 
   return (
     <div className="flex flex-col gap-5">
@@ -129,7 +117,7 @@ function CustomerInfoFields({
         <input id="customer-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
       </div>
       
-      {(shippingMethod !== 'self_pickup' || !isB2B) && (
+      {shippingMethod !== 'self_pickup' && (
         <div className="flex flex-col gap-2">
           <label htmlFor="customer-address" className="text-sm font-bold text-gray-700">
             {addressConfig.label}
@@ -163,7 +151,6 @@ function CustomerInfoFields({
 }
 
 function ShippingMethodSelector({
-  isB2B,
   shippingMethod,
   setShippingMethod,
   hasPaperAndCanvas,
@@ -185,54 +172,39 @@ function ShippingMethodSelector({
   const isFree = threshold !== null && cartTotal >= threshold;
 
   const standardSubtitle = isFree ? 'FREE (Threshold Met)' : `Rs ${standardFee} Flat Rate`;
-  const openSubtitle = `Min Rs ${goodsTransportMin}`;
+  const addaSubtitle = `Min Rs ${goodsTransportMin} (Only for Adda)`;
 
   return (
     <div className="flex flex-col gap-5">
       <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Shipping Method</h3>
-      <div className={`grid grid-cols-1 ${hasPaperAndCanvas && isB2B ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
-        {isB2B ? (
-          <>
-            <RadioOptionCard
-              name="shipping"
-              value="self_pickup"
-              checked={shippingMethod === 'self_pickup'}
-              onChange={() => setShippingMethod('self_pickup')}
-              icon={Building2}
-              title="Self Pickup"
-              subtitle="FREE"
-            />
-            <RadioOptionCard
-              name="shipping"
-              value="delivery_open"
-              checked={shippingMethod === 'delivery_open'}
-              onChange={() => setShippingMethod('delivery_open')}
-              icon={Truck}
-              title="Delivery - Open"
-              subtitle={openSubtitle}
-            />
-            {hasPaperAndCanvas && (
-              <RadioOptionCard
-                name="shipping"
-                value="delivery_bundle"
-                checked={shippingMethod === 'delivery_bundle'}
-                onChange={() => setShippingMethod('delivery_bundle')}
-                icon={PackageCheck}
-                title="Delivery - Bundle"
-                subtitle="Only for Adda"
-              />
-            )}
-          </>
-        ) : (
+      <div className={`grid grid-cols-1 ${hasPaperAndCanvas ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
+        <RadioOptionCard
+          name="shipping"
+          value="standard_delivery"
+          checked={shippingMethod === 'standard_delivery'}
+          onChange={() => setShippingMethod('standard_delivery')}
+          icon={Truck}
+          title="Standard Delivery"
+          subtitle={standardSubtitle}
+        />
+        <RadioOptionCard
+          name="shipping"
+          value="self_pickup"
+          checked={shippingMethod === 'self_pickup'}
+          onChange={() => setShippingMethod('self_pickup')}
+          icon={Building2}
+          title="Self Pickup"
+          subtitle="FREE"
+        />
+        {hasPaperAndCanvas && (
           <RadioOptionCard
             name="shipping"
-            value="standard_delivery"
-            checked={shippingMethod === 'standard_delivery'}
-            onChange={() => setShippingMethod('standard_delivery')}
-            icon={Truck}
-            title="Standard Delivery"
-            subtitle={standardSubtitle}
-            colSpan
+            value="delivery_bundle"
+            checked={shippingMethod === 'delivery_bundle' || shippingMethod === 'delivery_open'}
+            onChange={() => setShippingMethod('delivery_bundle')}
+            icon={PackageCheck}
+            title="Pickup from Adda"
+            subtitle={addaSubtitle}
           />
         )}
       </div>
@@ -240,54 +212,38 @@ function ShippingMethodSelector({
   );
 }
 
-function PaymentMethodSelector({ isB2B, paymentMethod, setPaymentMethod }) {
+function PaymentMethodSelector({ paymentMethod, setPaymentMethod }) {
   return (
     <div className="flex flex-col gap-5">
       <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Payment Method</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {isB2B ? (
-          <>
-            <RadioOptionCard
-              name="payment"
-              value="shop"
-              checked={paymentMethod === 'shop'}
-              onChange={() => setPaymentMethod('shop')}
-              icon={MapPin}
-              title="Pay at Shop"
-              subtitle="Pay when collecting"
-            />
-            <RadioOptionCard
-              name="payment"
-              value="bank"
-              checked={paymentMethod === 'bank'}
-              onChange={() => setPaymentMethod('bank')}
-              icon={CreditCard}
-              title="Bank Transfer"
-              subtitle="Account details on confirmation"
-            />
-          </>
-        ) : (
-          <>
-            <RadioOptionCard
-              name="payment"
-              value="cod"
-              checked={paymentMethod === 'cod'}
-              onChange={() => setPaymentMethod('cod')}
-              icon={MapPin}
-              title="Cash on Delivery (COD)"
-              subtitle="Pay at your doorstep"
-            />
-            <RadioOptionCard
-              name="payment"
-              value="online"
-              checked={paymentMethod === 'online'}
-              onChange={() => setPaymentMethod('online')}
-              icon={CreditCard}
-              title="Online Payment"
-              subtitle="Bank / EasyPaisa / JazzCash"
-            />
-          </>
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <RadioOptionCard
+          name="payment"
+          value="cod"
+          checked={paymentMethod === 'cod'}
+          onChange={() => setPaymentMethod('cod')}
+          icon={Truck}
+          title="Cash on Delivery (COD)"
+          subtitle="Pay at your doorstep"
+        />
+        <RadioOptionCard
+          name="payment"
+          value="shop"
+          checked={paymentMethod === 'shop'}
+          onChange={() => setPaymentMethod('shop')}
+          icon={MapPin}
+          title="Pay at Shop"
+          subtitle="Pay when collecting"
+        />
+        <RadioOptionCard
+          name="payment"
+          value="online"
+          checked={paymentMethod === 'online' || paymentMethod === 'bank'}
+          onChange={() => setPaymentMethod('online')}
+          icon={CreditCard}
+          title="Online Payment"
+          subtitle="Bank / EasyPaisa / JazzCash"
+        />
       </div>
     </div>
   );

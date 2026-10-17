@@ -166,7 +166,7 @@ export function buildOrderPayload({
   const shipMap = {
     self_pickup: 'Self Pickup (FREE)',
     delivery_open: `Delivery - Open (Min Rs ${goodsTransportMin})`,
-    delivery_bundle: 'Delivery - Bundle (Only for Adda)',
+    delivery_bundle: 'Pickup from Adda (Goods Transport)',
     standard_delivery: isFreeShipping ? 'Standard Delivery (FREE)' : `Standard Delivery (Rs ${standardFee})`,
   };
   const payMap = {
