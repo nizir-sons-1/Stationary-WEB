@@ -23,8 +23,8 @@ export function isPaperAndCanvasItem(item) {
 }
 
 export function isB2BCart(cartItems) {
-  if (cartItems.some((item) => item.isBulk)) return true;
-  return cartItems.every(isPaperAndCanvasItem);
+  if (!Array.isArray(cartItems) || cartItems.length === 0) return false;
+  return cartItems.some((item) => item.isBulk);
 }
 
 export function validateCheckoutInput({ checkoutPhase, fullName, phone, address, isB2B, shippingMethod }) {
