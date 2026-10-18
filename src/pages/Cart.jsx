@@ -45,8 +45,9 @@ function getOrCreateIdempotencyKey() {
 }
 
 async function placeOrderViaApi(payloadBody, idempotencyKey, fallbackPayload) {
+  let res;
   try {
-    const res = await fetch('/api/checkout', {
+    res = await fetch('/api/checkout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,24 +55,29 @@ async function placeOrderViaApi(payloadBody, idempotencyKey, fallbackPayload) {
       },
       body: JSON.stringify(payloadBody),
     });
+  } catch (networkErr) {
+    console.warn('[checkout] Network error reaching /api/checkout:', networkErr.message);
+  }
 
+  if (res) {
     if (res.ok) {
       const data = await res.json();
       return { order: data.order, finalTotal: data.finalTotal };
     }
     const errJson = await res.json().catch(() => ({}));
-    throw new Error(errJson.error || 'Server error placing order');
-  } catch (apiErr) {
-    console.warn('[checkout] API endpoint unavailable, fallback to direct Supabase insert:', apiErr.message);
-    const { data: insertedOrder, error: insertError } = await supabase
-      .from('orders')
-      .insert(fallbackPayload)
-      .select()
-      .single();
-
-    if (insertError) throw insertError;
-    return { order: insertedOrder, finalTotal: fallbackPayload.total_amount };
+    const errorDetails = errJson.details ? ` (${errJson.details})` : '';
+    throw new Error((errJson.error || `Server error ${res.status}`) + errorDetails);
   }
+
+  // Network connection failed completely (e.g. offline device)
+  const { data: insertedOrder, error: insertError } = await supabase
+    .from('orders')
+    .insert(fallbackPayload)
+    .select()
+    .single();
+
+  if (insertError) throw insertError;
+  return { order: insertedOrder, finalTotal: fallbackPayload.total_amount };
 }
 
 const Cart = () => {
@@ -139,12 +145,20 @@ const Cart = () => {
   const isB2B = isB2BCart(cartItems);
   const hasPaperAndCanvas = cartItems.some(isPaperAndCanvasItem);
 
-  // If cart does not have Paper & Canvas, ensure Adda shipping is reset to standard delivery
+  // Force default methods if switching types
   useEffect(() => {
-    if (!hasPaperAndCanvas && (shippingMethod === 'delivery_bundle' || shippingMethod === 'delivery_open')) {
-      setShippingMethod('standard_delivery');
+    if (isB2B) {
+      setShippingMethod(prev => {
+        if (prev === 'standard_delivery') return 'self_pickup';
+        if (prev === 'delivery_bundle' && !hasPaperAndCanvas) return 'delivery_open';
+        return prev;
+      });
+      setPaymentMethod(prev => (prev === 'cod' || prev === 'online' ? 'shop' : prev));
+    } else {
+      setShippingMethod(prev => (prev !== 'standard_delivery' ? 'standard_delivery' : prev));
+      setPaymentMethod(prev => (prev === 'shop' ? 'cod' : prev));
     }
-  }, [hasPaperAndCanvas, shippingMethod]);
+  }, [isB2B, hasPaperAndCanvas]);
 
   // Scroll to top immediately when checkout phase transitions
   useEffect(() => {
