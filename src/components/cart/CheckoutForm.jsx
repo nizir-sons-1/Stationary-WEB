@@ -24,20 +24,14 @@ function RadioOptionCard({ name, value, checked, onChange, icon: Icon, title, su
   );
 }
 
-function getAddressFieldConfig({ shippingMethod, isB2B, hasPaperAndCanvas }) {
-  if (shippingMethod === 'delivery_bundle') {
+function getAddressFieldConfig({ shippingMethod, isB2B }) {
+  if (shippingMethod === 'delivery_open') {
     return {
       label: 'Goods Transport / Adda Address *',
       placeholder: 'Enter your city and goods transport / adda details',
     };
   }
   if (isB2B) {
-    if (hasPaperAndCanvas) {
-      return {
-        label: 'Delivery / Adda / City Address *',
-        placeholder: 'Enter your city, shop name, or goods transport / adda details',
-      };
-    }
     return {
       label: 'Delivery / Shop / City Address *',
       placeholder: 'Enter your city, shop, or delivery address',
@@ -129,14 +123,14 @@ function CustomerInfoFields({
         <input id="customer-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="p-4 rounded-xl border border-gray-200 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm bg-white" />
       </div>
       
-      {(shippingMethod !== 'self_pickup' || !isB2B) && (
+      {shippingMethod === 'standard_delivery' && (
         <div className="flex flex-col gap-2">
           <label htmlFor="customer-address" className="text-sm font-bold text-gray-700">
             {addressConfig.label}
           </label>
           <textarea
             id="customer-address"
-            required={shippingMethod !== 'self_pickup'}
+            required
             value={address}
             onChange={e => setAddress(e.target.value)}
             placeholder={addressConfig.placeholder}
@@ -173,7 +167,7 @@ function ShippingMethodSelector({
   const standardFee =
     Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
       ? Number.parseFloat(settings.standard_delivery_fee)
-      : 200;
+      : 350;
   const goodsTransportMin =
     Number.isFinite(Number.parseFloat(settings?.goods_transport_min_fee))
       ? Number.parseFloat(settings.goods_transport_min_fee)
@@ -185,7 +179,6 @@ function ShippingMethodSelector({
   const isFree = threshold !== null && cartTotal >= threshold;
 
   const standardSubtitle = isFree ? 'FREE (Threshold Met)' : `Rs ${standardFee} Flat Rate`;
-  const openSubtitle = `Min Rs ${goodsTransportMin}`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -215,20 +208,9 @@ function ShippingMethodSelector({
           checked={shippingMethod === 'delivery_open'}
           onChange={() => setShippingMethod('delivery_open')}
           icon={Truck}
-          title="Delivery - Open (Adda)"
-          subtitle={openSubtitle}
+          title="Goods Transport (Adda)"
+          subtitle={`Rs ${goodsTransportMin} (Min Fee)`}
         />
-        {hasPaperAndCanvas && (
-          <RadioOptionCard
-            name="shipping"
-            value="delivery_bundle"
-            checked={shippingMethod === 'delivery_bundle'}
-            onChange={() => setShippingMethod('delivery_bundle')}
-            icon={PackageCheck}
-            title="Delivery - Bundle"
-            subtitle="Only for Adda"
-          />
-        )}
       </div>
     </div>
   );

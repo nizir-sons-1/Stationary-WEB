@@ -116,8 +116,8 @@ const Cart = () => {
   const [phone, setPhone] = useState(() => savedProfile.phone || '');
   const [email, setEmail] = useState(() => savedProfile.email || '');
   const [address, setAddress] = useState(() => savedProfile.address || '');
-  const [shippingMethod, setShippingMethod] = useState('self_pickup'); // 'self_pickup' | 'delivery_open' | 'delivery_bundle' | 'standard_delivery'
-  const [paymentMethod, setPaymentMethod] = useState('shop'); // 'shop' | 'bank' | 'cod' | 'online'
+  const [shippingMethod, setShippingMethod] = useState('standard_delivery'); // 'standard_delivery' | 'self_pickup' | 'delivery_open'
+  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' | 'shop' | 'online'
   const [placedOrder, setPlacedOrder] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -144,13 +144,6 @@ const Cart = () => {
 
   const isB2B = isB2BCart(cartItems);
   const hasPaperAndCanvas = cartItems.some(isPaperAndCanvasItem);
-
-  // Only adjust if delivery_bundle was selected but cart no longer has Paper & Canvas
-  useEffect(() => {
-    if (!hasPaperAndCanvas && shippingMethod === 'delivery_bundle') {
-      setShippingMethod('standard_delivery');
-    }
-  }, [hasPaperAndCanvas, shippingMethod]);
 
   // Scroll to top immediately when checkout phase transitions
   useEffect(() => {

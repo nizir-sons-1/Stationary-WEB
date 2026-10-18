@@ -38,11 +38,12 @@ export function validateCheckoutInput({ checkoutPhase, fullName, phone, address,
       message: 'Kripya 11 digits Pakistani mobile number enter karein jo 03 se shuru ho (e.g. 0300 1234567). Order confirm hone ke liye 11 digits mobile number zaroori hai.'
     };
   }
-  if (shippingMethod !== 'self_pickup' && !address?.trim()) {
+  // Address is only required for standard courier delivery. Hidden for self pickup & adda.
+  if (shippingMethod === 'standard_delivery' && !address?.trim()) {
     return {
       valid: false,
       message: isB2B
-        ? 'Please enter your delivery city, shop, or goods transport / adda address.'
+        ? 'Please enter your delivery city, shop, or courier address.'
         : 'Please enter your delivery address.'
     };
   }
@@ -58,6 +59,12 @@ export function generateFallbackOrderId() {
 
 export function getShippingFeeText(shippingMethod, settings = null, cartTotal = 0) {
   if (shippingMethod === 'self_pickup') return 'FREE';
+  if (shippingMethod === 'delivery_open') {
+    const fee = Number.isFinite(Number.parseFloat(settings?.goods_transport_min_fee))
+      ? Number.parseFloat(settings.goods_transport_min_fee)
+      : 350;
+    return `Rs ${fee}`;
+  }
   if (shippingMethod === 'standard_delivery') {
     const threshold =
       settings?.is_free_shipping_enabled && Number.isFinite(Number.parseFloat(settings?.free_shipping_threshold))
@@ -66,13 +73,18 @@ export function getShippingFeeText(shippingMethod, settings = null, cartTotal = 
     if (threshold !== null && cartTotal >= threshold) return 'FREE';
     const fee = Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
       ? Number.parseFloat(settings.standard_delivery_fee)
-      : 200;
+      : 350;
     return `Rs ${fee}`;
   }
-  return 'TBD';
+  return 'FREE';
 }
 
 function resolveStandardDeliveryFee(shippingMethod, cartTotal, settings) {
+  if (shippingMethod === 'delivery_open') {
+    return Number.isFinite(Number.parseFloat(settings?.goods_transport_min_fee))
+      ? Number.parseFloat(settings.goods_transport_min_fee)
+      : 350;
+  }
   if (shippingMethod !== 'standard_delivery') {
     return 0;
   }
@@ -86,7 +98,7 @@ function resolveStandardDeliveryFee(shippingMethod, cartTotal, settings) {
   }
   return Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
     ? Number.parseFloat(settings.standard_delivery_fee)
-    : 200;
+    : 350;
 }
 
 function formatBulkAddressAndType(address, cartItems, isB2B) {
@@ -121,6 +133,8 @@ function mapOrderItems(cartItems) {
     }
 
     return {
+      id: item.id || null,
+      productId: item.productId || null,
       name: item.name,
       size: item.size,
       gsm: item.gsm,
@@ -165,8 +179,7 @@ export function buildOrderPayload({
 
   const shipMap = {
     self_pickup: 'Self Pickup (FREE)',
-    delivery_open: `Delivery - Open (Min Rs ${goodsTransportMin})`,
-    delivery_bundle: 'Delivery - Bundle (Only for Adda)',
+    delivery_open: `Goods Transport / Adda (Rs ${goodsTransportMin})`,
     standard_delivery: isFreeShipping ? 'Standard Delivery (FREE)' : `Standard Delivery (Rs ${standardFee})`,
   };
   const payMap = {

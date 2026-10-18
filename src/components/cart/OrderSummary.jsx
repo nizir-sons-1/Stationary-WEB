@@ -15,14 +15,20 @@ export function OrderSummary({
   const standardFee =
     Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
       ? Number.parseFloat(settings.standard_delivery_fee)
-      : 200;
+      : 350;
   const threshold =
     settings?.is_free_shipping_enabled && Number.isFinite(Number.parseFloat(settings?.free_shipping_threshold))
       ? Number.parseFloat(settings.free_shipping_threshold)
       : null;
   const isFreeShipping = threshold !== null && cartTotal >= threshold;
+  const goodsTransportMin =
+    Number.isFinite(Number.parseFloat(settings?.goods_transport_min_fee))
+      ? Number.parseFloat(settings.goods_transport_min_fee)
+      : 350;
   let deliveryCharge = 0;
-  if (shippingMethod === 'standard_delivery' && !isFreeShipping) {
+  if (shippingMethod === 'delivery_open') {
+    deliveryCharge = goodsTransportMin;
+  } else if (shippingMethod === 'standard_delivery' && !isFreeShipping) {
     deliveryCharge = standardFee;
   }
 

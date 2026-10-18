@@ -87,20 +87,66 @@ export async function checkDuplicateOrder(supabase, cleanPhone, idempotencyKey) 
   return null;
 }
 
-async function fetchDbVariation(item, supabase) {
-  if (!item?.size) return null;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function isValidUuid(id) {
+  return typeof id === 'string' && UUID_REGEX.test(id.trim());
+}
+
+async function findVariationById(supabase, id) {
+  if (!isValidUuid(id)) return null;
+  const { data } = await supabase
+    .from('product_variations')
+    .select('id, price, stock, size, gsm, product_id')
+    .eq('id', id.trim())
+    .maybeSingle();
+  return data || null;
+}
+
+async function findVariationByProductId(supabase, productId, size, gsm) {
+  if (!isValidUuid(productId) || !size) return null;
+  let query = supabase
+    .from('product_variations')
+    .select('id, price, stock, size, gsm, product_id')
+    .eq('product_id', productId.trim())
+    .ilike('size', size);
+
+  if (gsm && gsm !== 'N/A') {
+    query = query.ilike('gsm', String(gsm));
+  }
+
+  const { data } = await query.limit(1);
+  return data?.[0] || null;
+}
+
+async function findVariationBySize(supabase, size, gsm) {
+  if (!size) return null;
   let query = supabase
     .from('product_variations')
     .select('id, price, stock, size, gsm')
-    .ilike('size', item.size);
+    .ilike('size', size);
 
-  if (item.gsm && item.gsm !== 'N/A') {
-    query = query.ilike('gsm', String(item.gsm));
+  if (gsm && gsm !== 'N/A') {
+    query = query.ilike('gsm', String(gsm));
   }
 
-  const { data: dbVars } = await query.limit(5);
-  return dbVars && dbVars.length > 0 ? dbVars[0] : null;
+  const { data } = await query.limit(5);
+  return data?.[0] || null;
+}
+
+async function fetchDbVariation(item, supabase) {
+  const byId = await findVariationById(supabase, item?.variationId || item?.id);
+  if (byId) return byId;
+
+  const byProd = await findVariationByProductId(
+    supabase,
+    item?.productId || item?.product_id,
+    item?.size,
+    item?.gsm
+  );
+  if (byProd) return byProd;
+
+  return findVariationBySize(supabase, item?.size, item?.gsm);
 }
 
 function checkItemPriceAndStock(item, matched, clientPrice, qty) {
@@ -175,14 +221,13 @@ export function buildVerifiedOrderRecord({
   finalTotal,
   verifiedItems,
   idempotencyKey,
-  standardFee = 200,
+  standardFee = 350,
   goodsTransportMin = 350,
   isFreeShipping = false,
 }) {
   const shipMap = {
     self_pickup: 'Self Pickup (FREE)',
-    delivery_open: `Delivery - Open (Min Rs ${goodsTransportMin})`,
-    delivery_bundle: 'Delivery - Bundle (Only for Adda)',
+    delivery_open: `Goods Transport / Adda (Rs ${goodsTransportMin})`,
     standard_delivery: isFreeShipping ? 'Standard Delivery (FREE)' : `Standard Delivery (Rs ${standardFee})`,
   };
 
@@ -261,7 +306,7 @@ export async function validateAndBuildOrderPayload(body, supabase) {
   const standardFee =
     Number.isFinite(Number.parseFloat(settings?.standard_delivery_fee))
       ? Number.parseFloat(settings.standard_delivery_fee)
-      : 200;
+      : 350;
   const goodsTransportMin =
     Number.isFinite(Number.parseFloat(settings?.goods_transport_min_fee))
       ? Number.parseFloat(settings.goods_transport_min_fee)
@@ -273,7 +318,9 @@ export async function validateAndBuildOrderPayload(body, supabase) {
   const isFreeShipping = threshold !== null && itemsCheck.verifiedSubtotal >= threshold;
 
   let deliveryFee = 0;
-  if (isStandardDelivery && !isFreeShipping) {
+  if (shippingMethod === 'delivery_open') {
+    deliveryFee = goodsTransportMin;
+  } else if (isStandardDelivery && !isFreeShipping) {
     deliveryFee = standardFee;
   }
   const finalTotal = itemsCheck.verifiedSubtotal + deliveryFee;
