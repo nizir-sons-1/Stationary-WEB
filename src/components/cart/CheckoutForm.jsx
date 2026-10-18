@@ -190,49 +190,43 @@ function ShippingMethodSelector({
   return (
     <div className="flex flex-col gap-5">
       <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Shipping Method</h3>
-      <div className={`grid grid-cols-1 ${hasPaperAndCanvas && isB2B ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
-        {isB2B ? (
-          <>
-            <RadioOptionCard
-              name="shipping"
-              value="self_pickup"
-              checked={shippingMethod === 'self_pickup'}
-              onChange={() => setShippingMethod('self_pickup')}
-              icon={Building2}
-              title="Self Pickup"
-              subtitle="FREE"
-            />
-            <RadioOptionCard
-              name="shipping"
-              value="delivery_open"
-              checked={shippingMethod === 'delivery_open'}
-              onChange={() => setShippingMethod('delivery_open')}
-              icon={Truck}
-              title="Delivery - Open"
-              subtitle={openSubtitle}
-            />
-            {hasPaperAndCanvas && (
-              <RadioOptionCard
-                name="shipping"
-                value="delivery_bundle"
-                checked={shippingMethod === 'delivery_bundle'}
-                onChange={() => setShippingMethod('delivery_bundle')}
-                icon={PackageCheck}
-                title="Delivery - Bundle"
-                subtitle="Only for Adda"
-              />
-            )}
-          </>
-        ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <RadioOptionCard
+          name="shipping"
+          value="standard_delivery"
+          checked={shippingMethod === 'standard_delivery'}
+          onChange={() => setShippingMethod('standard_delivery')}
+          icon={Truck}
+          title="Standard Delivery"
+          subtitle={standardSubtitle}
+        />
+        <RadioOptionCard
+          name="shipping"
+          value="self_pickup"
+          checked={shippingMethod === 'self_pickup'}
+          onChange={() => setShippingMethod('self_pickup')}
+          icon={Building2}
+          title="Self Pickup"
+          subtitle="FREE (Collect at Shop)"
+        />
+        <RadioOptionCard
+          name="shipping"
+          value="delivery_open"
+          checked={shippingMethod === 'delivery_open'}
+          onChange={() => setShippingMethod('delivery_open')}
+          icon={Truck}
+          title="Delivery - Open (Adda)"
+          subtitle={openSubtitle}
+        />
+        {hasPaperAndCanvas && (
           <RadioOptionCard
             name="shipping"
-            value="standard_delivery"
-            checked={shippingMethod === 'standard_delivery'}
-            onChange={() => setShippingMethod('standard_delivery')}
-            icon={Truck}
-            title="Standard Delivery"
-            subtitle={standardSubtitle}
-            colSpan
+            value="delivery_bundle"
+            checked={shippingMethod === 'delivery_bundle'}
+            onChange={() => setShippingMethod('delivery_bundle')}
+            icon={PackageCheck}
+            title="Delivery - Bundle"
+            subtitle="Only for Adda"
           />
         )}
       </div>
@@ -244,50 +238,34 @@ function PaymentMethodSelector({ isB2B, paymentMethod, setPaymentMethod }) {
   return (
     <div className="flex flex-col gap-5">
       <h3 className="font-bold text-lg text-secondary border-b border-gray-100 pb-2">Payment Method</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {isB2B ? (
-          <>
-            <RadioOptionCard
-              name="payment"
-              value="shop"
-              checked={paymentMethod === 'shop'}
-              onChange={() => setPaymentMethod('shop')}
-              icon={MapPin}
-              title="Pay at Shop"
-              subtitle="Pay when collecting"
-            />
-            <RadioOptionCard
-              name="payment"
-              value="bank"
-              checked={paymentMethod === 'bank'}
-              onChange={() => setPaymentMethod('bank')}
-              icon={CreditCard}
-              title="Bank Transfer"
-              subtitle="Account details on confirmation"
-            />
-          </>
-        ) : (
-          <>
-            <RadioOptionCard
-              name="payment"
-              value="cod"
-              checked={paymentMethod === 'cod'}
-              onChange={() => setPaymentMethod('cod')}
-              icon={MapPin}
-              title="Cash on Delivery (COD)"
-              subtitle="Pay at your doorstep"
-            />
-            <RadioOptionCard
-              name="payment"
-              value="online"
-              checked={paymentMethod === 'online'}
-              onChange={() => setPaymentMethod('online')}
-              icon={CreditCard}
-              title="Online Payment"
-              subtitle="Bank / EasyPaisa / JazzCash"
-            />
-          </>
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <RadioOptionCard
+          name="payment"
+          value="cod"
+          checked={paymentMethod === 'cod'}
+          onChange={() => setPaymentMethod('cod')}
+          icon={MapPin}
+          title="Cash on Delivery (COD)"
+          subtitle="Pay at your doorstep"
+        />
+        <RadioOptionCard
+          name="payment"
+          value="shop"
+          checked={paymentMethod === 'shop'}
+          onChange={() => setPaymentMethod('shop')}
+          icon={Building2}
+          title="Pay at Shop"
+          subtitle="Pay when collecting"
+        />
+        <RadioOptionCard
+          name="payment"
+          value="online"
+          checked={paymentMethod === 'online' || paymentMethod === 'bank'}
+          onChange={() => setPaymentMethod('online')}
+          icon={CreditCard}
+          title="Bank / Online Payment"
+          subtitle="EasyPaisa / JazzCash / Bank"
+        />
       </div>
     </div>
   );

@@ -145,20 +145,12 @@ const Cart = () => {
   const isB2B = isB2BCart(cartItems);
   const hasPaperAndCanvas = cartItems.some(isPaperAndCanvasItem);
 
-  // Force default methods if switching types
+  // Only adjust if delivery_bundle was selected but cart no longer has Paper & Canvas
   useEffect(() => {
-    if (isB2B) {
-      setShippingMethod(prev => {
-        if (prev === 'standard_delivery') return 'self_pickup';
-        if (prev === 'delivery_bundle' && !hasPaperAndCanvas) return 'delivery_open';
-        return prev;
-      });
-      setPaymentMethod(prev => (prev === 'cod' || prev === 'online' ? 'shop' : prev));
-    } else {
-      setShippingMethod(prev => (prev !== 'standard_delivery' ? 'standard_delivery' : prev));
-      setPaymentMethod(prev => (prev === 'shop' ? 'cod' : prev));
+    if (!hasPaperAndCanvas && shippingMethod === 'delivery_bundle') {
+      setShippingMethod('standard_delivery');
     }
-  }, [isB2B, hasPaperAndCanvas]);
+  }, [hasPaperAndCanvas, shippingMethod]);
 
   // Scroll to top immediately when checkout phase transitions
   useEffect(() => {
